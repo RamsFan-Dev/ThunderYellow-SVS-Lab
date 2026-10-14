@@ -55,6 +55,17 @@
 #inventory td:nth-last-child(2){width:102px}
 #inventory td:last-child{width:60px}
 @media(max-width:650px){#inventory td:first-child{min-width:105px;font-size:12px}#inventory .qtyField{width:78px;padding:6px}#inventory .qty-owned{font-size:11px}#inventory .btn{padding:5px 7px!important}}
+</style><style>
+#inventory td:last-child{text-align:left;width:auto}
+#inventory .inv-actions{display:flex;flex-direction:column;gap:6px}
+#inventory .move-pc{font-size:12px;min-height:32px;padding:5px 8px}
+#pcItemsTable .qtyField{width:86px;min-width:0}
+.party-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.party-choice{padding:12px;border:1px solid #40536d;border-radius:12px;background:#141f2f;min-width:0}
+.party-choice .label{margin-bottom:8px}
+.party-choice select{min-width:0;font-size:12px;padding:10px}
+.party-choice.locked{border-color:#b68a40}
+@media(max-width:620px){.party-picker{grid-template-columns:1fr}#inventory .move-pc{font-size:11px}#inventory td:last-child{min-width:84px}}
 </style></head>
 <body><main class="shell">
 <header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.7</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
@@ -62,8 +73,14 @@
 <div id="workspace" class="hidden">
 <section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div></section>
 <section class="panel"><div class="feature">03 • Safe edits</div><h2>Coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="preset">Quick item presets</label><select id="preset"><option value="68|0">Rare Candy</option><option value="20|0">Max Potion</option><option value="200|0">Leftovers</option><option value="19|0">Full Restore</option><option value="21|0">Hyper Potion</option><option value="24|0">Revive</option><option value="25|0">Max Revive</option><option value="1|2">Master Ball</option><option value="4|2">Poké Ball</option><option value="2|2">Ultra Ball</option></select><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary">Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
-<hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div><div class="tablewrap"><table class="table"><thead><tr><th>Item</th><th class="smallHide">ID</th><th>Quantity</th><th>Save</th></tr></thead><tbody id="inventory"></tbody></table></div>
+<hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div><div class="tablewrap"><table class="table"><thead><tr><th>Item</th><th class="smallHide">ID</th><th>Quantity</th><th>Save / Move</th></tr></thead><tbody id="inventory"></tbody></table></div>
 <details><summary>Add any numeric item ID</summary><div class="grid3"><div><label class="label" for="customPocket">Pocket</label><select id="customPocket"></select></div><div><label class="label" for="customId">Item ID (decimal)</label><input id="customId" class="input" type="number" min="1" max="65535" inputmode="numeric" placeholder="e.g. 68"></div><div><label class="label" for="customQty">Quantity</label><input id="customQty" class="input" type="number" min="0" max="999" placeholder="Set qty" inputmode="numeric"></div></div><button id="customApply" class="btn" style="margin-top:12px">Apply item ID</button><div class="hint">Setting a quantity to 0 removes the item and compacts the pocket. Use the game's actual internal item ID, not the Pokédex number. Wrong IDs may be unsupported by this ROM.</div></details>
+<details id="pcItemsDetails"><summary>🗃️ Item PC storage and Withdraw</summary>
+<div class="hint">Your in-game item PC has 30 storage slots. PC items have plain quantities, while bag quantities are encrypted. Use Move → PC beside an item above; use Withdraw here to bring stored items back into the bag. Key Items cannot be deposited.</div>
+<div id="pcItemsStatus" class="callout" style="margin:10px 0"></div>
+<div id="pcItemsResetBox" class="hidden callout warn" style="margin:10px 0"><strong>PC item data needs attention.</strong><div class="hint">If this save inherited malformed PC item quantities, you can explicitly reset the 30 PC-item slots. This clears PC-stored items only, not your bag or Pokémon; save a backup first.</div><button id="resetPCItems" type="button" class="btn danger" style="margin-top:8px">Reset invalid PC item storage…</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Stored item</th><th>Owned</th><th>Withdraw quantity</th><th>Action</th></tr></thead><tbody id="pcItemsTable"></tbody></table></div>
+</details>
 </section>
 <section class="panel"><div class="feature">04 • Pokémon manager</div><h2>Party &amp; PC Pokémon Editor</h2><p>Edit existing Pokémon directly in your <strong>.svs</strong>: moves, current PP, PP Ups, experience, friendship, held items, IVs, EVs and battle stats. PC Pokémon may be copied, moved and deleted. The special starter Pikachu is protected from copying or deletion.</p>
 <details id="showdownDetails" style="margin:18px 0">
@@ -80,6 +97,15 @@
 <div class="hint">Import is blocked if it would replace our special follower Pikachu, cross the party's six-slot limit, or skip an earlier empty party slot. PC batches can continue into the next box.</div>
 <div class="row" style="margin:12px 0"><button id="showdownPreviewButton" class="btn secondary" type="button">Preview Pokémon import</button><button id="showdownImportButton" class="btn primary" type="button" disabled>💾 Import sets into SVS session</button></div>
 <div id="showdownPreview" class="status" role="status" aria-live="polite"></div>
+</details>
+<details id="partySwitcher"><summary>⚡ Party Builder &amp; Switcher</summary>
+<p class="hint">Build a lineup from the current six party Pokémon and your PC boxes. Save multiple named plans on this device, then activate one to exchange members between party and PC. The original follower Pikachu stays in his current party slot.</p>
+<div class="grid" style="margin-bottom:12px"><div><label class="label" for="partyPlanName">Team name</label><input id="partyPlanName" class="input" maxlength="32" placeholder="e.g. Elite Four team"></div><div><label class="label" for="partyPresets">Saved teams on this device</label><select id="partyPresets" class="input"></select></div></div>
+<div class="row" style="margin-bottom:12px"><button id="partySavePlan" type="button" class="btn secondary">Save team plan</button><button id="partyLoadPlan" type="button" class="btn secondary">Load team plan</button><button id="partyDeletePlan" type="button" class="btn danger">Delete plan</button></div>
+<div id="partyPicker" class="party-picker"></div>
+<div class="row" style="margin:15px 0"><button id="partyPreviewButton" type="button" class="btn secondary">Preview team exchange</button><button id="partyApplyButton" type="button" class="btn primary" disabled>Apply party to SVS</button></div>
+<div id="partySwitcherStatus" class="status"></div>
+<div class="hint">Switching modifies the working SVS only after confirmation. Party members not selected go into the PC slots vacated by incoming Pokémon. Save plans are stored in this browser, not in your ROM or original save file. Export the updated SVS to test in Delta.</div>
 </details>
 <div id="monUnavailable" class="callout warn hidden"></div><div id="monWrap" class="hidden">
 <div class="seg" id="monTabs"><button class="selected" data-mode="party">Party (6 slots)</button><button data-mode="box">PC boxes (14)</button></div>
