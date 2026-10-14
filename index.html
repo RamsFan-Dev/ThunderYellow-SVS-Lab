@@ -33,6 +33,13 @@
 .badge-entry input{width:21px;height:21px;accent-color:#ffcf55}
 .badge-entry .badge-sub{font-size:11px;color:#9fb3cb}
 @media(max-width:650px){.badge-entry{padding:10px 7px}}
+</style><style>
+#monStatRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#monStatRows>div{min-width:0}
+#monStatRows input{width:100%;padding:11px 9px}
+.ev-budget{margin:10px 0;padding:11px 12px;border-radius:10px;border:1px solid #4c866b;background:#132d28;color:#b6f6d2;font-weight:700;font-size:13px}
+.ev-budget.bad{border-color:#b85a60;background:#352126;color:#ffd3d7}
+@media(max-width:650px){#monStatRows .label{font-size:12px}#monStatRows{gap:8px}}
 </style></head>
 <body><main class="shell">
 <header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.2</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
@@ -59,7 +66,12 @@
 <div id="monForm" class="hidden">
 <div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability slot</label><select id="monAbility"><option value="0">First ability</option><option value="1">Second ability</option></select></div></div>
 <h3 style="font-size:15px;margin:21px 0 9px">All four moves • PP and PP Ups</h3><div class="hint">Choose a move for each slot, adjust PP and PP Ups, then save the Pokémon changes below.</div><div id="monMoveRows"></div><div class="grid3" style="margin:13px 0"><div><label class="label" for="moveQuickSlot">Apply preset to slot</label><select id="moveQuickSlot"><option value="0">Move 1</option><option value="1">Move 2</option><option value="2">Move 3</option><option value="3">Move 4</option></select></div><div><label class="label" for="moveQuickName">Choose familiar move</label><select id="moveQuickName"></select></div><div style="display:flex;align-items:end"><button class="btn secondary" id="moveQuick">Fill move ID</button></div></div><div class="hint">Move names use Gen 3 IDs internally. The editor does not check whether a Pokémon can learn a move. Current PP and PP Ups are saved separately.</div>
-<details><summary>IVs and EVs</summary><div class="grid3" id="monStatRows"></div></details>
+<details><summary>IVs and EVs</summary>
+<div class="hint" style="margin:4px 0 10px">Generation III limits: IV 0–31 each • EV 0–255 each • 510 EVs total across all six stats. Entering a higher IV automatically caps it at 31.</div>
+<div id="evBudget" class="ev-budget good" role="status" aria-live="polite">EVs: 0 / 510 • 510 remaining</div>
+<div id="monStatRows" class="grid3"></div>
+<button id="normalizeEvs" class="btn secondary" type="button" style="margin-top:12px">Fit EVs to 510 (if over)</button>
+</details>
 <details id="monStats"><summary>Current party battle stats</summary><div class="grid3" id="partyStatRows"></div><div class="hint">The current level shown above is read-only. Changing species or EXP does not recalculate a Pokémon’s level or battle stats. Consider retaining the original species until these are reconciled in Delta.</div></details>
 <div id="monSaveStatus" role="status" class="callout" style="margin-top:15px">No pending edits.</div><button class="btn primary wide" id="saveMon" style="margin-top:12px">💾 Save Pokémon changes</button></div>
 <div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. The party cannot be reordered, emptied or expanded in this version; doing so could interfere with the follower system.</div></div>
@@ -441,7 +453,7 @@ function renderPokemon(){if(!loaded)return;
  ensureMonOption(mon.sp,$('species'),'Species');ensureMonOption(mon.held,$('held'),'Item');for(let k=0;k<4;k++)ensureMonOption(mon.moves[k],$('move'+k),'Move');
  const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('friendship',mon.friend);v('monAbility',mon.ability);
  for(let k=0;k<4;k++){v('move'+k,mon.moves[k]);v('pp'+k,mon.pp[k]);v('up'+k,mon.ppups[k])}
- for(let k=0;k<6;k++){v('iv'+k,mon.iv[k]);v('ev'+k,mon.ev[k]);}
+ for(let k=0;k<6;k++){v('iv'+k,mon.iv[k]);v('ev'+k,mon.ev[k]);}showEVBudget();
  $('species').disabled=isProtected(mon);
  $('monStats').classList.toggle('hidden',monMode!=='party');
  if(monMode==='party'&&data.length>=100){for(let k=0;k<7;k++)v('stat'+k,u16(data,86+k*2));}
@@ -451,6 +463,8 @@ function commitMon(){try{let data=getSlotBytes(),mon=decodeMon(data);if(!mon)thr
  const f={sp:readMonNumber('species',1,1400,'Species'),held:readMonNumber('held',0,65535,'Held item'),exp:readMonNumber('experience',0,3000000,'Experience'),friend:readMonNumber('friendship',0,255,'Friendship'),ability:readMonNumber('monAbility',0,1,'Ability slot'),moves:[],pp:[],ppups:[],iv:[],ev:[]};
  for(let k=0;k<4;k++){f.moves.push(readMonNumber('move'+k,0,65535,'Move '+(k+1)));f.pp.push(readMonNumber('pp'+k,0,99,'PP '+(k+1)));f.ppups.push(readMonNumber('up'+k,0,3,'PP Ups '+(k+1)))}
  for(let k=0;k<6;k++){f.iv.push(readMonNumber('iv'+k,0,31,'IV '+statKeys[k]));f.ev.push(readMonNumber('ev'+k,0,255,'EV '+statKeys[k]));}
+ const evTotal=f.ev.reduce((a,b)=>a+b,0);
+ if(evTotal>510)throw Error('Combined EVs are '+evTotal+' / 510. Reduce EVs or tap Fit EVs to 510 before saving.');
  if(isProtected(mon)&&f.sp!==25)throw Error('The special starter Pikachu cannot change species.');
  let next=encodeMon(mon,f);
  if(monMode==='party'&&data.length>=100){let extended=new Uint8Array(100);extended.set(next);extended.set(data.slice(80,100),80);
@@ -479,6 +493,68 @@ function deleteMon(){try{if(monDirty)throw Error('Save Pokémon changes before d
  let p=[];applySlot(new Uint8Array(80),p);refreshChecksums(p);snapshot('Delete '+monSourceLabel(mon)+' from PC',p);sync();msg($('monMsg'),'✓ PC slot cleared in detected copies. Keep an original backup.','good');
  }catch(e){msg($('monMsg'),e.message,'bad')}
 }
+function legalNumber(el,lo,hi){
+ const text=String(el.value).trim();
+ if(!text)return null; // Allow clearing a field while retyping.
+ const number=Number(text);
+ if(!Number.isFinite(number))return null;
+ const clamped=Math.max(lo,Math.min(hi,Math.floor(number)));
+ if(clamped!==number)el.value=String(clamped);
+ return clamped;
+}
+function evCount(){return Array.from({length:6},(_,i)=>{
+ const v=Number($('ev'+i)?.value);
+ return Number.isFinite(v)?Math.max(0,Math.min(255,Math.floor(v))):0;
+}).reduce((a,b)=>a+b,0)}
+function showEVBudget(){
+ const budget=$('evBudget');if(!budget)return;
+ const total=evCount(),left=510-total;
+ budget.className='ev-budget '+(total>510?'bad':'good');
+ budget.textContent=total>510?'⚠ EVs: '+total+' / 510 • '+(total-510)+' over the game limit. Tap Fit EVs to 510.':'EVs: '+total+' / 510 • '+left+' remaining';
+}
+function enforceLegalStat(event){
+ const el=event.target;if(!(el instanceof HTMLInputElement))return;
+ const match=/^(iv|ev)([0-5])$/.exec(el.id);
+ if(match){
+  if(match[1]==='iv'){legalNumber(el,0,31);return}
+  const current=legalNumber(el,0,255);
+  if(current!==null){
+   const others=Array.from({length:6},(_,i)=>i).filter(i=>i!==Number(match[2])).reduce((sum,i)=>{
+    const value=Number($('ev'+i).value);
+    return sum+(Number.isFinite(value)?Math.max(0,Math.min(255,Math.floor(value))):0);
+   },0);
+   // Do not make a pre-existing out-of-range spread worse; allow reducing it.
+   if(others<=510){
+    const limit=Math.min(255,510-others);
+    if(current>limit)el.value=String(limit);
+   }
+  }
+  showEVBudget();return;
+ }
+ const caps={friendship:255,experience:3000000,ppups:3};
+ if(/^up[0-3]$/.test(el.id))legalNumber(el,0,3);
+ else if(/^pp[0-3]$/.test(el.id))legalNumber(el,0,99);
+ else if(el.id==='friendship')legalNumber(el,0,255);
+ else if(el.id==='experience')legalNumber(el,0,3000000);
+ else if(/^stat[0-6]$/.test(el.id))legalNumber(el,0,65535);
+}
+function normalizeEVs(){
+ const values=Array.from({length:6},(_,i)=>{
+  const el=$('ev'+i),v=Number(el.value);
+  return Number.isFinite(v)?Math.max(0,Math.min(255,Math.floor(v))):0;
+ });
+ const total=values.reduce((a,b)=>a+b,0);
+ if(total>510){
+  // Deterministic proportional reduction; never increase an EV.
+  const scaled=values.map(v=>Math.floor(v*510/total));
+  let remainder=510-scaled.reduce((a,b)=>a+b,0);
+  const priority=values.map((v,i)=>({i,fraction:v*510/total-scaled[i]})).sort((a,b)=>b.fraction-a.fraction||a.i-b.i);
+  for(const {i} of priority){if(remainder<=0)break;if(scaled[i]<values[i]&&scaled[i]<255){scaled[i]++;remainder--}}
+  values.splice(0,6,...scaled);
+ }
+ values.forEach((v,i)=>$('ev'+i).value=v);
+ showEVBudget();markMonDirty();
+}
 function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('option');o.value=i;o.textContent='Box '+(i+1);$('boxSelect').append(o)}
  const fillNames=(el,lookup,allowZero)=>{for(const [id,nm] of Object.entries(lookup).filter(([id])=>allowZero||Number(id)>0).sort((a,b)=>a[1].localeCompare(b[1])))el.add(new Option(nm+' (#'+id+')',id))};
  fillNames($('species'),monNames,false);
@@ -489,7 +565,9 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
  $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);monSlot=boxNo*30;renderPokemon()};
- $('monForm').addEventListener('input',e=>{if(e.target.matches('input, select'))markMonDirty()});$('monForm').addEventListener('change',e=>{if(e.target.matches('input, select'))markMonDirty()});
+ $('monForm').addEventListener('input',e=>{enforceLegalStat(e);if(e.target.matches('input, select'))markMonDirty()});
+ $('monForm').addEventListener('change',e=>{enforceLegalStat(e);if(e.target.matches('input, select'))markMonDirty()});
+ $('normalizeEvs').onclick=normalizeEVs;
  $('saveMonDock').onclick=commitMon;$('saveMon').onclick=commitMon;$('cloneMon').onclick=()=>copyMoveMon(false);$('moveMon').onclick=()=>copyMoveMon(true);$('removeMon').onclick=deleteMon;
 }
 initializeMonUI();
