@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10151f"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>ThunderYellow • SVS Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#0d111a;--panel:#171e2b;--panel2:#1f2939;--ink:#f3f6ff;--muted:#a6b3c6;--line:#354257;--gold:#ffd05c;--yellow:#ffe16c;--blue:#8bc9ff;--green:#85e6ac;--red:#ff9797;--r:17px}
+*{box-sizing:border-box}html,body{margin:0}body{font:15px/1.48 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 70% -10%,#36425a 0,transparent 32%),var(--bg);color:var(--ink);min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}a{color:var(--blue)}
+.shell{max-width:1060px;margin:0 auto;padding:24px 16px 80px}.brand{display:flex;align-items:center;gap:13px;margin:3px 0 20px}.bolt{height:54px;width:54px;display:grid;place-items:center;background:linear-gradient(135deg,#ffe783,#ffa338);color:#24283d;border-radius:17px;font-size:30px;box-shadow:0 8px 30px #edb14835}.brand h1{font-size:clamp(1.45rem,5vw,2.1rem);margin:0;letter-spacing:-.04em}.sub{color:var(--muted);font-size:13px;margin-top:2px}.pill{border-radius:99px;border:1px solid #5b6b85;padding:4px 10px;font-size:11px;color:#c6d3e8;margin-left:auto;white-space:nowrap}
+.panel{border:1px solid var(--line);background:linear-gradient(160deg,#1b2432,#151c29);border-radius:var(--r);padding:19px;margin-bottom:15px;box-shadow:0 12px 30px #02051127}.panel h2{font-size:1.1rem;margin:0 0 6px;letter-spacing:-.018em}.panel p{margin:4px 0 15px;color:var(--muted)}.label{display:block;color:#c7d4e8;font-size:13px;margin-bottom:6px;font-weight:650}.hint{color:var(--muted);font-size:12px;margin-top:7px}.small{font-size:13px;color:var(--muted)}.feature{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);font-weight:800}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1.5px dashed #7586a0;background:#202b3a63;border-radius:14px;min-height:160px;padding:26px;gap:8px}.drop.drag{border-color:var(--gold);background:#64522140}.drop strong{font-size:18px}.drop input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}.filetitle{font-weight:700;overflow-wrap:anywhere}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.entry{min-width:0}.input,select,textarea{width:100%;background:#0c1420;border:1px solid #516078;color:var(--ink);border-radius:11px;padding:11px 12px;min-height:45px;outline:none}.input:focus,select:focus,textarea:focus{border-color:#ffd66f;box-shadow:0 0 0 3px #fbd76b22}option{background:#1c2636}.btn{border:1px solid #53617a;background:#2d3950;color:#fff;border-radius:12px;padding:11px 15px;min-height:43px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}.btn:hover:not(:disabled){filter:brightness(1.12)}.btn:active:not(:disabled){transform:translateY(1px)}.primary{background:linear-gradient(135deg,#ffdc77,#ffad48);border-color:#ffdc77;color:#1a1c29}.secondary{background:#202c3e}.danger{border-color:#a74e55;color:#ffb3b3;background:#48282c}.ghost{background:transparent}.wide{width:100%}.chip{background:#334158;border:1px solid #5d6d83;color:#e3edfc;border-radius:100px;padding:8px 12px;font-size:13px;font-weight:700}
+.kpi{background:#101827;border:1px solid #334157;border-radius:13px;padding:14px;min-width:0}.kpi .num{font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.025em;color:#fff}.kpi .cap{font-size:12px;color:#acbdd1;margin-top:6px}.muted{color:var(--muted)}.good{color:var(--green)}.warn{color:var(--gold)}.bad{color:var(--red)}.callout{border-radius:12px;padding:12px 14px;background:#17283a;border:1px solid #486885;font-size:13px}.callout.warn{background:#352c1d;border-color:#77623b;color:#f6d99f}.callout.bad{background:#352127;border-color:#925465;color:#ffd0d4}.log{max-height:175px;overflow:auto;font-size:12px;background:#101824;padding:10px 13px;border-radius:12px;border:1px solid #344153;white-space:pre-wrap;overflow-wrap:anywhere}.tablewrap{max-height:380px;overflow:auto;border:1px solid #334258;border-radius:11px}.table{border-collapse:collapse;width:100%;font-size:13px}.table th,.table td{padding:8px 10px;border-bottom:1px solid #2e3c51;text-align:left}.table th{position:sticky;top:0;background:#202a3a;color:#c2d0e3;z-index:1}.table td:last-child{text-align:right}.qtyField{max-width:96px;min-height:36px;padding:5px 8px}.seg{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.seg button{background:#273248;color:#b5c5d9;padding:7px 10px;border-radius:9px;border:1px solid #445268;font-size:12px;font-weight:700}.seg button.selected{background:#664f28;color:#ffdf83;border-color:#d2a648}hr{border:0;border-top:1px solid #344356;margin:18px 0}details{border:1px solid #394a63;border-radius:13px;padding:12px 14px;background:#111b28;margin:12px 0}summary{cursor:pointer;font-weight:700}details[open] summary{margin-bottom:14px}.tog{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d0dbea}.tog input{margin-top:3px;accent-color:#ffd369}.hidden{display:none!important}.hr{height:1px;background:#2e3c50;margin:16px 0}.right{margin-left:auto}.foot{margin-top:18px;color:#8697ad;text-align:center;font-size:12px}.compact{margin:0!important}.monospace{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.status{margin-top:12px}.preview{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.6 ui-monospace,Menlo,monospace;border:1px solid #344258;background:#090f1a;padding:11px;border-radius:12px;color:#bacee8}
+@media(max-width:650px){.shell{padding:17px 12px 55px}.brand{gap:9px}.bolt{height:43px;width:43px;font-size:24px;border-radius:12px}.pill{display:none}.panel{padding:15px}.grid,.grid3{grid-template-columns:1fr}.kpi .num{font-size:23px}.table th,.table td{padding:7px 6px}.btn{font-size:13px}.drop{min-height:140px}.smallHide{display:none}}
+</style>
+<style>
+.mon-roster{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.mon-tile{display:flex;flex-direction:column;align-items:flex-start;min-height:64px;padding:9px;border-radius:11px;border:1px solid #485873;background:#182538;color:#f3f6ff;text-align:left;min-width:0}.mon-tile.chosen{border-color:#ffdc77;background:#59492b}.mon-tile strong{font-size:13px;overflow-wrap:anywhere}.mon-tile small{font-size:11px;color:#bfd0e3;overflow-wrap:anywhere}.mon-move-row{display:grid;grid-template-columns:25px 1.5fr 1fr 1fr;gap:9px;align-items:end;margin-bottom:11px}.mon-move-row .small{padding-bottom:13px}@media(max-width:650px){.mon-roster{grid-template-columns:repeat(2,minmax(0,1fr))}.mon-move-row{grid-template-columns:20px 1fr 1fr 1fr;gap:5px}.mon-move-row .label{font-size:11px}.mon-move-row .input{padding:9px 5px}}
+</style></head>
+<body><main class="shell">
+<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.0</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
+<div id="workspace" class="hidden">
+<section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div></section>
+<section class="panel"><div class="feature">03 • Safe edits</div><h2>Coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="preset">Quick item presets</label><select id="preset"><option value="68|0">Rare Candy</option><option value="20|0">Max Potion</option><option value="200|0">Leftovers</option><option value="19|0">Full Restore</option><option value="21|0">Hyper Potion</option><option value="24|0">Revive</option><option value="25|0">Max Revive</option><option value="1|2">Master Ball</option><option value="4|2">Poké Ball</option><option value="2|2">Ultra Ball</option></select><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" value="999" class="input" style="width:108px"><button id="applyPreset" class="btn primary">Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
+<hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div><div class="tablewrap"><table class="table"><thead><tr><th>Item</th><th class="smallHide">ID</th><th>Quantity</th><th>Save</th></tr></thead><tbody id="inventory"></tbody></table></div>
+<details><summary>Add any numeric item ID</summary><div class="grid3"><div><label class="label" for="customPocket">Pocket</label><select id="customPocket"></select></div><div><label class="label" for="customId">Item ID (decimal)</label><input id="customId" class="input" type="number" min="1" max="65535" inputmode="numeric" placeholder="e.g. 68"></div><div><label class="label" for="customQty">Quantity</label><input id="customQty" class="input" type="number" min="0" max="999" value="99" inputmode="numeric"></div></div><button id="customApply" class="btn" style="margin-top:12px">Apply item ID</button><div class="hint">Setting a quantity to 0 removes the item and compacts the pocket. Use the game's actual internal item ID, not the Pokédex number. Wrong IDs may be unsupported by this ROM.</div></details>
+</section>
+<section class="panel"><div class="feature">04 • Pokémon manager</div><h2>Party &amp; PC Pokémon Editor</h2><p>Edit existing Pokémon directly in your <strong>.svs</strong>: moves, current PP, PP Ups, experience, friendship, held items, IVs, EVs and battle stats. PC Pokémon may be copied, moved and deleted. The special starter Pikachu is protected from copying or deletion.</p>
+<div id="monUnavailable" class="callout warn hidden"></div><div id="monWrap" class="hidden">
+<div class="seg" id="monTabs"><button class="selected" data-mode="party">Party (6 slots)</button><button data-mode="box">PC boxes (14)</button></div>
+<div id="boxSelector" class="hidden" style="max-width:260px;margin-bottom:12px"><label class="label" for="boxSelect">Select PC box</label><select id="boxSelect"></select></div>
+<div id="monRoster" class="mon-roster"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
+<div id="monForm" class="hidden">
+<div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Species (internal ID)</label><input class="input" id="species" type="number" min="1" max="1400" inputmode="numeric"></div><div><label class="label" for="held">Held item ID</label><input class="input" id="held" type="number" min="0" max="65535" inputmode="numeric"></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability slot</label><select id="monAbility"><option value="0">First ability</option><option value="1">Second ability</option></select></div></div>
+<h3 style="font-size:15px;margin:21px 0 9px">Moves, PP and PP Ups</h3><div id="monMoveRows"></div><div class="grid3" style="margin:13px 0"><div><label class="label" for="moveQuickSlot">Apply preset to slot</label><select id="moveQuickSlot"><option value="0">Move 1</option><option value="1">Move 2</option><option value="2">Move 3</option><option value="3">Move 4</option></select></div><div><label class="label" for="moveQuickName">Choose familiar move</label><select id="moveQuickName"></select></div><div style="display:flex;align-items:end"><button class="btn secondary" id="moveQuick">Fill move ID</button></div></div><div class="hint">Use FireRed/LeafGreen Gen 3 move IDs (example: Thunderbolt 85, Surf 57, Quick Attack 98). The editor does not verify whether a Pokémon can learn a move. PP is current PP; PP Ups are stored separately.</div>
+<details><summary>IVs and EVs</summary><div class="grid3" id="monStatRows"></div></details>
+<details id="monStats"><summary>Current party battle stats</summary><div class="grid3" id="partyStatRows"></div><div class="hint">The current level shown above is read-only. Changing species or EXP does not recalculate a Pokémon’s level or battle stats. Consider retaining the original species until these are reconciled in Delta.</div></details>
+<button class="btn primary" id="saveMon" style="margin-top:12px">Apply Pokémon changes</button></div>
+<div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. The party cannot be reordered, emptied or expanded in this version; doing so could interfere with the follower system.</div></div>
+<div id="monMsg" class="status"></div>
+</div><div class="callout warn" style="margin-top:15px">Experimental build: validates Gen 3 record and flash-section checksums, but has not been tested loading an edited Pokémon state in Delta. Keep your original SVS and check your edited copy in-game before overwriting anything.</div></section>
+<section class="panel"><div class="feature">05 • Pokémon cleanup</div><h2>Bad Egg scanner</h2><p>Scans for flagged Gen 3 Bad Egg records in memory. Removal is optional and only clears positively flagged records; it does not change normal eggs.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">Experimental: the same Pokémon may appear in multiple RAM copies. Keep a backup and test in Delta. Do not use this as a Pokémon storage editor.</div></section>
+<section class="panel"><div class="feature">06 • Advanced</div><h2>Hex inspection &amp; patching</h2><p>For controlled follower-logic research or other known ThunderYellow offsets. Raw decompressed file offsets, not GBA ROM addresses.</p><details><summary>Open hex editor</summary><div class="grid3"><div><label class="label" for="hexOffset">Offset (hex or decimal)</label><input id="hexOffset" class="input monospace" placeholder="0x2DE6F" value="0x2DE6F"></div><div><label class="label" for="hexBytes">Patch bytes (hex)</label><input id="hexBytes" class="input monospace" placeholder="e.g. 0F 27"></div><div style="display:flex;align-items:end;gap:6px;flex-wrap:wrap"><button id="inspectHex" class="btn secondary">Inspect</button><button id="applyHex" class="btn danger">Patch</button></div></div><div id="hexView" class="preview" style="margin-top:13px"></div><div class="hint">Manual patches modify only the specified offset; unlike the item editor, they do not synchronize copies. Always record the precise source of an offset.</div></details></section>
+<section class="panel"><div class="feature">07 • Export</div><h2>Download your edited save state</h2><div class="callout">The original upload is never changed. The editor recalculates affected FireRed flash-section checksums and writes a new gzip-compressed <b>.svs</b> snapshot.</div><div class="row" style="margin-top:15px"><button id="undo" class="btn secondary" disabled>↶ Undo last change</button><button id="export" class="btn primary" style="flex:1">⬇ Download edited .svs</button></div><div id="exportMsg" class="status"></div><details><summary>Changes made</summary><div id="history" class="log">No changes yet.</div></details></section>
+</div>
+<div class="foot">ThunderYellow SVS Lab • No upload server, account, advertisements, or external libraries.<br>Save states are tied to the exact ROM version. This editor does not repair the ROM's follower startup code.</div>
+</main>
+<script>
+'use strict';
+(()=>{
+const $=id=>document.getElementById(id),pockets=[['Items',42],['Key Items',30],['Poké Balls',16],['TMs & HMs',64],['Berries',46]], offsets=[0,168,288,352,608];
+const named={1:'Master Ball',2:'Ultra Ball',3:'Great Ball',4:'Poké Ball',13:'Potion',14:'Antidote',15:'Burn Heal',16:'Ice Heal',17:'Awakening',18:'Parlyz Heal',19:'Full Restore',20:'Max Potion',21:'Hyper Potion',22:'Super Potion',23:'Full Heal',24:'Revive',25:'Max Revive',26:'Fresh Water',27:'Soda Pop',28:'Lemonade',34:'Ether',35:'Max Ether',36:'Elixir',63:'HP Up',64:'Protein',67:'Carbos',68:'Rare Candy',70:'PP Up',73:'Zinc',74:'PP Max',75:'Exp. Share',76:'Quick Claw',77:'Soothe Bell',78:'Mental Herb',79:'Choice Band',80:'King\'s Rock',83:'Silver Powder',85:'Amulet Coin',94:'Cleanse Tag',95:'Soul Dew',96:'Deep Sea Tooth',98:'Smoke Ball',110:'Nugget',132:'Escape Rope',190:'Max Repel',195:'Item 195',200:'Leftovers',206:'Item 206'};
+let original=null,work=null,filename='',copies=[],flashSectors=[],activePocket=0,undoStack=[],log=[],eggMatches=[],loaded=false;
+const u16=(d,x)=>d[x]|(d[x+1]<<8),w16=(d,x,n)=>{d[x]=n&255;d[x+1]=(n>>8)&255},hex=n=>'0x'+n.toString(16).toUpperCase(),fmt=n=>Number(n).toLocaleString('en-US');
+const name=id=>named[id]||'Item #'+id;
+function msg(el,text,type=''){el.className='status callout '+type;el.textContent=text}
+function note(text){log.unshift(new Date().toLocaleTimeString()+' • '+text);$('history').textContent=log.join('\n')}
+function snapshot(label,patches){if(!patches.length)return false;undoStack.push({label,patches});$('undo').disabled=false;note(label+' — '+patches.length+' byte region(s)');return true}
+function patch(offset,bytes,patches){if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
+function patch16(offset,val,patches){patch(offset,Uint8Array.of(val&255,(val>>>8)&255),patches)}
+// FireRed/LeafGreen flash sections: checksums must be updated whenever flash-backed copies change.
+const sectionLengths=[0xF24,0xF80,0xF80,0xF80,0xEE8,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0x7D0];
+function checksum(d,start,size){let sum=0;for(let i=start;i<start+size;i+=4)sum=(sum+((d[i]|(d[i+1]<<8)|(d[i+2]<<16)|(d[i+3]<<24))>>>0))>>>0;return ((sum>>>16)+(sum&65535))&65535;}
+function findSectors(d){let sectors=[];for(let i=0;i<d.length-4;i++){
+ if(d[i]!==0x25||d[i+1]!==0x20||d[i+2]!==0x01||d[i+3]!==0x08)continue;
+ let base=i-0xFF8;if(base<0||base+4096>d.length)continue;
+ let id=u16(d,i-4);if(id>13)continue;
+ let size=sectionLengths[id];if(checksum(d,base,size)!==u16(d,i-2))continue;
+ sectors.push({base,id,size,checksumOffset:i-2});i+=3;
+}return sectors;}
+function refreshChecksums(patches){const touched=patches.map(p=>[p.offset,p.offset+p.old.length]);let fixed=0;
+ for(const s of flashSectors){if(!touched.some(([a,b])=>a<s.base+s.size&&b>s.base))continue;
+  let desired=checksum(work,s.base,s.size);if(desired!==u16(work,s.checksumOffset)){patch16(s.checksumOffset,desired,patches);fixed++}
+ }return fixed;
+}
+function isBinGzip(file){return file.length>=10&&file[0]===31&&file[1]===139&&file[2]===8}
+async function gzipTransform(b,mode){if(typeof DecompressionStream==='undefined'||typeof CompressionStream==='undefined')throw Error('This browser does not support built-in gzip streams. Please open in recent Safari or Chrome.');let transform=mode==='unzip'?new DecompressionStream('gzip'):new CompressionStream('gzip');let stream=new Blob([b]).stream().pipeThrough(transform);return new Uint8Array(await new Response(stream).arrayBuffer())}
+function ascii(d,start,len){return String.fromCharCode(...d.slice(start,start+len)).replace(/\x00/g,'').trim()}
+function findCopies(d){
+ let found=[],max=d.length-900;
+ // A full 42-slot Items pocket is followed by a Key Items pocket.
+ // Verify the quantity XOR key against the unused slots and casino coins against the pre-pocket field.
+ for(let s=128;s<max;s++){
+  if(d[s+1]!==0||d[s+5]!==0||d[s+9]!==0)continue;
+  let a=u16(d,s),b=u16(d,s+4),c=u16(d,s+8);
+  if(a<1||a>300||b<1||b>300||c<1||c>300)continue;
+  if(d[s+160]!==0||d[s+161]!==0||d[s+164]!==0||d[s+165]!==0)continue;
+  let key=u16(d,s+162);if(!key||key!==u16(d,s+166))continue;
+  let coins=u16(d,s-0x7c)^key;if(coins>9999)continue;
+  let ids=new Set(),empty=false,valid=true,used=0;
+  for(let j=0;j<42;j++){
+   let id=u16(d,s+j*4),q=u16(d,s+j*4+2)^key;
+   if(!id){if(q)valid=false;empty=true}else{if(empty||id>400||q<1||q>999)valid=false;used++;ids.add(id)}
+   if(!valid)break;
+  }
+  if(!valid||used<8||ids.size<7)continue;
+  let firstKeyId=u16(d,s+168);if(firstKeyId!==0&&(firstKeyId<256||firstKeyId>450))continue;
+  found.push({start:s,key,coins,used,firstKeyId});
+  s+=40;
+ }
+ return found;
+}
+function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
+function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderPokemon();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
+ $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
+ if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
+ $('applyCoins').disabled=false;$('applyPreset').disabled=false;$('customApply').disabled=false;
+ const vals=new Set(copies.map(c=>c.coins));$('coins').value=copies[0].coins;
+ $('copyInfo').innerHTML=`<div class="callout ${vals.size>1?'warn':''}">${vals.size>1?'⚠️ Desynchronized inventory copies found. Editing coins or items will update all '+copies.length+' detected copies.':'✓ Inventory copies identified. Edits are applied across all '+copies.length+' detected copies.'}<div class="small" style="margin-top:6px">${copies.map((c,i)=>'Copy '+(i+1)+' at '+hex(c.start)+': '+fmt(c.coins)+' coins, key '+hex(c.key)).join(' • ')}</div></div>`;
+}
+function renderInventory(){let p=$('pockets');p.innerHTML='';pockets.forEach(([n],i)=>{const b=document.createElement('button');b.textContent=n;b.className=i===activePocket?'selected':'';b.onclick=()=>{activePocket=i;renderInventory()};p.append(b)});
+ let tbody=$('inventory');tbody.innerHTML='';if(!copies.length){tbody.innerHTML='<tr><td colspan="4">Inventory not detected in this file</td></tr>';return}
+ let items=getItems(work,copies[0],activePocket);$('inventoryDesc').textContent=items.length+' / '+pockets[activePocket][1]+' slots';if(!items.length){tbody.innerHTML='<tr><td colspan="4">Pocket empty</td></tr>';return}
+ items.forEach(item=>{const tr=document.createElement('tr'),nm=document.createElement('td'),id=document.createElement('td'),qt=document.createElement('td'),sv=document.createElement('td'),inp=document.createElement('input'),btn=document.createElement('button');nm.textContent=name(item.id);id.textContent=item.id;id.className='smallHide muted monospace';inp.className='input qtyField';inp.type='number';inp.min='0';inp.max='999';inp.inputMode='numeric';inp.value=item.qty;btn.className='btn secondary';btn.style='min-height:34px;padding:5px 11px;font-size:12px';btn.textContent='Set';btn.onclick=()=>applyItem(item.id,activePocket,Number(inp.value));qt.append(inp);sv.append(btn);tr.append(nm,id,qt,sv);tbody.append(tr)})
+}
+function validateInt(n,lo,hi,label){if(!Number.isInteger(n)||n<lo||n>hi)throw Error(label+' must be between '+fmt(lo)+' and '+fmt(hi))}
+function applyCoins(){try{if(!copies.length)throw Error('Inventory data was not detected.');let value=Number($('coins').value);validateInt(value,0,9999,'Coins');let patches=[];for(const c of copies)patch16(c.start-0x7c,value^c.key,patches);refreshChecksums(patches);if(snapshot('Set casino coins to '+fmt(value)+' across '+copies.length+' copy/copies',patches)){sync();msg($('editMsg'),'✓ All '+copies.length+' copies now show '+fmt(value)+' coins.','good')}else msg($('editMsg'),'Coins already have this value.')}catch(e){msg($('editMsg'),e.message,'bad')}}
+function applyItem(id,pocket,qty){try{
+ validateInt(id,1,65535,'Item ID');validateInt(pocket,0,4,'Pocket');validateInt(qty,0,999,'Quantity');if(!copies.length)throw Error('Could not detect inventory copies.');let plan=[];
+ for(const c of copies){let slots=pockets[pocket][1],start=c.start+offsets[pocket],target=-1,firstEmpty=-1;
+  for(let i=0;i<slots;i++){let off=start+i*4,cur=u16(work,off);if(cur===id){target=off;break}if(cur===0&&firstEmpty<0)firstEmpty=off}
+  if(target<0&&qty>0)target=firstEmpty;
+  if(target<0&&qty>0)throw Error('Pocket is full in one detected copy. Nothing was changed.');
+  if(target<0)continue;
+  // Keep two empty slots for safe re-detection of the Items pocket after edits.
+  if(pocket===0 && qty>0 && u16(work,target)===0 && target>=start+40*4)
+   throw Error('Keep two empty Items slots for reliable copy detection. Remove another item first.');
+  plan.push({target,id,qty,key:c.key,needNew:u16(work,target)!==id,start,slots});
+ }
+ let patches=[];for(const p of plan){
+  if(p.qty===0){ // Delete the slot, shift remaining items down and blank the final slot.
+   let idx=(p.target-p.start)/4,used=[];
+   for(let j=0;j<p.slots;j++){let pos=p.start+j*4,oldId=u16(work,pos),oldQty=u16(work,pos+2)^p.key;if(oldId&&j!==idx)used.push([oldId,oldQty]);}
+   for(let j=0;j<p.slots;j++){let item=used[j]||[0,0],pos=p.start+j*4;patch16(pos,item[0],patches);patch16(pos+2,item[1]^p.key,patches)}
+  }else{if(p.needNew)patch16(p.target,id,patches);patch16(p.target+2,p.qty^p.key,patches)}
+ }
+ refreshChecksums(patches);if(snapshot('Set '+name(id)+' (#'+id+') to '+fmt(qty)+' in '+pockets[pocket][0],patches)){sync();msg($('editMsg'),'✓ Updated '+name(id)+' across '+copies.length+' detected copies.','good')}
+ else msg($('editMsg'),'No change needed.');
+ }catch(e){msg($('editMsg'),e.message,'bad')}}
+function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
+ // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
+ if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
+ if(u16(d,i+28)===0||d[i+4]===0&&d[i+5]===0&&d[i+6]===0&&d[i+7]===0)continue;
+ let validOt=d.subarray(i+20,i+27).includes(255);if(!validOt)continue;
+ found.push(i);i+=60;
+ }return found}
+function showEggs(){try{eggMatches=scanner();$('eggCount').textContent=eggMatches.length?'Found '+eggMatches.length+' flagged RAM record(s)':'No flagged records detected';$('eggList').innerHTML=eggMatches.length?`<div class="callout warn">${eggMatches.length} matching record(s) (including any duplicates). Clearing sets exactly these 80-byte boxed-Pokémon records to zero.<div class="small" style="margin-top:5px;overflow-wrap:anywhere">Offsets: ${eggMatches.slice(0,35).map(hex).join(', ')}${eggMatches.length>35?' …':''}</div></div>`:'<div class="callout">No matching Bad Egg patterns. This does not guarantee there are none in the in-game .sav or unseen flash memory.</div>';$('clearEggs').classList.toggle('hidden',eggMatches.length===0)}catch(e){msg($('eggList'),e.message,'bad')}}
+function eraseEggs(){if(!eggMatches.length)return;if(!confirm('Remove '+eggMatches.length+' flagged Bad Egg RAM records? This may not repair invalid storage data. Keep your original SVS file.'))return;let patches=[];for(let s of eggMatches)patch(s,new Uint8Array(80),patches);refreshChecksums(patches);snapshot('Cleared '+eggMatches.length+' flagged Bad Egg record(s)',patches);sync();showEggs();msg($('eggList'),'✓ Flagged records cleared from this snapshot. Test loading in Delta before deleting any backups.','good')}
+function parseOffset(s){s=s.trim();if(!/^(0x[\da-f]+|\d+)$/i.test(s))throw Error('Enter a valid hex offset such as 0x2DE6F or a decimal number.');let n=Number(s);if(!Number.isSafeInteger(n)||n<0||n>=work.length)throw Error('Offset out of range.');return n}
+function parseBytes(s){let val=s.trim().replace(/0x/ig,'').replace(/[,;:_-]/g,' ').replace(/\s+/g,'');if(!val||val.length%2||!/^[\da-f]+$/i.test(val))throw Error('Enter pairs of hex digits, e.g. 0F 27');if(val.length>512)throw Error('Patch limited to 256 bytes.');return Uint8Array.from(val.match(/../g).map(x=>parseInt(x,16)))}
+function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,p-32),end=Math.min(work.length,p+160),rows=[];start-=start%16;
+ for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
+function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
+function undo(){let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;undoStack=[];log=[];loaded=true;activePocket=0;copies=[];flashSectors=findSectors(work);monLocations=locateMons();monMode='party';monSlot=0;boxNo=0;$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');sync();hexView();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function exportSVS(){if(!loaded)return;let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes. Import this new .svs into Delta and test it.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
+$('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
+$('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyCoins;$('applyPreset').onclick=()=>{let[id,p]= $('preset').value.split('|').map(Number);applyItem(id,p,Number($('presetQty').value))};
+for(let i=0;i<pockets.length;i++){let o=document.createElement('option');o.value=i;o.textContent=pockets[i][0];$('customPocket').append(o)}$('customApply').onclick=()=>applyItem(Number($('customId').value),Number($('customPocket').value),Number($('customQty').value));
+$('scanEggs').onclick=showEggs;$('clearEggs').onclick=eraseEggs;$('inspectHex').onclick=hexView;$('applyHex').onclick=hexPatch;$('hexOffset').onchange=hexView;$('undo').onclick=undo;$('export').onclick=exportSVS;
+// ThunderYellow SVS Lab v2 — Gen 3 Pokémon record editing (standalone, no network).
+const monPerms=['GAEM','GAME','GEAM','GEMA','GMAE','GMEA','AGEM','AGME','AEGM','AEMG','AMGE','AMEG','EGAM','EGMA','EAGM','EAMG','EMGA','EMAG','MGAE','MGEA','MAGE','MAEG','MEGA','MEAG'];
+const monNames={1:'Bulbasaur',2:'Ivysaur',3:'Venusaur',4:'Charmander',5:'Charmeleon',6:'Charizard',7:'Squirtle',8:'Wartortle',9:'Blastoise',10:'Caterpie',16:'Pidgey',25:'Pikachu',26:'Raichu',37:'Vulpix',52:'Meowth',56:'Mankey',63:'Abra',74:'Geodude',79:'Slowpoke',83:'Farfetch’d',92:'Gastly',93:'Haunter',94:'Gengar',95:'Onix',100:'Voltorb',101:'Electrode',105:'Marowak',107:'Hitmonchan',133:'Eevee',134:'Vaporeon',135:'Jolteon',136:'Flareon',145:'Zapdos',150:'Mewtwo',151:'Mew',172:'Pichu',201:'Unown',202:'Wobbuffet'};
+const moveNames={0:'None',1:'Pound',5:'Mega Punch',7:'Fire Punch',8:'Ice Punch',9:'Thunder Punch',10:'Scratch',15:'Cut',19:'Fly',21:'Slam',22:'Vine Whip',28:'Sand Attack',29:'Headbutt',33:'Tackle',39:'Tail Whip',40:'Poison Sting',43:'Leer',45:'Growl',52:'Ember',53:'Flamethrower',55:'Water Gun',57:'Surf',63:'Hyper Beam',70:'Strength',85:'Thunderbolt',86:'Thunder Wave',87:'Thunder',89:'Earthquake',94:'Psychic',98:'Quick Attack',104:'Double Team',107:'Minimize',126:'Fire Blast',145:'Bubble',165:'Struggle',182:'Protect',209:'Spark',232:'Metal Claw',237:'Hidden Power',245:'ExtremeSpeed',247:'Shadow Ball',252:'Fake Out',280:'Brick Break',291:'Dive',310:'Astonish',354:'Psycho Boost'};
+const statKeys=['HP','Attack','Defense','Speed','Sp. Attack','Sp. Defense'];
+const u32=(d,i)=>(d[i]|(d[i+1]<<8)|(d[i+2]<<16)|(d[i+3]<<24))>>>0;
+const put32=(d,i,v)=>{d[i]=v&255;d[i+1]=(v>>>8)&255;d[i+2]=(v>>>16)&255;d[i+3]=(v>>>24)&255};
+function textMon(d){let s='';for(const c of d){if(c===255)break;if(c>=0xbb&&c<=0xd4)s+=String.fromCharCode(65+c-0xbb);else if(c>=0xd5&&c<=0xee)s+=String.fromCharCode(97+c-0xd5);else if(c>=0xa1&&c<=0xaa)s+=String.fromCharCode(48+c-0xa1);else if(c===0)s+=' ';else s+='·'}return s.trim()}
+function decodeMon(bytes){if(!bytes||bytes.length<80)return null;
+ let pid=u32(bytes,0),ot=u32(bytes,4);if(!pid||!ot||pid===0xffffffff||ot===0xffffffff)return null;
+ let key=pid^ot,buf=new Uint8Array(48);for(let i=0;i<12;i++)put32(buf,i*4,u32(bytes,32+i*4)^key);
+ let check=0;for(let i=0;i<48;i+=2)check=(check+u16(buf,i))&65535;
+ if(check!==u16(bytes,28))return null;
+ let order=monPerms[pid%24],group={};for(let i=0;i<4;i++)group[order[i]]=buf.slice(i*12,i*12+12);
+ const g=group.G,a=group.A,e=group.E,m=group.M,sp=u16(g,0);
+ if(!sp||sp>1400)return null;
+ return {pid,ot,sp,held:u16(g,2),exp:u32(g,4),ppups:[0,1,2,3].map(i=>(g[8]>>>(i*2))&3),friend:g[9],moves:[0,2,4,6].map(j=>u16(a,j)),pp:Array.from(a.slice(8,12)),ev:Array.from(e.slice(0,6)),iv:[0,5,10,15,20,25].map(j=>(u32(m,4)>>>j)&31),ability:(u32(m,4)>>>31)&1,flags:bytes[19],name:textMon(bytes.slice(8,18)),bytes:bytes.slice(0,80),group};
+}
+function encodeMon(mon,fields){let b=mon.bytes.slice(),g=mon.group.G.slice(),a=mon.group.A.slice(),e=mon.group.E.slice(),m=mon.group.M.slice();
+ w16(g,0,fields.sp);w16(g,2,fields.held);put32(g,4,fields.exp);
+ g[8]=fields.ppups.reduce((v,n,i)=>v|(n<<(2*i)),0);g[9]=fields.friend;
+ for(let i=0;i<4;i++){w16(a,i*2,fields.moves[i]);a[8+i]=fields.pp[i]}
+ for(let i=0;i<6;i++)e[i]=fields.ev[i];
+ let ivWord=u32(m,4)&0x40000000;for(let i=0;i<6;i++)ivWord|=(fields.iv[i]<<(5*i));ivWord|=fields.ability<<31;put32(m,4,ivWord);
+ const group={G:g,A:a,E:e,M:m},order=monPerms[mon.pid%24],plain=new Uint8Array(48);for(let i=0;i<4;i++)plain.set(group[order[i]],i*12);
+ let cs=0;for(let i=0;i<48;i+=2)cs=(cs+u16(plain,i))&0xffff;w16(b,28,cs);
+ const key=mon.pid^mon.ot;for(let i=0;i<12;i++)put32(b,32+i*4,u32(plain,i*4)^key);
+ return b;
+}
+let monLocations=null,monMode='party',monSlot=0,boxNo=0;
+function getFlashGroups(){const grouped=new Map();for(const s of flashSectors){let ctr=u32(work,s.base+0xffc);if(!grouped.has(ctr))grouped.set(ctr,new Map());grouped.get(ctr).set(s.id,s)}return [...grouped.entries()].filter(([_,m])=>m.size===14).sort((a,b)=>b[0]-a[0]).map(([count,sectors])=>({count,sectors}));}
+function getPartyFrom(group,slot){const sec=group?.sectors.get(1);return sec?work.slice(sec.base+0x38+slot*100,sec.base+0x38+(slot+1)*100):null}
+function getPCFrom(group,slot){let start=4+slot*80,out=new Uint8Array(80);for(let i=0;i<80;i++){let logical=start+i,sec=group?.sectors.get(5+Math.floor(logical/3968));if(!sec)return null;out[i]=work[sec.base+logical%3968]}return out;}
+function locateMons(){let groups=getFlashGroups(),partyRAM=[],pcRAM=[];
+ if(!groups.length)return {groups,partyRAM,pcRAM};
+ // Find active party in emulator RAM: 1-6 count directly ahead of six 100-byte records.
+ for(let i=0x20000;i<Math.min(work.length-620,0x90000);i++){
+  if(u32(work,i-4)<1||u32(work,i-4)>6)continue;
+  let first=decodeMon(work.subarray(i,i+80));if(!first)continue;
+  let score=0;for(let k=0;k<6;k++)if(decodeMon(work.subarray(i+k*100,i+k*100+80)))score++;
+  if(score>=4){partyRAM.push(i);i+=595;}
+ }
+ // Extra cached party in RAM is optional, detected by first Pokémon identity with four matching slots.
+ if(partyRAM.length){const f=partyRAM[0];for(let i=0x20000;i<0x60000;i++){
+  if(partyRAM.some(b=>Math.abs(b-i)<600))continue;
+  if(u32(work,i)!==u32(work,f)||u32(work,i+4)!==u32(work,f+4))continue;
+  let matches=0;for(let k=0;k<6;k++){let a=decodeMon(work.subarray(i+k*100,i+k*100+80)),b=decodeMon(work.subarray(f+k*100,f+k*100+80));if(a&&b&&a.pid===b.pid&&a.ot===b.ot)matches++}
+  if(matches>=4){partyRAM.push(i);i+=595;}
+ }}
+ // Find live Pokémon Storage in emulator RAM by first stored record from flash save.
+ let token=getPCFrom(groups[0],0);
+ if(token&&decodeMon(token))for(let i=0x20000;i<Math.min(work.length-33760,0x90000);i++){
+   if(u32(work,i-4)>13||u32(work,i)!==u32(token,0)||u32(work,i+4)!==u32(token,4))continue;
+   if(!work.subarray(i,i+80).every((x,j)=>x===token[j]))continue;
+   let next=getPCFrom(groups[0],1);if(next&&decodeMon(next)&&!work.subarray(i+80,i+160).every((x,j)=>x===next[j]))continue;
+   pcRAM.push(i);i+=79;
+ }
+ return {groups,partyRAM,pcRAM};
+}
+function getSlotBytes(){if(!monLocations)return null;if(monMode==='party')return monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+monSlot*100,monLocations.partyRAM[0]+monSlot*100+100):getPartyFrom(monLocations.groups[0],monSlot);
+ return monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+monSlot*80,monLocations.pcRAM[0]+monSlot*80+80):getPCFrom(monLocations.groups[0],monSlot);
+}
+function isProtected(mon){return mon&&mon.sp===25&&mon.pid===207385026&&mon.ot===1850938314}
+function applySlot(bytes,patches){if(monMode==='party'){
+  for(const b of monLocations.partyRAM){const off=b+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches);}
+  for(const g of monLocations.groups){const sec=g.sectors.get(1);if(!sec)continue;let off=sec.base+0x38+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches)}
+ }else{
+  for(const b of monLocations.pcRAM)patch(b+80*monSlot,bytes.slice(0,80),patches);
+  for(const g of monLocations.groups){const slotOffset=4+monSlot*80;let p=0;while(p<80){let x=slotOffset+p,sec=g.sectors.get(5+Math.floor(x/3968));if(!sec)throw Error('Pokémon Storage section missing');let len=Math.min(80-p,3968-x%3968);patch(sec.base+x%3968,bytes.slice(p,p+len),patches);p+=len;}}
+ }}
+function readMonNumber(id,lo,hi,label){const s=String($(id).value).trim();if(!/^[0-9]+$/.test(s))throw Error('Enter a valid '+label+'.');const n=Number(s);validateInt(n,lo,hi,label);return n}
+function monSourceLabel(m){return (m?monNames[m.sp]||'Species '+m.sp:'Empty')+(m&&m.name?' • '+m.name:'')}
+function renderPokemon(){if(!loaded)return;
+ const ok=monLocations&&monLocations.groups.length>0;
+ $('monWrap').classList.toggle('hidden',!ok);$('monUnavailable').classList.toggle('hidden',ok);
+ if(!ok){$('monUnavailable').textContent='No compatible FireRed flash save sections found. Pokémon editing is disabled.';return;}
+ const currentBox=Math.floor(monSlot/30);
+ $('monTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===monMode));
+ $('boxSelector').classList.toggle('hidden',monMode!=='box');$('boxSelect').value=boxNo;
+ const roster=$('monRoster');roster.replaceChildren();let count=monMode==='party'?6:30;
+ for(let k=0;k<count;k++){
+  const idx=monMode==='party'?k:boxNo*30+k;
+  const bytes=monMode==='party'?(monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+idx*100,monLocations.partyRAM[0]+idx*100+100):getPartyFrom(monLocations.groups[0],idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(monLocations.groups[0],idx));
+  let mon=bytes&&decodeMon(bytes),empty=bytes&&!u32(bytes,0);
+  const b=document.createElement('button');b.type='button';b.className='mon-tile'+(idx===monSlot?' chosen':'');b.innerHTML='<strong>'+(k+1)+'. '+(mon?(monNames[mon.sp]||'Species '+mon.sp):(empty?'Empty':'Unreadable'))+'</strong><small>'+(mon?(mon.name||'')+(isProtected(mon)?' · Starter ★':''):'')+'</small>';
+  b.onclick=()=>{monSlot=idx;renderPokemon()};roster.append(b);
+ }
+ let data=getSlotBytes(),mon=data&&decodeMon(data),empty=data&&u32(data,0)===0;
+ $('monForm').classList.toggle('hidden',!mon);$('monActions').classList.toggle('hidden',!mon);
+ $('monSummary').textContent=mon?(monSourceLabel(mon)+(isProtected(mon)?' — protected starter Pikachu':'')+' • PID '+hex(mon.pid)+' • OT '+hex(mon.ot)+(monMode==='party'?' • Lv '+data[84]:'')):(empty?'This slot is empty. You can copy another Pokémon into this PC slot.':'This slot cannot be safely decoded; editing disabled.');
+ $('removeMon').disabled=!mon||isProtected(mon)||monMode!=='box';$('cloneMon').disabled=!mon||isProtected(mon);$('moveMon').disabled=!mon||isProtected(mon)||monMode!=='box';
+ if(!mon)return;
+ const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('friendship',mon.friend);v('monAbility',mon.ability);
+ for(let k=0;k<4;k++){v('move'+k,mon.moves[k]);v('pp'+k,mon.pp[k]);v('up'+k,mon.ppups[k])}
+ for(let k=0;k<6;k++){v('iv'+k,mon.iv[k]);v('ev'+k,mon.ev[k]);}
+ $('species').disabled=isProtected(mon);
+ $('monStats').classList.toggle('hidden',monMode!=='party');
+ if(monMode==='party'&&data.length>=100){for(let k=0;k<7;k++)v('stat'+k,u16(data,86+k*2));}
+}
+function commitMon(){try{let data=getSlotBytes(),mon=decodeMon(data);if(!mon)throw Error('Select a readable Pokémon before editing.');
+ const f={sp:readMonNumber('species',1,1400,'Species'),held:readMonNumber('held',0,65535,'Held item'),exp:readMonNumber('experience',0,3000000,'Experience'),friend:readMonNumber('friendship',0,255,'Friendship'),ability:readMonNumber('monAbility',0,1,'Ability slot'),moves:[],pp:[],ppups:[],iv:[],ev:[]};
+ for(let k=0;k<4;k++){f.moves.push(readMonNumber('move'+k,0,65535,'Move '+(k+1)));f.pp.push(readMonNumber('pp'+k,0,99,'PP '+(k+1)));f.ppups.push(readMonNumber('up'+k,0,3,'PP Ups '+(k+1)))}
+ for(let k=0;k<6;k++){f.iv.push(readMonNumber('iv'+k,0,31,'IV '+statKeys[k]));f.ev.push(readMonNumber('ev'+k,0,255,'EV '+statKeys[k]));}
+ if(isProtected(mon)&&f.sp!==25)throw Error('The special starter Pikachu cannot change species.');
+ let next=encodeMon(mon,f);
+ if(monMode==='party'&&data.length>=100){let extended=new Uint8Array(100);extended.set(next);extended.set(data.slice(80,100),80);
+  for(let k=0;k<7;k++)w16(extended,86+k*2,readMonNumber('stat'+k,0,65535,'Party stat'));next=extended;}
+ let patches=[];applySlot(next,patches);refreshChecksums(patches);
+ if(snapshot('Edit '+monSourceLabel(mon)+' ('+(monMode==='party'?'party '+(monSlot+1):'box '+(1+Math.floor(monSlot/30))+' slot '+(1+monSlot%30))+')',patches)){
+  sync();msg($('monMsg'),'✓ Encrypted Pokémon data, checksum and detected save copies updated. Verify in Delta.','good');
+ }else msg($('monMsg'),'No changes needed.');
+ }catch(e){msg($('monMsg'),e.message,'bad')}
+}
+function copyMoveMon(move){try{if(monMode!=='box'&&move)throw Error('Moving from your active party is disabled to protect follower scripts.');
+ const data=getSlotBytes(),mon=decodeMon(data);if(!mon)throw Error('Choose a readable source Pokémon.');if(isProtected(mon))throw Error('Starter Pikachu cannot be copied or moved.');
+ const targetBox=readMonNumber('targetBox',1,14,'Target box')-1,targetSlot=readMonNumber('targetSlot',1,30,'Target slot')-1,target=targetBox*30+targetSlot;
+ if(monMode==='box'&&target===monSlot)throw Error('Choose another slot.');
+ let saveMode=monMode,saveSlot=monSlot,patches=[];
+ monMode='box';monSlot=target;let targetData=getSlotBytes();if(!targetData||u32(targetData,0)!==0){monMode=saveMode;monSlot=saveSlot;throw Error('Target slot is not empty. Choose an empty PC slot.');}
+ applySlot(data.slice(0,80),patches);
+ monMode=saveMode;monSlot=saveSlot;
+ if(move)applySlot(new Uint8Array(80),patches);
+ refreshChecksums(patches);snapshot((move?'Move ':'Copy ')+monSourceLabel(mon)+' to box '+(targetBox+1)+' slot '+(targetSlot+1),patches);
+ monMode='box';boxNo=targetBox;monSlot=target;sync();msg($('monMsg'),'✓ Pokémon '+(move?'moved':'copied')+' in all detected storage copies. Test in Delta.','good');
+ }catch(e){msg($('monMsg'),e.message,'bad')}
+}
+function deleteMon(){try{if(monMode!=='box')throw Error('Only PC-box removal is supported.');let data=getSlotBytes(),mon=decodeMon(data);if(!mon)throw Error('No readable Pokémon in this slot.');if(isProtected(mon))throw Error('Cannot delete special starter Pikachu.');
+ if(!confirm('Delete '+monSourceLabel(mon)+' from Box '+(1+boxNo)+' Slot '+(1+monSlot%30)+'? This cannot be recovered after exporting except from your backup.'))return;
+ let p=[];applySlot(new Uint8Array(80),p);refreshChecksums(p);snapshot('Delete '+monSourceLabel(mon)+' from PC',p);sync();msg($('monMsg'),'✓ PC slot cleared in detected copies. Keep an original backup.','good');
+ }catch(e){msg($('monMsg'),e.message,'bad')}
+}
+function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('option');o.value=i;o.textContent='Box '+(i+1);$('boxSelect').append(o)}
+ for(let i=0;i<4;i++){let div=document.createElement('div');div.className='mon-move-row';div.innerHTML=`<div class="small">${i+1}</div><div><label class="label" for="move${i}">Move ID</label><input class="input" id="move${i}" type="number" min="0" max="65535" inputmode="numeric"></div><div><label class="label" for="pp${i}">Current PP</label><input class="input" id="pp${i}" type="number" min="0" max="99" inputmode="numeric"></div><div><label class="label" for="up${i}">PP Ups (0–3)</label><input class="input" id="up${i}" type="number" min="0" max="3" inputmode="numeric"></div>`;$('monMoveRows').append(div)}
+ for(const [id,nm] of Object.entries(moveNames)){const o=document.createElement('option');o.value=id;o.textContent=nm+' (#'+id+')';$('moveQuickName').append(o)}
+ for(let k=0;k<6;k++)for(let [prefix,max] of [['iv',31],['ev',255]]){const div=document.createElement('div');div.innerHTML=`<label class="label" for="${prefix}${k}">${statKeys[k]} ${prefix.toUpperCase()}</label><input class="input" id="${prefix}${k}" type="number" min="0" max="${max}" inputmode="numeric">`;$('monStatRows').append(div)}
+ for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
+ $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v))$('move'+i).value=v;};
+ $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;renderPokemon()});$('boxSelect').onchange=()=>{boxNo=Number($('boxSelect').value);monSlot=boxNo*30;renderPokemon()};
+ $('saveMon').onclick=commitMon;$('cloneMon').onclick=()=>copyMoveMon(false);$('moveMon').onclick=()=>copyMoveMon(true);$('removeMon').onclick=deleteMon;
+}
+initializeMonUI();
+
+})();
+</script></body></html>
