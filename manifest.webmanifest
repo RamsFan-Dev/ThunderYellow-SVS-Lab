@@ -1,0 +1,18 @@
+{
+  "name": "ThunderYellow SVS Lab",
+  "short_name": "SVS Lab",
+  "description": "Local Delta SVS save-state Pokémon editor for ThunderYellow",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10151f",
+  "theme_color": "#10151f",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
