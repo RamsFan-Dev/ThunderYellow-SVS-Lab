@@ -40,6 +40,13 @@
 .ev-budget{margin:10px 0;padding:11px 12px;border-radius:10px;border:1px solid #4c866b;background:#132d28;color:#b6f6d2;font-weight:700;font-size:13px}
 .ev-budget.bad{border-color:#b85a60;background:#352126;color:#ffd3d7}
 @media(max-width:650px){#monStatRows .label{font-size:12px}#monStatRows{gap:8px}}
+</style><style>
+#showdownDetails textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;min-height:185px;line-height:1.45}
+.showdown-preview{border:1px solid #405570;border-radius:12px;overflow:auto;max-height:410px;margin:10px 0}
+.showdown-preview table{width:100%;border-collapse:collapse;min-width:430px;font-size:12px}
+.showdown-preview th,.showdown-preview td{padding:9px 8px;border-bottom:1px solid #34425a;text-align:left}
+.showdown-preview th{background:#23324a;position:sticky;top:0}
+.showdown-preview .risky{color:#ffd087}
 </style></head>
 <body><main class="shell">
 <header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.4</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
@@ -51,6 +58,21 @@
 <details><summary>Add any numeric item ID</summary><div class="grid3"><div><label class="label" for="customPocket">Pocket</label><select id="customPocket"></select></div><div><label class="label" for="customId">Item ID (decimal)</label><input id="customId" class="input" type="number" min="1" max="65535" inputmode="numeric" placeholder="e.g. 68"></div><div><label class="label" for="customQty">Quantity</label><input id="customQty" class="input" type="number" min="0" max="999" value="99" inputmode="numeric"></div></div><button id="customApply" class="btn" style="margin-top:12px">Apply item ID</button><div class="hint">Setting a quantity to 0 removes the item and compacts the pocket. Use the game's actual internal item ID, not the Pokédex number. Wrong IDs may be unsupported by this ROM.</div></details>
 </section>
 <section class="panel"><div class="feature">04 • Pokémon manager</div><h2>Party &amp; PC Pokémon Editor</h2><p>Edit existing Pokémon directly in your <strong>.svs</strong>: moves, current PP, PP Ups, experience, friendship, held items, IVs, EVs and battle stats. PC Pokémon may be copied, moved and deleted. The special starter Pikachu is protected from copying or deletion.</p>
+<details id="showdownDetails" style="margin:18px 0">
+<summary>📋 Paste Pokémon sets (Showdown / PKMDS format)</summary>
+<p class="hint">Paste one or several complete Pokémon sets, separated by blank lines. Preview the party or PC destination before importing. Level defaults to 100 when omitted; IVs default to 31, and EVs default to 0 unless specified.</p>
+<label class="label" for="showdownText">Pokémon sets</label>
+<textarea id="showdownText" class="input" rows="9" spellcheck="false" autocomplete="off" placeholder="Squirtle (M) @ Leftovers&#10;Ability: Torrent&#10;EVs: 255 HP / 255 Atk / 255 Def / 255 SpA / 255 SpD / 255 Spe&#10;Hardy Nature&#10;- Tackle&#10;- Tail Whip"></textarea>
+<div class="grid3" style="margin:13px 0 10px">
+ <div><label class="label" for="showdownTarget">Import destination</label><select id="showdownTarget" class="input"><option value="box">PC boxes</option><option value="party">Party</option></select></div>
+ <div id="showdownBoxPane"><label class="label" for="showdownBox">Starting PC box</label><select id="showdownBox" class="input"></select></div>
+ <div><label class="label" for="showdownSlot">Starting slot</label><select id="showdownSlot" class="input"></select></div>
+</div>
+<label class="tog" style="margin:10px 0"><input id="showdownOverwrite" type="checkbox"> Allow replacement of occupied, non-protected slots (requires confirmation)</label>
+<div class="hint">Import is blocked if it would replace our special follower Pikachu, cross the party's six-slot limit, or skip an earlier empty party slot. PC batches can continue into the next box.</div>
+<div class="row" style="margin:12px 0"><button id="showdownPreviewButton" class="btn secondary" type="button">Preview Pokémon import</button><button id="showdownImportButton" class="btn primary" type="button" disabled>💾 Import sets into SVS session</button></div>
+<div id="showdownPreview" class="status" role="status" aria-live="polite"></div>
+</details>
 <div id="monUnavailable" class="callout warn hidden"></div><div id="monWrap" class="hidden">
 <div class="seg" id="monTabs"><button class="selected" data-mode="party">Party (6 slots)</button><button data-mode="box">PC boxes (14)</button></div>
 <div id="boxSelector" class="hidden" style="max-width:260px;margin-bottom:12px"><label class="label" for="boxSelect">Select PC box</label><select id="boxSelect"></select></div>
