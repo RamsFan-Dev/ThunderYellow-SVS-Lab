@@ -321,6 +321,76 @@ function refreshMonSaveStatus(label){
 }
 function markMonDirty(){if(!loaded||$('monForm').classList.contains('hidden'))return;monDirty=true;refreshMonSaveStatus()}
 function confirmMonDiscard(){if(!monDirty)return true;if(!confirm('Unsaved Pokémon edits will be lost. Discard them and switch slots?'))return false;monDirty=false;refreshMonSaveStatus();return true;}
+
+function startExp(g,l){if(l===1)return 0;const n=l*l*l;
+ switch(g){case 'MEDIUM_FAST':return n;case 'FAST':return Math.floor(4*n/5);case 'SLOW':return Math.floor(5*n/4);
+ case 'MEDIUM_SLOW':return Math.max(0,Math.floor(6*n/5)-15*l*l+100*l-140);
+ case 'ERRATIC':return l<=50?Math.floor((100-l)*n/50):l<=68?Math.floor((150-l)*n/100):l<=98?Math.floor((1911-10*l)*n/1500):Math.floor((160-l)*n/100);
+ case 'FLUCTUATING':return l<=15?Math.floor((Math.floor((l+1)/3)+24)*n/50):l<=36?Math.floor((l+14)*n/50):Math.floor((Math.floor(l/2)+32)*n/50);
+ default:throw Error('Unknown species growth rate.')}
+}
+function newSpeciesId(){const q=$('newSpecies').value.trim().toLowerCase(),v=Object.entries(monNames).filter(([id,nm])=>nm.toLowerCase()===q||id===q);if(v.length!==1||!speciesStats[v[0][0]])throw Error('Select a valid Pokémon from the name suggestions.');return Number(v[0][0])}
+function updateSpeciesHints(){
+ const q=$('newSpecies').value.trim().toLowerCase(),out=$('newSuggestions');out.replaceChildren();if(!q)return;
+ const hits=Object.entries(monNames).filter(([id,nm])=>speciesStats[id]&&nm.toLowerCase().includes(q)).sort((a,b)=>(+!a[1].toLowerCase().startsWith(q))-(+!b[1].toLowerCase().startsWith(q))||a[1].localeCompare(b[1])).slice(0,9);
+ for(const [id,nm] of hits){const btn=document.createElement('button');btn.type='button';btn.className='chip';btn.textContent=nm;btn.onclick=()=>{$('newSpecies').value=nm;updateSpeciesHints()};out.append(btn)}
+}
+function createNewBox(sp,l){
+ const save=getFlashGroups()[0],sec=save?.sectors.get(0);if(!sec)throw Error('Trainer identity unavailable in save.');
+ const box=new Uint8Array(80),pidArray=new Uint32Array(1);crypto.getRandomValues(pidArray);
+ let pid=pidArray[0]>>>0;if(!pid||pid===0xFFFFFFFF||pid===207385026)pid=0x7ACB1023;
+ const tid=u32(work,sec.base+10);put32(box,0,pid);put32(box,4,tid);
+ const nm=(monNames[sp]||'POKEMON').toUpperCase().replace(/[^A-Z0-9 ]/g,'').slice(0,10);
+ box.fill(255,8,18);for(let i=0;i<nm.length;i++){let c=nm.charCodeAt(i);box[8+i]=c>=65&&c<=90?c-65+0xBB:c>=48&&c<=57?c-48+0xA1:0}
+ box[18]=2;box[19]=2;box.set(work.slice(sec.base,sec.base+7),20);
+ const G={G:new Uint8Array(12),A:new Uint8Array(12),E:new Uint8Array(12),M:new Uint8Array(12)};
+ G.M[2]=l;G.M[3]=0x40;
+ let learned=[];for(const [lvl,move] of levelLearnsets[sp]||[]){if(lvl>l)continue;if(!move||learned.includes(move))continue;learned.push(move);if(learned.length>4)learned.shift()}
+ if(!learned.length)learned=[33];
+ const iv=[15,15,15,15,15,15];
+ const fields={sp,held:0,exp:startExp(speciesStats[sp][6],l),friend:speciesStats[sp][7],ability:0,ev:[0,0,0,0,0,0],iv,
+ moves:Array.from({length:4},(_,i)=>learned[i]||0),pp:Array.from({length:4},(_,i)=>maxPP[learned[i]]||0),ppups:[0,0,0,0]};
+ const encoded=encodeMon({pid,ot:tid,bytes:box,group:G},fields),decoded=decodeMon(encoded);
+ if(!decoded||decoded.sp!==sp)throw Error('Created Pokémon failed checksum verification.');
+ return {encoded,fields,pid};
+}
+function createPartyStats(sp,l,pid,iv){
+ const bases=speciesStats[sp],nature=pid%25,up=Math.floor(nature/5),down=nature%5;
+ return bases.slice(0,6).map((base,i)=>{
+  let n=Math.floor((2*base+iv[i])*l/100);
+  if(i===0)return sp===292?1:n+l+10;
+  n+=5;const j=i-1;if(up!==down)n=up===j?Math.floor(n*1.1):down===j?Math.floor(n*.9):n;
+  return n;
+ });
+}
+function createPokemonInSlot(){
+ let changes=[];
+ try{
+  if(monDirty||badgeDirty)throw Error('Save pending edits before creating a Pokémon.');
+  const sp=newSpeciesId(),l=readMonNumber('newLevel',1,100,'Level'),old=getSlotBytes(),groups=getFlashGroups();
+  if(!old||u32(old,0)!==0||!groups.length)throw Error('The selected slot is not safely empty.');
+  let count=0;
+  if(monMode==='party'){
+   count=work[groups[0].sectors.get(1).base+0x34];
+   if(count>=6||monSlot!==count)throw Error('Only the next empty party slot can be filled; the maximum party size is six.');
+   if(groups.some(g=>work[g.sectors.get(1).base+0x34]!==count||u32(getPartyFrom(g,monSlot),0)!==0))throw Error('Party copies do not agree. No data changed.');
+  }else if(groups.some(g=>u32(getPCFrom(g,monSlot),0)!==0))throw Error('PC copies do not agree. No data changed.');
+  const created=createNewBox(sp,l);
+  if(monMode==='party'){
+   const party=new Uint8Array(100);party.set(created.encoded);party[84]=l;party[85]=255;
+   const stats=createPartyStats(sp,l,created.pid,created.fields.iv);
+   for(let j=0;j<7;j++)w16(party,86+2*j,j===0?stats[0]:stats[j-1]);
+   applySlot(party,changes);
+   for(const g of groups)patch(g.sectors.get(1).base+0x34,Uint8Array.of(count+1),changes);
+   for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(count+1),changes);
+  }else applySlot(created.encoded,changes);
+  refreshChecksums(changes);
+  if(!snapshot('Create '+monNames[sp]+' Lv '+l+' in '+monMode+' slot '+(monSlot+1),changes))throw Error('No edits recorded.');
+  monDirty=false;sync();msg($('monMsg'),'✓ Created '+monNames[sp]+' at level '+l+'. Export the SVS and test in Delta.','good');
+ }catch(e){for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);msg($('monMsg'),e.message,'bad')}
+}
+$('newSpecies').oninput=updateSpeciesHints;$('createMon').onclick=createPokemonInSlot;
+
 function monSourceLabel(m){return (m?monNames[m.sp]||'Species '+m.sp:'Empty')+(m&&m.name?' • '+m.name:'')}
 function renderPokemon(){if(!loaded)return;
  const ok=monLocations&&monLocations.groups.length>0;
@@ -335,10 +405,15 @@ function renderPokemon(){if(!loaded)return;
   const bytes=monMode==='party'?(monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+idx*100,monLocations.partyRAM[0]+idx*100+100):getPartyFrom(monLocations.groups[0],idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(monLocations.groups[0],idx));
   let mon=bytes&&decodeMon(bytes),empty=bytes&&!u32(bytes,0);
   const b=document.createElement('button');b.type='button';b.className='mon-tile'+(idx===monSlot?' chosen':'');b.innerHTML='<strong>'+(k+1)+'. '+(mon?(monNames[mon.sp]||'Species '+mon.sp):(empty?'Empty':'Unreadable'))+'</strong><small>'+(mon?(mon.name||'')+(isProtected(mon)?' · Starter ★':''):'')+'</small>';
-  b.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;renderPokemon()};roster.append(b);
+  b.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;$('newSpecies').value='';$('newSuggestions').replaceChildren();renderPokemon()};roster.append(b);
  }
  let data=getSlotBytes(),mon=data&&decodeMon(data),empty=data&&u32(data,0)===0;
  $('monForm').classList.toggle('hidden',!mon);$('monActions').classList.toggle('hidden',!mon);
+ $('newMonPane').classList.toggle('hidden',!empty);
+ if(empty){const ct=monMode==='party'?work[monLocations.groups[0].sectors.get(1).base+0x34]:-1;
+  $('createMon').disabled=monMode==='party'&&(ct>=6||monSlot!==ct);
+  $('newHelp').textContent=monMode==='party'&&monSlot!==ct?'Choose the next empty party slot '+(ct+1)+'; later empty slots must stay empty.':'Type a Pokémon name to view suggestions, choose a level, then create it. Newly created Pikachu is not the story starter.';
+ }
  $('monSummary').textContent=mon?(monSourceLabel(mon)+(isProtected(mon)?' — protected starter Pikachu':'')+' • PID '+hex(mon.pid)+' • OT '+hex(mon.ot)+(monMode==='party'?' • Lv '+data[84]:'')):(empty?'This slot is empty. You can copy another Pokémon into this PC slot.':'This slot cannot be safely decoded; editing disabled.');
  $('removeMon').disabled=!mon||isProtected(mon)||monMode!=='box';$('cloneMon').disabled=!mon||isProtected(mon);$('moveMon').disabled=!mon||isProtected(mon)||monMode!=='box';
  if(!mon){refreshMonSaveStatus();return;}
