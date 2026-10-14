@@ -272,6 +272,267 @@ $('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyC
 for(let i=0;i<pockets.length;i++){let o=document.createElement('option');o.value=i;o.textContent=pockets[i][0];$('customPocket').append(o)}$('customApply').onclick=()=>applyItem(Number($('customId').value),Number($('customPocket').value),Number($('customQty').value));
 $('scanEggs').onclick=showEggs;$('clearEggs').onclick=eraseEggs;$('inspectHex').onclick=hexView;$('applyHex').onclick=hexPatch;$('hexOffset').onchange=hexView;$('undo').onclick=undo;$('export').onclick=exportSVS;
 // ThunderYellow SVS Lab v2 — Gen 3 Pokémon record editing (standalone, no network).
+
+// PKMDS/Showdown-style multi-Pokémon paste importer (Gen III ThunderYellow; local and offline).
+const importNatures=['Hardy','Lonely','Brave','Adamant','Naughty','Bold','Docile','Relaxed','Impish','Lax','Timid','Hasty','Serious','Jolly','Naive','Modest','Mild','Quiet','Bashful','Rash','Calm','Gentle','Sassy','Careful','Quirky'];
+const importStatLabels={hp:0,atk:1,attack:1,def:2,defense:2,spe:3,speed:3,spa:4,spatk:4,spattack:4,specialattack:4,spd:5,spdef:5,spdefense:5,specialdefense:5};
+const importSimplify=value=>String(value).toLowerCase().normalize('NFKD').replace(/♀/g,'female').replace(/♂/g,'male').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+function importLookup(collection,label,typed){
+ const matches=Object.entries(collection).filter(([,name])=>importSimplify(name)===importSimplify(typed));
+ if(matches.length!==1)throw Error('Unknown '+label+': "'+typed+'". Check the Gen 3 spelling.');
+ return Number(matches[0][0]);
+}
+function importStats(line,label,limit,defaultVal){
+ const values=Array(6).fill(defaultVal),seen=new Set(),body=line.split(/\s*\/\s*/);
+ for(const part of body){
+  const m=/^\s*(\d+)\s+(.+?)\s*$/.exec(part);
+  if(!m)throw Error(label+' entry is invalid: '+part);
+  const index=importStatLabels[importSimplify(m[2])];
+  if(index===undefined||seen.has(index))throw Error(label+' stat is unknown or duplicated: '+m[2]);
+  const n=Number(m[1]);if(!Number.isInteger(n)||n<0||n>limit)throw Error(label+' '+m[2]+' must be 0–'+limit);
+  values[index]=n;seen.add(index);
+ }
+ return values;
+}
+function parseShowdownImport(input){
+ const blocks=String(input).replace(/\r/g,'').trim().split(/\n\s*\n/).filter(Boolean);
+ if(!blocks.length)throw Error('Paste at least one Pokémon set.');
+ if(blocks.length>30)throw Error('Import at most 30 Pokémon sets at once.');
+ const sets=[];
+ for(const [idx,block] of blocks.entries()){
+  const lines=block.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!lines.length)continue;
+  const first=/^(.+?)(?:\s+@\s+(.+))?$/.exec(lines[0]);
+  if(!first)throw Error('Set '+(idx+1)+' has an invalid header.');
+  let pokemon=first[1],gender=null,nickname=null,held=first[2]?importLookup(named,'held item',first[2]):0;
+  const g=pokemon.match(/\s+\(([MF])\)$/i);
+  if(g){gender=g[1].toUpperCase();pokemon=pokemon.slice(0,g.index).trim()}
+  const nick=pokemon.match(/^(.+?)\s+\(([^()]+)\)$/);
+  if(nick){nickname=nick[1].trim();pokemon=nick[2].trim()}
+  const sp=importLookup(monNames,'Pokémon species',pokemon);
+  if(!speciesStats[sp]||!speciesMeta[sp])throw Error('Species '+pokemon+' lacks validated Gen 3 data.');
+  let level=100,nature=0,ability=null,shiny=false,ev=Array(6).fill(0),iv=Array(6).fill(31),friend=speciesStats[sp][7],moves=[],seen=new Set();
+  for(const line of lines.slice(1)){
+   let m;
+   if((m=/^Ability\s*:\s*(.+)$/i.exec(line))){if(seen.has('ability'))throw Error('Duplicate Ability for '+pokemon);ability=m[1].trim();seen.add('ability');}
+   else if((m=/^Level\s*:\s*(\d+)$/i.exec(line))){level=Number(m[1]);if(level<1||level>100)throw Error(pokemon+' level must be 1–100');}
+   else if((m=/^Shiny\s*:\s*(Yes|No|True|False)$/i.exec(line))){shiny=/^(yes|true)$/i.test(m[1]);}
+   else if((m=/^EVs\s*:\s*(.+)$/i.exec(line))){ev=importStats(m[1],'EV',255,0);}
+   else if((m=/^IVs\s*:\s*(.+)$/i.exec(line))){iv=importStats(m[1],'IV',31,31);}
+   else if((m=/^(?:Happiness|Friendship)\s*:\s*(\d+)$/i.exec(line))){friend=Number(m[1]);if(friend>255)throw Error(pokemon+' happiness must be 0–255');}
+   else if((m=/^(.+?)\s+Nature$/i.exec(line))){const found=importNatures.findIndex(x=>importSimplify(x)===importSimplify(m[1]));if(found<0)throw Error('Unknown nature: '+m[1]);nature=found;}
+   else if((m=/^Nature\s*:\s*(.+)$/i.exec(line))){const found=importNatures.findIndex(x=>importSimplify(x)===importSimplify(m[1]));if(found<0)throw Error('Unknown nature: '+m[1]);nature=found;}
+   else if((m=/^-\s*(.+)$/i.exec(line))){const move=importLookup(moveNames,'move',m[1]);if(!move)throw Error('Choose a real move instead of None.');moves.push(move);if(moves.length>4)throw Error(pokemon+' has more than 4 moves');}
+   else if(line.startsWith('#'))continue;
+   else throw Error(pokemon+': unsupported pasted line "'+line+'". Remove it or correct the format.');
+  }
+  const meta=speciesMeta[sp],ratio=meta[0];
+  if(gender&&ratio===255)throw Error(pokemon+' is genderless and cannot be '+gender+'.');
+  if(gender==='F'&&ratio===0)throw Error(pokemon+' cannot be female.');
+  if(gender==='M'&&ratio===254) { /* Rare male possibility is valid in this dataset. */ }
+  let abilitySlot=0;
+  if(ability){
+   const match=[meta[1],meta[2]].findIndex(a=>a!=='NONE'&&importSimplify(a)===importSimplify(ability));
+   if(match<0)throw Error(pokemon+' cannot have '+ability+' in this Gen 3 ROM. Valid: '+meta.slice(1).filter(x=>x!=='NONE').map(x=>x.split('_').join(' ')).join(' / '));
+   abilitySlot=match;
+  }
+  if(meta[1]==='NONE')throw Error(pokemon+' does not have a supported ability.');
+  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,shiny,ev,iv,friend,moves});
+ }
+ return sets;
+}
+function showdownTargetSlots(sets){
+ const kind=$('showdownTarget').value,box=Number($('showdownBox').value)-1,slot=Number($('showdownSlot').value)-1;
+ if(!loaded||!monLocations?.groups?.length)throw Error('Open a compatible SVS file before previewing.');
+ if(kind!=='party'&&kind!=='box')throw Error('Choose a destination.');
+ const max=kind==='party'?6:420,start=kind==='party'?slot:box*30+slot;
+ if(!Number.isInteger(start)||start<0||start+sets.length>max)throw Error('The paste would exceed '+(kind==='party'?'the six party slots':'PC Box 14')+'. Choose an earlier starting slot or a smaller batch.');
+ const groups=getFlashGroups(),overwrite=$('showdownOverwrite').checked;
+ if(!groups.length)throw Error('No verified flash save groups found.');
+ const counts=groups.map(g=>{const sec=g.sectors.get(1);return sec?work[sec.base+0x34]:255});
+ if(kind==='party'&&(counts.some(x=>x>6||x!==counts[0])||start>counts[0]))throw Error('Party copies disagree, or the target would leave a gap. Choose an occupied slot or the next empty party slot.');
+ const dest=[];
+ for(let n=0;n<sets.length;n++){
+  const at=start+n;
+  const raws=groups.map(g=>kind==='party'?getPartyFrom(g,at):getPCFrom(g,at));
+  if(raws.some(x=>!x||x.length<(kind==='party'?100:80)))throw Error('An SVS save copy is missing this slot.');
+  let replacing=false;
+  for(const raw of raws){
+   const occupied=raw.slice(0,80).some(b=>b!==0);
+   if(!occupied)continue;
+   const old=decodeMon(raw);if(!old)throw Error('Slot '+(at+1)+' has an unreadable Pokémon. It cannot be replaced safely.');
+   if(isProtected(old))throw Error('Slot '+(at+1)+' contains our protected starter Pikachu. Choose a different destination.');
+   if(!overwrite)throw Error('Slot '+(at+1)+' is already occupied by '+monSourceLabel(old)+'. Select empty slots or enable replacement.');
+   replacing=true;
+  }
+  if(kind==='party'){
+   for(const base of monLocations.partyRAM){
+    const raw=work.slice(base+at*100,base+at*100+80);
+    const live=raw.some(b=>b!==0)?decodeMon(raw):null;
+    if(raw.some(b=>b!==0)&&!live)throw Error('Unreadable live party data in slot '+(at+1));
+    if(live&&isProtected(live))throw Error('Live slot '+(at+1)+' contains protected follower Pikachu.');
+    if(live&&!overwrite)throw Error('Live party slot '+(at+1)+' is occupied.');
+   }
+  }else{
+   for(const base of monLocations.pcRAM){
+    const raw=work.slice(base+at*80,base+at*80+80);
+    const live=raw.some(b=>b!==0)?decodeMon(raw):null;
+    if(raw.some(b=>b!==0)&&!live)throw Error('Unreadable live PC data in slot '+(at+1));
+    if(live&&isProtected(live))throw Error('Live PC slot '+(at+1)+' contains protected Pikachu.');
+    if(live&&!overwrite)throw Error('Live PC slot '+(at+1)+' is occupied.');
+   }
+  }
+  dest.push({slot:at,replacing,label:kind==='party'?'Party '+(at+1):'Box '+(Math.floor(at/30)+1)+', slot '+(at%30+1)});
+ }
+ return {kind,overwrite,dest,count:kind==='party'?counts[0]:null};
+}
+function showdownSignature(){
+ return [$('showdownText').value,$('showdownTarget').value,$('showdownBox').value,$('showdownSlot').value,$('showdownOverwrite').checked].join('\u0001');
+}
+let showdownPrepared=null;
+function invalidateShowdownPreview(){
+ showdownPrepared=null;$('showdownImportButton').disabled=true;
+ $('showdownPreview').replaceChildren();
+}
+function updateShowdownTarget(){
+ const party=$('showdownTarget').value==='party';
+ $('showdownBoxPane').classList.toggle('hidden',party);
+ const current=$('showdownSlot').value;
+ $('showdownSlot').replaceChildren();
+ for(let i=1;i<=(party?6:30);i++)$('showdownSlot').add(new Option('Slot '+i,i));
+ if(Number(current)>=1&&Number(current)<=(party?6:30))$('showdownSlot').value=current;
+ invalidateShowdownPreview();
+}
+function previewShowdown(){
+ const root=$('showdownPreview');root.replaceChildren();
+ try{
+  if(monDirty||badgeDirty)throw Error('Save pending Pokémon or badge edits before importing sets.');
+  const sets=parseShowdownImport($('showdownText').value),plan=showdownTargetSlots(sets);
+  const wrap=document.createElement('div');wrap.className='showdown-preview';
+  const table=document.createElement('table'),head=document.createElement('tr');
+  for(const v of ['Destination','Pokémon','Level / nature','Move count','Action']){const cell=document.createElement('th');cell.textContent=v;head.append(cell)}
+  const thead=document.createElement('thead');thead.append(head);table.append(thead);
+  const tbody=document.createElement('tbody');
+  sets.forEach((set,i)=>{
+   const row=document.createElement('tr');
+   const fields=[plan.dest[i].label,set.display+(set.gender?' ('+set.gender+')':'')+(set.shiny?' ✨ Shiny':''),
+    'Lv '+set.level+' • '+importNatures[set.nature],set.moves.length+' / 4',plan.dest[i].replacing?'REPLACE':'Add'];
+   for(const [j,field] of fields.entries()){const cell=document.createElement('td');cell.textContent=field;if(j===4&&plan.dest[i].replacing)cell.className='risky';row.append(cell)}
+   tbody.append(row);
+  });
+  table.append(tbody);wrap.append(table);root.append(wrap);
+  const info=document.createElement('div');info.className='callout good';
+  const replacements=plan.dest.filter(x=>x.replacing).length;
+  info.textContent='✓ '+sets.length+' Pokémon parsed and '+plan.dest.length+' slots checked. '+replacements+' slot(s) will be replaced. No SVS bytes have been changed yet.';
+  root.append(info);
+  showdownPrepared={sets,plan,signature:showdownSignature()};
+  $('showdownImportButton').disabled=false;
+ }catch(e){showdownPrepared=null;$('showdownImportButton').disabled=true;msg(root,e.message,'bad')}
+}
+function showdownPersonality(spec,ot){
+ const ratio=speciesMeta[spec.sp][0],want=spec.gender,wantShiny=spec.shiny;
+ // The 25 Gen 3 natures derive from PID % 25. Gender uses its low byte.
+ // Shiny status is the PID ^ trainer-ID word XOR value < 8.
+ const rand=new Uint32Array(1);
+ for(let i=0;i<250000;i++){
+  crypto.getRandomValues(rand);
+  const lo=rand[0]&65535;
+  const hi=wantShiny?((lo^(ot&65535)^(ot>>>16)^(rand[0]>>>24&7))&65535):(rand[0]>>>16);
+  const pid=(lo|(hi<<16))>>>0;
+  if(pid===0||pid===0xffffffff||pid===207385026||pid%25!==spec.nature)continue;
+  const isShiny=((pid&65535)^(pid>>>16)^(ot&65535)^(ot>>>16))<8;
+  if(isShiny!==wantShiny)continue;
+  if(want&&ratio!==255){
+   const female=(pid&255)<ratio;
+   if((want==='F')!==female)continue;
+  }
+  return pid;
+ }
+ throw Error('Could not create a valid personality for '+spec.display+' with that gender/nature/shiny combination.');
+}
+function showdownBoxRecord(spec){
+ const group=getFlashGroups()[0],sec=group?.sectors.get(0);
+ if(!sec)throw Error('Unable to find trainer identity in SVS.');
+ const ot=u32(work,sec.base+10),pid=showdownPersonality(spec,ot),box=new Uint8Array(80);
+ put32(box,0,pid);put32(box,4,ot);
+ const text=(spec.nickname||spec.display).toUpperCase().normalize('NFKD').replace(/[^A-Z0-9 ]/g,'').slice(0,10);
+ box.fill(255,8,18);
+ for(let i=0;i<text.length;i++){const ch=text.charCodeAt(i);box[8+i]=ch>=65&&ch<=90?ch-65+0xbb:ch>=48&&ch<=57?ch-48+0xa1:0}
+ box[18]=2;box[19]=2;box.set(work.slice(sec.base,sec.base+7),20);
+ const groupData={G:new Uint8Array(12),A:new Uint8Array(12),E:new Uint8Array(12),M:new Uint8Array(12)};
+ groupData.M[2]=spec.level;groupData.M[3]=0x20;
+ const fields={sp:spec.sp,held:spec.held,exp:startExp(speciesStats[spec.sp][6],spec.level),
+ friend:spec.friend,ability:spec.abilitySlot,moves:Array.from({length:4},(_,i)=>spec.moves[i]||0),
+ pp:Array.from({length:4},(_,i)=>spec.moves[i]?maxPP[spec.moves[i]]||0:0),
+ ppups:[0,0,0,0],iv:spec.iv,ev:spec.ev};
+ const encoded=encodeMon({pid,ot,bytes:box,group:groupData},fields),decoded=decodeMon(encoded);
+ if(!decoded||decoded.sp!==spec.sp||decoded.pid!==pid||decoded.moves.some((v,i)=>v!==fields.moves[i]))throw Error('Generated Pokémon failed encryption/checksum validation.');
+ return {encoded,pid,fields};
+}
+function showdownPartyRecord(spec,record){
+ const party=new Uint8Array(100);party.set(record.encoded);party[84]=spec.level;party[85]=255;
+ const bases=speciesStats[spec.sp],up=Math.floor(spec.nature/5),down=spec.nature%5;
+ const stats=bases.slice(0,6).map((base,i)=>{
+  let value=Math.floor((2*base+spec.iv[i]+Math.floor(spec.ev[i]/4))*spec.level/100);
+  if(i===0)return spec.sp===303?1:value+spec.level+10;
+  value+=5;
+  if(up!==down){if(up===i-1)value=Math.floor(value*1.1);else if(down===i-1)value=Math.floor(value*0.9)}
+  return value;
+ });
+ for(let i=0;i<7;i++)w16(party,86+i*2,i===0?stats[0]:stats[i-1]);
+ return party;
+}
+function writeShowdownSlot(kind,slot,bytes,patches){
+ if(kind==='party'){
+  for(const base of monLocations.partyRAM)patch(base+100*slot,bytes,patches);
+  for(const g of monLocations.groups){const sec=g.sectors.get(1);if(!sec)throw Error('Missing party save sector.');patch(sec.base+0x38+100*slot,bytes,patches)}
+ }else{
+  for(const base of monLocations.pcRAM)patch(base+80*slot,bytes.slice(0,80),patches);
+  for(const g of monLocations.groups){let p=0,start=4+slot*80;while(p<80){const at=start+p,sec=g.sectors.get(5+Math.floor(at/3968));if(!sec)throw Error('Missing PC storage sector.');const n=Math.min(80-p,3968-at%3968);patch(sec.base+at%3968,bytes.slice(p,p+n),patches);p+=n}}
+ }
+}
+function applyShowdownPaste(){
+ const root=$('showdownPreview'),patches=[];
+ try{
+  if(monDirty||badgeDirty)throw Error('Save your other pending edits first.');
+  if(!showdownPrepared||showdownPrepared.signature!==showdownSignature())throw Error('The paste or destination changed. Preview it again.');
+  const sets=showdownPrepared.sets,plan=showdownTargetSlots(sets);
+  if(plan.dest.some((x,i)=>x.slot!==showdownPrepared.plan.dest[i].slot||x.replacing!==showdownPrepared.plan.dest[i].replacing))throw Error('The destination changed; preview the import again.');
+  const replaceCount=plan.dest.filter(x=>x.replacing).length;
+  if(replaceCount&&!confirm('Replace '+replaceCount+' existing Pokémon? This cannot be undone after exporting without a backup. Our protected Pikachu will not be replaced.'))return;
+  const records=sets.map(spec=>showdownBoxRecord(spec));
+  for(let i=0;i<sets.length;i++){
+   const bytes=plan.kind==='party'?showdownPartyRecord(sets[i],records[i]):records[i].encoded;
+   writeShowdownSlot(plan.kind,plan.dest[i].slot,bytes,patches);
+  }
+  if(plan.kind==='party'){
+   const newCount=Math.max(plan.count,plan.dest.at(-1).slot+1);
+   for(const g of monLocations.groups){const sec=g.sectors.get(1);patch(sec.base+0x34,Uint8Array.of(newCount),patches)}
+   for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(newCount),patches);
+  }
+  refreshChecksums(patches);
+  if(!snapshot('Imported '+sets.length+' Pokémon set(s) into '+(plan.kind==='party'?'party':'PC boxes'),patches))throw Error('No changes could be recorded.');
+  showdownPrepared=null;$('showdownImportButton').disabled=true;sync();
+  msg(root,'✓ '+sets.length+' Pokémon imported into this SVS editing session. Export the edited .svs and test it in Delta before replacing your original.','good');
+ }catch(e){
+  for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);
+  msg(root,'Import stopped: '+e.message,'bad');showdownPrepared=null;$('showdownImportButton').disabled=true;
+ }
+}
+function initializeShowdown(){
+ for(let b=1;b<=14;b++)$('showdownBox').add(new Option('Box '+b,b));
+ updateShowdownTarget();
+ for(const id of ['showdownText','showdownTarget','showdownBox','showdownSlot','showdownOverwrite']){
+  $(id).addEventListener(id==='showdownText'?'input':'change',()=>{
+   if(id==='showdownTarget'){updateShowdownTarget();return;}
+   invalidateShowdownPreview();
+  });
+ }
+ $('showdownPreviewButton').onclick=previewShowdown;
+ $('showdownImportButton').onclick=applyShowdownPaste;
+}
+initializeShowdown();
+
 const monPerms=['GAEM','GAME','GEAM','GEMA','GMAE','GMEA','AGEM','AGME','AEGM','AEMG','AMGE','AMEG','EGAM','EGMA','EAGM','EAMG','EMGA','EMAG','MGAE','MGEA','MAGE','MAEG','MEGA','MEAG'];
 const monNames={"1":"Bulbasaur","2":"Ivysaur","3":"Venusaur","4":"Charmander","5":"Charmeleon","6":"Charizard","7":"Squirtle","8":"Wartortle","9":"Blastoise","10":"Caterpie","11":"Metapod","12":"Butterfree","13":"Weedle","14":"Kakuna","15":"Beedrill","16":"Pidgey","17":"Pidgeotto","18":"Pidgeot","19":"Rattata","20":"Raticate","21":"Spearow","22":"Fearow","23":"Ekans","24":"Arbok","25":"Pikachu","26":"Raichu","27":"Sandshrew","28":"Sandslash","29":"Nidoran ♀","30":"Nidorina","31":"Nidoqueen","32":"Nidoran ♂","33":"Nidorino","34":"Nidoking","35":"Clefairy","36":"Clefable","37":"Vulpix","38":"Ninetales","39":"Jigglypuff","40":"Wigglytuff","41":"Zubat","42":"Golbat","43":"Oddish","44":"Gloom","45":"Vileplume","46":"Paras","47":"Parasect","48":"Venonat","49":"Venomoth","50":"Diglett","51":"Dugtrio","52":"Meowth","53":"Persian","54":"Psyduck","55":"Golduck","56":"Mankey","57":"Primeape","58":"Growlithe","59":"Arcanine","60":"Poliwag","61":"Poliwhirl","62":"Poliwrath","63":"Abra","64":"Kadabra","65":"Alakazam","66":"Machop","67":"Machoke","68":"Machamp","69":"Bellsprout","70":"Weepinbell","71":"Victreebel","72":"Tentacool","73":"Tentacruel","74":"Geodude","75":"Graveler","76":"Golem","77":"Ponyta","78":"Rapidash","79":"Slowpoke","80":"Slowbro","81":"Magnemite","82":"Magneton","83":"Farfetch'd","84":"Doduo","85":"Dodrio","86":"Seel","87":"Dewgong","88":"Grimer","89":"Muk","90":"Shellder","91":"Cloyster","92":"Gastly","93":"Haunter","94":"Gengar","95":"Onix","96":"Drowzee","97":"Hypno","98":"Krabby","99":"Kingler","100":"Voltorb","101":"Electrode","102":"Exeggcute","103":"Exeggutor","104":"Cubone","105":"Marowak","106":"Hitmonlee","107":"Hitmonchan","108":"Lickitung","109":"Koffing","110":"Weezing","111":"Rhyhorn","112":"Rhydon","113":"Chansey","114":"Tangela","115":"Kangaskhan","116":"Horsea","117":"Seadra","118":"Goldeen","119":"Seaking","120":"Staryu","121":"Starmie","122":"Mr. Mime","123":"Scyther","124":"Jynx","125":"Electabuzz","126":"Magmar","127":"Pinsir","128":"Tauros","129":"Magikarp","130":"Gyarados","131":"Lapras","132":"Ditto","133":"Eevee","134":"Vaporeon","135":"Jolteon","136":"Flareon","137":"Porygon","138":"Omanyte","139":"Omastar","140":"Kabuto","141":"Kabutops","142":"Aerodactyl","143":"Snorlax","144":"Articuno","145":"Zapdos","146":"Moltres","147":"Dratini","148":"Dragonair","149":"Dragonite","150":"Mewtwo","151":"Mew","152":"Chikorita","153":"Bayleef","154":"Meganium","155":"Cyndaquil","156":"Quilava","157":"Typhlosion","158":"Totodile","159":"Croconaw","160":"Feraligatr","161":"Sentret","162":"Furret","163":"Hoothoot","164":"Noctowl","165":"Ledyba","166":"Ledian","167":"Spinarak","168":"Ariados","169":"Crobat","170":"Chinchou","171":"Lanturn","172":"Pichu","173":"Cleffa","174":"Igglybuff","175":"Togepi","176":"Togetic","177":"Natu","178":"Xatu","179":"Mareep","180":"Flaaffy","181":"Ampharos","182":"Bellossom","183":"Marill","184":"Azumarill","185":"Sudowoodo","186":"Politoed","187":"Hoppip","188":"Skiploom","189":"Jumpluff","190":"Aipom","191":"Sunkern","192":"Sunflora","193":"Yanma","194":"Wooper","195":"Quagsire","196":"Espeon","197":"Umbreon","198":"Murkrow","199":"Slowking","200":"Misdreavus","201":"Unown","202":"Wobbuffet","203":"Girafarig","204":"Pineco","205":"Forretress","206":"Dunsparce","207":"Gligar","208":"Steelix","209":"Snubbull","210":"Granbull","211":"Qwilfish","212":"Scizor","213":"Shuckle","214":"Heracross","215":"Sneasel","216":"Teddiursa","217":"Ursaring","218":"Slugma","219":"Magcargo","220":"Swinub","221":"Piloswine","222":"Corsola","223":"Remoraid","224":"Octillery","225":"Delibird","226":"Mantine","227":"Skarmory","228":"Houndour","229":"Houndoom","230":"Kingdra","231":"Phanpy","232":"Donphan","233":"Porygon2","234":"Stantler","235":"Smeargle","236":"Tyrogue","237":"Hitmontop","238":"Smoochum","239":"Elekid","240":"Magby","241":"Miltank","242":"Blissey","243":"Raikou","244":"Entei","245":"Suicune","246":"Larvitar","247":"Pupitar","248":"Tyranitar","249":"Lugia","250":"Ho-Oh","251":"Celebi","277":"Treecko","278":"Grovyle","279":"Sceptile","280":"Torchic","281":"Combusken","282":"Blaziken","283":"Mudkip","284":"Marshtomp","285":"Swampert","286":"Poochyena","287":"Mightyena","288":"Zigzagoon","289":"Linoone","290":"Wurmple","291":"Silcoon","292":"Beautifly","293":"Cascoon","294":"Dustox","295":"Lotad","296":"Lombre","297":"Ludicolo","298":"Seedot","299":"Nuzleaf","300":"Shiftry","301":"Nincada","302":"Ninjask","303":"Shedinja","304":"Taillow","305":"Swellow","306":"Shroomish","307":"Breloom","308":"Spinda","309":"Wingull","310":"Pelipper","311":"Surskit","312":"Masquerain","313":"Wailmer","314":"Wailord","315":"Skitty","316":"Delcatty","317":"Kecleon","318":"Baltoy","319":"Claydol","320":"Nosepass","321":"Torkoal","322":"Sableye","323":"Barboach","324":"Whiscash","325":"Luvdisc","326":"Corphish","327":"Crawdaunt","328":"Feebas","329":"Milotic","330":"Carvanha","331":"Sharpedo","332":"Trapinch","333":"Vibrava","334":"Flygon","335":"Makuhita","336":"Hariyama","337":"Electrike","338":"Manectric","339":"Numel","340":"Camerupt","341":"Spheal","342":"Sealeo","343":"Walrein","344":"Cacnea","345":"Cacturne","346":"Snorunt","347":"Glalie","348":"Lunatone","349":"Solrock","350":"Azurill","351":"Spoink","352":"Grumpig","353":"Plusle","354":"Minun","355":"Mawile","356":"Meditite","357":"Medicham","358":"Swablu","359":"Altaria","360":"Wynaut","361":"Duskull","362":"Dusclops","363":"Roselia","364":"Slakoth","365":"Vigoroth","366":"Slaking","367":"Gulpin","368":"Swalot","369":"Tropius","370":"Whismur","371":"Loudred","372":"Exploud","373":"Clamperl","374":"Huntail","375":"Gorebyss","376":"Absol","377":"Shuppet","378":"Banette","379":"Seviper","380":"Zangoose","381":"Relicanth","382":"Aron","383":"Lairon","384":"Aggron","385":"Castform","386":"Volbeat","387":"Illumise","388":"Lileep","389":"Cradily","390":"Anorith","391":"Armaldo","392":"Ralts","393":"Kirlia","394":"Gardevoir","395":"Bagon","396":"Shelgon","397":"Salamence","398":"Beldum","399":"Metang","400":"Metagross","401":"Regirock","402":"Regice","403":"Registeel","404":"Kyogre","405":"Groudon","406":"Rayquaza","407":"Latias","408":"Latios","409":"Jirachi","410":"Deoxys","411":"Chimecho"};
 const moveNames={"0":"(Empty move slot)","1":"Pound","2":"Karate Chop","3":"Double Slap","4":"Comet Punch","5":"Mega Punch","6":"Pay Day","7":"Fire Punch","8":"Ice Punch","9":"Thunder Punch","10":"Scratch","11":"ViceGrip","12":"Guillotine","13":"Razor Wind","14":"Swords Dance","15":"Cut","16":"Gust","17":"Wing Attack","18":"Whirlwind","19":"Fly","20":"Bind","21":"Slam","22":"Vine Whip","23":"Stomp","24":"Double Kick","25":"Mega Kick","26":"Jump Kick","27":"Rolling Kick","28":"Sand Attack","29":"Headbutt","30":"Horn Attack","31":"Fury Attack","32":"Horn Drill","33":"Tackle","34":"Body Slam","35":"Wrap","36":"Take Down","37":"Thrash","38":"Double Edge","39":"Tail Whip","40":"Poison Sting","41":"Twineedle","42":"Pin Missile","43":"Leer","44":"Bite","45":"Growl","46":"Roar","47":"Sing","48":"Supersonic","49":"Sonic Boom","50":"Disable","51":"Acid","52":"Ember","53":"Flamethrower","54":"Mist","55":"Water Gun","56":"Hydro Pump","57":"Surf","58":"Ice Beam","59":"Blizzard","60":"Psybeam","61":"Bubble Beam","62":"Aurora Beam","63":"Hyper Beam","64":"Peck","65":"Drill Peck","66":"Submission","67":"Low Kick","68":"Counter","69":"Seismic Toss","70":"Strength","71":"Absorb","72":"Mega Drain","73":"Leech Seed","74":"Growth","75":"Razor Leaf","76":"Solar Beam","77":"Poison Powder","78":"Stun Spore","79":"Sleep Powder","80":"Petal Dance","81":"String Shot","82":"Dragon Rage","83":"Fire Spin","84":"Thunder Shock","85":"Thunderbolt","86":"Thunder Wave","87":"Thunder","88":"Rock Throw","89":"Earthquake","90":"Fissure","91":"Dig","92":"Toxic","93":"Confusion","94":"Psychic","95":"Hypnosis","96":"Meditate","97":"Agility","98":"Quick Attack","99":"Rage","100":"Teleport","101":"Night Shade","102":"Mimic","103":"Screech","104":"Double Team","105":"Recover","106":"Harden","107":"Minimize","108":"Smokescreen","109":"Confuse Ray","110":"Withdraw","111":"Defense Curl","112":"Barrier","113":"Light Screen","114":"Haze","115":"Reflect","116":"Focus Energy","117":"Bide","118":"Metronome","119":"Mirror Move","120":"Self Destruct","121":"Egg Bomb","122":"Lick","123":"Smog","124":"Sludge","125":"Bone Club","126":"Fire Blast","127":"Waterfall","128":"Clamp","129":"Swift","130":"Skull Bash","131":"Spike Cannon","132":"Constrict","133":"Amnesia","134":"Kinesis","135":"Soft-Boiled","136":"Hi Jump Kick","137":"Glare","138":"Dream Eater","139":"Poison Gas","140":"Barrage","141":"Leech Life","142":"Lovely Kiss","143":"Sky Attack","144":"Transform","145":"Bubble","146":"Dizzy Punch","147":"Spore","148":"Flash","149":"Psywave","150":"Splash","151":"Acid Armor","152":"Crabhammer","153":"Explosion","154":"Fury Swipes","155":"Bonemerang","156":"Rest","157":"Rock Slide","158":"Hyper Fang","159":"Sharpen","160":"Conversion","161":"Tri Attack","162":"Super Fang","163":"Slash","164":"Substitute","165":"Struggle","166":"Sketch","167":"Triple Kick","168":"Thief","169":"Spider Web","170":"Mind Reader","171":"Nightmare","172":"Flame Wheel","173":"Snore","174":"Curse","175":"Flail","176":"Conversion 2","177":"Aeroblast","178":"Cotton Spore","179":"Reversal","180":"Spite","181":"Powder Snow","182":"Protect","183":"Mach Punch","184":"Scary Face","185":"Faint Attack","186":"Sweet Kiss","187":"Belly Drum","188":"Sludge Bomb","189":"Mud Slap","190":"Octazooka","191":"Spikes","192":"Zap Cannon","193":"Foresight","194":"Destiny Bond","195":"Perish Song","196":"Icy Wind","197":"Detect","198":"Bone Rush","199":"Lock On","200":"Outrage","201":"Sandstorm","202":"Giga Drain","203":"Endure","204":"Charm","205":"Rollout","206":"False Swipe","207":"Swagger","208":"Milk Drink","209":"Spark","210":"Fury Cutter","211":"Steel Wing","212":"Mean Look","213":"Attract","214":"Sleep Talk","215":"Heal Bell","216":"Return","217":"Present","218":"Frustration","219":"Safeguard","220":"Pain Split","221":"Sacred Fire","222":"Magnitude","223":"Dynamic Punch","224":"Megahorn","225":"Dragon Breath","226":"Baton Pass","227":"Encore","228":"Pursuit","229":"Rapid Spin","230":"Sweet Scent","231":"Iron Tail","232":"Metal Claw","233":"Vital Throw","234":"Morning Sun","235":"Synthesis","236":"Moonlight","237":"Hidden Power","238":"Cross Chop","239":"Twister","240":"Rain Dance","241":"Sunny Day","242":"Crunch","243":"Mirror Coat","244":"Psych Up","245":"Extreme Speed","246":"Ancient Power","247":"Shadow Ball","248":"Future Sight","249":"Rock Smash","250":"Whirlpool","251":"Beat Up","252":"Fake Out","253":"Uproar","254":"Stockpile","255":"Spit Up","256":"Swallow","257":"Heat Wave","258":"Hail","259":"Torment","260":"Flatter","261":"Will-O-Wisp","262":"Memento","263":"Facade","264":"Focus Punch","265":"Smelling Salt","266":"Follow Me","267":"Nature Power","268":"Charge","269":"Taunt","270":"Helping Hand","271":"Trick","272":"Role Play","273":"Wish","274":"Assist","275":"Ingrain","276":"Superpower","277":"Magic Coat","278":"Recycle","279":"Revenge","280":"Brick Break","281":"Yawn","282":"Knock Off","283":"Endeavor","284":"Eruption","285":"Skill Swap","286":"Imprison","287":"Refresh","288":"Grudge","289":"Snatch","290":"Secret Power","291":"Dive","292":"Arm Thrust","293":"Camouflage","294":"Tail Glow","295":"Luster Purge","296":"Mist Ball","297":"Feather Dance","298":"Teeter Dance","299":"Blaze Kick","300":"Mud Sport","301":"Ice Ball","302":"Needle Arm","303":"Slack Off","304":"Hyper Voice","305":"Poison Fang","306":"Crush Claw","307":"Blast Burn","308":"Hydro Cannon","309":"Meteor Mash","310":"Astonish","311":"Weather Ball","312":"Aromatherapy","313":"Fake Tears","314":"Air Cutter","315":"Overheat","316":"Odor Sleuth","317":"Rock Tomb","318":"Silver Wind","319":"Metal Sound","320":"Grass Whistle","321":"Tickle","322":"Cosmic Power","323":"Water Spout","324":"Signal Beam","325":"Shadow Punch","326":"Extrasensory","327":"Sky Uppercut","328":"Sand Tomb","329":"Sheer Cold","330":"Muddy Water","331":"Bullet Seed","332":"Aerial Ace","333":"Icicle Spear","334":"Iron Defense","335":"Block","336":"Howl","337":"Dragon Claw","338":"Frenzy Plant","339":"Bulk Up","340":"Bounce","341":"Mud Shot","342":"Poison Tail","343":"Covet","344":"Volt Tackle","345":"Magical Leaf","346":"Water Sport","347":"Calm Mind","348":"Leaf Blade","349":"Dragon Dance","350":"Rock Blast","351":"Shock Wave","352":"Water Pulse","353":"Doom Desire","354":"Psycho Boost"};
