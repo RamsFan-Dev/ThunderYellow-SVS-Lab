@@ -1092,29 +1092,35 @@ function updateShowdownTarget(){
  if(Number(current)>=1&&Number(current)<=(party?6:30))$('showdownSlot').value=current;
  invalidateShowdownPreview();
 }
-function previewShowdown(){
+
+function previewShowdown(starterOnly=false){
  const root=$('showdownPreview');root.replaceChildren();
  try{
-  if(monDirty||badgeDirty)throw Error('Save pending Pokémon or badge edits before importing sets.');
-  const sets=parseShowdownImport($('showdownText').value),plan=showdownTargetSlots(sets);
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save pending Pokémon, badge or trainer-name edits before importing sets.');
+  const parsed=parseShowdownImport($('showdownText').value),sets=starterOnly?parsed.filter(s=>s.sp===25):parsed;
+  if(starterOnly&&sets.length!==1)throw Error('Paste exactly one Pikachu set (other species may also be present) to update the original starter.');
+  const plan=showdownTargetSlots(sets,starterOnly);
   const wrap=document.createElement('div');wrap.className='showdown-preview';
   const table=document.createElement('table'),head=document.createElement('tr');
-  for(const v of ['Destination','Pokémon','Level / nature','Move count','Action']){const cell=document.createElement('th');cell.textContent=v;head.append(cell)}
+  for(const v of ['Destination','Pokémon','Level / nature','Moves','Action']){const cell=document.createElement('th');cell.textContent=v;head.append(cell)}
   const thead=document.createElement('thead');thead.append(head);table.append(thead);
   const tbody=document.createElement('tbody');
   sets.forEach((set,i)=>{
    const row=document.createElement('tr');
-   const fields=[plan.dest[i].label,set.display+(set.gender?' ('+set.gender+')':'')+(set.shiny?' ✨ Shiny':''),
-    'Lv '+set.level+' • '+importNatures[set.nature],set.moves.length+' / 4',plan.dest[i].replacing?'REPLACE':'Add'];
+   const fields=[plan.dest[i].label,set.display+(set.gender?' ('+set.gender+')':'')+(set.shiny?' ✨ Requested Shiny':''),
+    plan.mode==='moves'?'Existing level / nature retained':'Lv '+set.level+' • '+importNatures[set.nature],
+    set.moves.length+' / 4',
+    plan.mode==='moves'?'MOVES + ABILITY':plan.dest[i].replacing?'REPLACE':'Add'];
    for(const [j,field] of fields.entries()){const cell=document.createElement('td');cell.textContent=field;if(j===4&&plan.dest[i].replacing)cell.className='risky';row.append(cell)}
    tbody.append(row);
   });
   table.append(tbody);wrap.append(table);root.append(wrap);
   const info=document.createElement('div');info.className='callout good';
-  const replacements=plan.dest.filter(x=>x.replacing).length;
-  info.textContent='✓ '+sets.length+' Pokémon parsed and '+plan.dest.length+' slots checked. '+replacements+' slot(s) will be replaced. No SVS bytes have been changed yet.';
+  info.textContent=plan.mode==='moves'?
+    '✓ '+sets.length+' existing Pokémon matched. This only changes pasted moves, PP/PP Ups and ability (if given). Shiny, held item, EVs, IVs, nature, level, PID, OT, and follower identity are unchanged. No bytes changed yet.':
+    '✓ '+sets.length+' Pokémon parsed and '+plan.dest.length+' slots checked. '+plan.dest.filter(x=>x.replacing).length+' slot(s) will be replaced. No SVS bytes changed yet.';
   root.append(info);
-  showdownPrepared={sets,plan,signature:showdownSignature()};
+  showdownPrepared={sets,plan,starterOnly,signature:showdownSignature()};
   $('showdownImportButton').disabled=false;
  }catch(e){showdownPrepared=null;$('showdownImportButton').disabled=true;msg(root,e.message,'bad')}
 }
@@ -1180,29 +1186,35 @@ function writeShowdownSlot(kind,slot,bytes,patches){
   for(const g of monLocations.groups){let p=0,start=4+slot*80;while(p<80){const at=start+p,sec=g.sectors.get(5+Math.floor(at/3968));if(!sec)throw Error('Missing PC storage sector.');const n=Math.min(80-p,3968-at%3968);patch(sec.base+at%3968,bytes.slice(p,p+n),patches);p+=n}}
  }
 }
+
 function applyShowdownPaste(){
  const root=$('showdownPreview'),patches=[];
  try{
-  if(monDirty||badgeDirty)throw Error('Save your other pending edits first.');
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save your other pending edits first.');
   if(!showdownPrepared||showdownPrepared.signature!==showdownSignature())throw Error('The paste or destination changed. Preview it again.');
-  const sets=showdownPrepared.sets,plan=showdownTargetSlots(sets);
-  if(plan.dest.some((x,i)=>x.slot!==showdownPrepared.plan.dest[i].slot||x.replacing!==showdownPrepared.plan.dest[i].replacing))throw Error('The destination changed; preview the import again.');
-  const replaceCount=plan.dest.filter(x=>x.replacing).length;
-  if(replaceCount&&!confirm('Replace '+replaceCount+' existing Pokémon? This cannot be undone after exporting without a backup. Our protected Pikachu will not be replaced.'))return;
-  const records=sets.map(spec=>showdownBoxRecord(spec));
-  for(let i=0;i<sets.length;i++){
-   const bytes=plan.kind==='party'?showdownPartyRecord(sets[i],records[i]):records[i].encoded;
-   writeShowdownSlot(plan.kind,plan.dest[i].slot,bytes,patches);
-  }
-  if(plan.kind==='party'){
-   const newCount=Math.max(plan.count,plan.dest.at(-1).slot+1);
-   for(const g of monLocations.groups){const sec=g.sectors.get(1);patch(sec.base+0x34,Uint8Array.of(newCount),patches)}
-   for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(newCount),patches);
+  const {sets,starterOnly}=showdownPrepared,plan=showdownTargetSlots(sets,starterOnly);
+  if(plan.mode!==showdownPrepared.plan.mode||plan.dest.some((x,i)=>x.slot!==showdownPrepared.plan.dest[i].slot||x.replacing!==showdownPrepared.plan.dest[i].replacing))throw Error('The destination changed; preview the import again.');
+  if(plan.mode==='moves'){
+   const records=sets.map((spec,i)=>showdownMoveRecord(spec,plan.kind,plan.dest[i].slot));
+   for(let i=0;i<records.length;i++)writeShowdownSlot(plan.kind,plan.dest[i].slot,records[i],patches);
+  }else{
+   const replaceCount=plan.dest.filter(x=>x.replacing).length;
+   if(replaceCount&&!confirm('Replace '+replaceCount+' existing Pokémon? This cannot be undone after exporting without a backup. Our protected Pikachu will not be replaced.'))return;
+   const records=sets.map(spec=>showdownBoxRecord(spec));
+   for(let i=0;i<sets.length;i++){
+    const bytes=plan.kind==='party'?showdownPartyRecord(sets[i],records[i]):records[i].encoded;
+    writeShowdownSlot(plan.kind,plan.dest[i].slot,bytes,patches);
+   }
+   if(plan.kind==='party'){
+    const newCount=Math.max(plan.count,plan.dest.at(-1).slot+1);
+    for(const g of monLocations.groups){const sec=g.sectors.get(1);patch(sec.base+0x34,Uint8Array.of(newCount),patches)}
+    for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(newCount),patches);
+   }
   }
   refreshChecksums(patches);
-  if(!snapshot('Imported '+sets.length+' Pokémon set(s) into '+(plan.kind==='party'?'party':'PC boxes'),patches))throw Error('No changes could be recorded.');
+  if(!snapshot((plan.mode==='moves'?'Moves/ability updated for ':'Imported ')+sets.length+' Pokémon set(s)',patches))throw Error('No changes could be recorded.');
   showdownPrepared=null;$('showdownImportButton').disabled=true;sync();
-  msg(root,'✓ '+sets.length+' Pokémon imported into this SVS editing session. Export the edited .svs and test it in Delta before replacing your original.','good');
+  msg(root,'✓ '+sets.length+' Pokémon '+(plan.mode==='moves'?'updated without replacing their identities':'imported')+' in the SVS session. Export and test in Delta before replacing the original.','good');
  }catch(e){
   for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);
   msg(root,'Import stopped: '+e.message,'bad');showdownPrepared=null;$('showdownImportButton').disabled=true;
@@ -1423,17 +1435,27 @@ $('partySavePlan').onclick=savePartyPlan;
 $('partyLoadPlan').onclick=loadPartyPlan;
 $('partyDeletePlan').onclick=deletePartyPlan;
 
+
 function initializeShowdown(){
  for(let b=1;b<=14;b++)$('showdownBox').add(new Option('Box '+b,b));
  updateShowdownTarget();
- for(const id of ['showdownText','showdownTarget','showdownBox','showdownSlot','showdownOverwrite']){
+ const modeUI=()=>{const moves=$('showdownImportMode').value==='moves';$('showdownOverwriteLabel').classList.toggle('hidden',moves);$('showdownMoveHelp').classList.toggle('hidden',!moves);invalidateShowdownPreview();};
+ for(const id of ['showdownText','showdownImportMode','showdownTarget','showdownBox','showdownSlot','showdownOverwrite']){
   $(id).addEventListener(id==='showdownText'?'input':'change',()=>{
    if(id==='showdownTarget'){updateShowdownTarget();return;}
+   if(id==='showdownImportMode'){modeUI();return;}
    invalidateShowdownPreview();
   });
  }
- $('showdownPreviewButton').onclick=previewShowdown;
+ $('showdownPreviewButton').onclick=()=>previewShowdown(false);
+ $('showdownStarterButton').onclick=()=>{
+  try{
+   if(!snapshotSafe)throw Error('Open a matching verified SVS before editing your starter.');
+   $('showdownImportMode').value='moves';$('showdownTarget').value='party';updateShowdownTarget();modeUI();previewShowdown(true);
+  }catch(e){msg($('showdownPreview'),e.message,'bad');}
+ };
  $('showdownImportButton').onclick=applyShowdownPaste;
+ modeUI();
 }
 initializeShowdown();
 
