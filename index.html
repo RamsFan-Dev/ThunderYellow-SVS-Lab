@@ -138,14 +138,18 @@
 <p class="hint">Paste one or several complete Pokémon sets, separated by blank lines. Preview the party or PC destination before importing. Level defaults to 100 when omitted; IVs default to 31, and EVs default to 0 unless specified.</p>
 <label class="label" for="showdownText">Pokémon sets</label>
 <textarea id="showdownText" class="input" rows="9" spellcheck="false" autocomplete="off" placeholder="Squirtle (M) @ Leftovers&#10;Ability: Torrent&#10;EVs: 255 HP / 255 Atk / 255 Def / 255 SpA / 255 SpD / 255 Spe&#10;Hardy Nature&#10;- Tackle&#10;- Tail Whip"></textarea>
+<div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option></select></div>
 <div class="grid3" style="margin:13px 0 10px">
  <div><label class="label" for="showdownTarget">Import destination</label><select id="showdownTarget" class="input"><option value="box">PC boxes</option><option value="party">Party</option></select></div>
  <div id="showdownBoxPane"><label class="label" for="showdownBox">Starting PC box</label><select id="showdownBox" class="input"></select></div>
  <div><label class="label" for="showdownSlot">Starting slot</label><select id="showdownSlot" class="input"></select></div>
 </div>
-<label class="tog" style="margin:10px 0"><input id="showdownOverwrite" type="checkbox"> Allow replacement of occupied, non-protected slots (requires confirmation)</label>
+<div id="showdownMoveHelp" class="hint hidden" style="margin:8px 0">Moves + Ability Only updates the Pokémon already in the selected slots. Their species must match the pasted sets. It preserves PID, OT, level, EXP, nature, shiny status, held item, IVs, EVs, happiness and follower identity. If Ability is omitted, it stays unchanged. New moves receive their default PP.</div>
+<label class="tog" style="margin:10px 0" id="showdownOverwriteLabel"><input id="showdownOverwrite" type="checkbox"> Allow replacement of occupied, non-protected slots (requires confirmation)</label>
 <div class="hint">Import is blocked if it would replace our special follower Pikachu, cross the party's six-slot limit, or skip an earlier empty party slot. PC batches can continue into the next box.</div>
-<div class="row" style="margin:12px 0"><button id="showdownPreviewButton" class="btn secondary" type="button">Preview Pokémon import</button><button id="showdownImportButton" class="btn primary" type="button" disabled>💾 Import sets into SVS session</button></div>
+<div class="row" style="margin:12px 0"><button id="showdownStarterButton" class="btn secondary" type="button">⚡ Starter Pikachu — Preview Moves + Ability Only</button></div>
+<div class="hint">Starter shortcut finds your original follower Pikachu even when not in slot 1. Paste multiple Pokémon sets, but only Pikachu’s moves and listed ability will be imported. “Shiny: Yes” and every other set property will be ignored by this shortcut.</div>
+<div class="row" style="margin:12px 0"><button id="showdownPreviewButton" class="btn secondary" type="button">Preview Pokémon import</button><button id="showdownImportButton" class="btn primary" type="button" disabled>💾 Apply preview to SVS session</button></div>
 <div id="showdownPreview" class="status" role="status" aria-live="polite"></div>
 </details>
 <details id="partySwitcher"><summary>⚡ Party Builder &amp; Switcher</summary>
@@ -971,11 +975,62 @@ function parseShowdownImport(input){
    abilitySlot=match;
   }
   if(meta[1]==='NONE')throw Error(pokemon+' does not have a supported ability.');
-  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,shiny,ev,iv,friend,moves});
+  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,abilityProvided:seen.has('ability'),shiny,ev,iv,friend,moves});
  }
  return sets;
 }
-function showdownTargetSlots(sets){
+
+function showdownMoveTargets(sets,starterOnly=false){
+ const kind=starterOnly?'party':$('showdownTarget').value,groups=getFlashGroups();
+ if(!loaded||!snapshotSafe||!monLocations?.groups?.length||!groups.length)throw Error('Open a matching verified SVS before editing existing Pokémon.');
+ let start=kind==='party'?Number($('showdownSlot').value)-1:(Number($('showdownBox').value)-1)*30+Number($('showdownSlot').value)-1;
+ if(starterOnly){
+  if(sets.length!==1||sets[0].sp!==25)throw Error('The starter shortcut needs one Pikachu set.');
+  const sec=groups[0].sectors.get(1),count=sec?work[sec.base+0x34]:0,found=[];
+  for(let k=0;k<Math.min(count,6);k++){const mon=decodeMon(getPartyFrom(groups[0],k));if(mon&&isProtected(mon))found.push(k);}
+  if(found.length!==1)throw Error('Exactly one original starter Pikachu must be present in the party.');
+  start=found[0];
+ }
+ if(kind!=='party'&&kind!=='box')throw Error('Choose a valid destination.');
+ const max=kind==='party'?6:420;
+ if(!Number.isInteger(start)||start<0||start+sets.length>max)throw Error('The selected slots exceed the destination.');
+ const dest=[];
+ for(let i=0;i<sets.length;i++){
+  const slot=start+i,raws=groups.map(g=>kind==='party'?getPartyFrom(g,slot):getPCFrom(g,slot));
+  if(raws.some(raw=>!raw))throw Error('Missing save copy for slot '+(slot+1));
+  const mons=raws.map(raw=>decodeMon(raw));
+  if(mons.some(mon=>!mon))throw Error('Slot '+(slot+1)+' has no valid Pokémon to update. Use complete import.');
+  const mon=mons[0];
+  if(mons.some(m=>m.pid!==mon.pid||m.ot!==mon.ot||m.sp!==mon.sp))throw Error('Save copies disagree about slot '+(slot+1)+'. No edits made.');
+  if(mon.sp!==sets[i].sp)throw Error('Slot '+(slot+1)+' is '+(monNames[mon.sp]||mon.sp)+' but pasted Pokémon is '+sets[i].display+'. Species must match.');
+  if(starterOnly&&!isProtected(mon))throw Error('Target is not the protected starter Pikachu.');
+  const mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM,sz=kind==='party'?100:80;
+  for(const base of mirrors){
+   const live=decodeMon(work.slice(base+sz*slot,base+sz*slot+80));
+   if(!live||live.pid!==mon.pid||live.ot!==mon.ot||live.sp!==mon.sp)throw Error('Live RAM differs from saved Pokémon in slot '+(slot+1)+'. No edits made.');
+  }
+  if(!sets[i].moves.length&&!sets[i].abilityProvided)throw Error(sets[i].display+' has no moves or Ability line to import.');
+  dest.push({slot,replacing:false,label:kind==='party'?'Party '+(slot+1):'Box '+(Math.floor(slot/30)+1)+', slot '+(slot%30+1)});
+ }
+ return {kind,mode:'moves',starterOnly,dest};
+}
+function showdownMoveRecord(spec,kind,slot){
+ const raw=kind==='party'?getPartyFrom(monLocations.groups[0],slot):getPCFrom(monLocations.groups[0],slot),mon=decodeMon(raw);
+ if(!mon||mon.sp!==spec.sp)throw Error('Target Pokémon no longer matches the preview.');
+ const moves=spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]||0):mon.moves.slice();
+ const pp=spec.moves.length?moves.map(id=>id?(maxPP[id]||0):0):mon.pp.slice();
+ const ups=spec.moves.length?[0,0,0,0]:mon.ppups.slice();
+ const fields={sp:mon.sp,held:mon.held,exp:mon.exp,friend:mon.friend,ability:spec.abilityProvided?spec.abilitySlot:mon.ability,moves,pp,ppups:ups,iv:mon.iv.slice(),ev:mon.ev.slice()};
+ const encoded=encodeMon(mon,fields),checked=decodeMon(encoded);
+ if(!checked||checked.pid!==mon.pid||checked.ot!==mon.ot||checked.sp!==mon.sp||checked.held!==mon.held||checked.exp!==mon.exp||checked.friend!==mon.friend||shinyStatus(checked.pid,checked.ot)!==shinyStatus(mon.pid,mon.ot))throw Error('Identity-preservation verification failed.');
+ for(const key of ['moves','pp','ppups','iv','ev'])if(JSON.stringify(checked[key])!==JSON.stringify(fields[key]))throw Error('Moves-only verification failed for '+key+'.');
+ if(checked.ability!==fields.ability)throw Error('Moves-only ability verification failed.');
+ if(kind==='party'){const extended=raw.slice();extended.set(encoded,0);return extended;}
+ return encoded;
+}
+
+function showdownTargetSlots(sets,starterOnly=false){
+ if(starterOnly||$('showdownImportMode').value==='moves')return showdownMoveTargets(sets,starterOnly);
  const kind=$('showdownTarget').value,box=Number($('showdownBox').value)-1,slot=Number($('showdownSlot').value)-1;
  if(!loaded||!monLocations?.groups?.length)throw Error('Open a compatible SVS file before previewing.');
  if(kind!=='party'&&kind!=='box')throw Error('Choose a destination.');
@@ -1021,7 +1076,7 @@ function showdownTargetSlots(sets){
  return {kind,overwrite,dest,count:kind==='party'?counts[0]:null};
 }
 function showdownSignature(){
- return [$('showdownText').value,$('showdownTarget').value,$('showdownBox').value,$('showdownSlot').value,$('showdownOverwrite').checked].join('\u0001');
+ return [$('showdownText').value,$('showdownImportMode').value,$('showdownTarget').value,$('showdownBox').value,$('showdownSlot').value,$('showdownOverwrite').checked].join('\u0001');
 }
 let showdownPrepared=null;
 function invalidateShowdownPreview(){
