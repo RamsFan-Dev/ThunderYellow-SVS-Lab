@@ -273,7 +273,185 @@ function findCopies(d){
  return copies;
 }
 function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
-function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+
+// FRLG SaveBlock2 +0x000 = playerName[8]; SaveBlock1 +0x3A4C = rivalName[8].
+// SaveBlock1 is divided into logical flash sectors 1-4 at 0xF80 intervals.
+// Keep the OT ID and personality unchanged while renaming player-owned Pokémon.
+const gen3NameMap={};
+for(let i=0;i<26;i++){gen3NameMap[String.fromCharCode(65+i)]=0xBB+i;gen3NameMap[String.fromCharCode(97+i)]=0xD5+i;}
+for(let i=0;i<10;i++)gen3NameMap[String(i)]=0xA1+i;
+Object.assign(gen3NameMap,{' ':0x00,'!':0xAB,'?':0xAC,'.':0xAD,'-':0xAE,',':0xB8,"'":0xB4,':':0xF0,'/':0xBA,'&':0x2D,'+':0x2E,'é':0x1B,'É':0x06,'ñ':0x29,'Ñ':0x14,'ä':0xF4,'ö':0xF5,'ü':0xF6,'Ä':0xF1,'Ö':0xF2,'Ü':0xF3});
+const gen3Reverse={};for(const [character,code] of Object.entries(gen3NameMap))gen3Reverse[code]=character;
+let nameDirty=false,trainerOldPlayer='',trainerOldRival='';
+function gameNameFromBytes(bytes){
+ let name='';
+ for(let i=0;i<Math.min(bytes.length,8);i++){
+  const b=bytes[i];if(b===0xFF)break;
+  name+=(gen3Reverse[b]??'�');
+ }
+ return name;
+}
+function gameNameBytes(value,existing){
+ const input=String(value).trim();
+ if(!input||Array.from(input).length>7)throw Error('Names must be 1–7 in-game characters.');
+ const result=existing?Uint8Array.from(existing):new Uint8Array(8).fill(0xFF);
+ for(let i=0;i<input.length;i++){
+  const code=gen3NameMap[input[i]];
+  if(code===undefined)throw Error('Unsupported in-game name character: '+input[i]+'. Use letters, numbers or common punctuation.');
+  result[i]=code;
+ }
+ result[input.length]=0xFF;
+ return result;
+}
+function nameCompare(bytes,other){
+ const a=gameNameFromBytes(bytes),b=gameNameFromBytes(other);
+ return a===b;
+}
+function originalTrainerNameMatches(bytes,oldName){
+ // BoxPokemon OT name occupies 7 bytes at +20 and is not encrypted.
+ // Check both name string and surrounding stored identity before patching.
+ return bytes&&bytes.length>=80&&nameCompare(bytes.subarray(20,27),oldName);
+}
+function trainerSaveGroups(){
+ const groups=getFlashGroups();
+ if(!groups.length)throw Error('No verified complete FireRed save groups. Names cannot be edited.');
+ const data=[];
+ for(const group of groups){
+  const s0=group.sectors.get(0),s4=group.sectors.get(4);
+  if(!s0||!s4)throw Error('This SVS is missing a trainer or rival-name save sector.');
+  data.push({group,player:s0.base,rival:s4.base+0xBCC,ot:u32(work,s0.base+10)});
+ }
+ if(data.some(d=>d.ot!==data[0].ot))throw Error('Trainer ID differs between save copies. Name editing is blocked.');
+ if(data.some(d=>!nameCompare(work.subarray(d.player,d.player+8),work.subarray(data[0].player,data[0].player+8))))throw Error('Player names differ between verified save copies. Save and reload normally before renaming.');
+ if(data.some(d=>!nameCompare(work.subarray(d.rival,d.rival+8),work.subarray(data[0].rival,data[0].rival+8))))throw Error('Rival names differ between verified save copies. Save and reload normally before renaming.');
+ return data;
+}
+function trainerRAMPlayerLocations(groups){
+ const results=[],seen=new Set(),ewStart=0x85DF,ewEnd=0x485DF;
+ for(const group of groups){
+  const flash=group.player,refName=work.slice(flash,flash+8),tid=work.slice(flash+10,flash+14),
+        key=work.slice(flash+0xF20,flash+0xF24);
+  for(let p=ewStart;p+0xF24<=Math.min(work.length,ewEnd);p++){
+   if(seen.has(p)||work[p]!==refName[0])continue;
+   if(!nameCompare(work.subarray(p,p+8),refName))continue;
+   if(!tid.every((v,i)=>work[p+10+i]===v))continue;
+   if(!key.every((v,i)=>work[p+0xF20+i]===v))continue;
+   if(work[p+8]!==work[flash+8]||work[p+9]!==work[flash+9])continue;
+   seen.add(p);results.push(p);
+  }
+ }
+ return results;
+}
+function trainerRAMRivalLocations(groups){
+ const found=[],seen=new Set();
+ for(const copy of findCopies(work)){
+  if(copy.kind!=='RAM')continue;
+  const rival=(copy.start-0x310)+0x3A4C;
+  if(rival<0||rival+8>work.length||seen.has(rival))continue;
+  if(!groups.some(group=>nameCompare(work.subarray(rival,rival+8),work.subarray(group.rival,group.rival+8))))continue;
+  seen.add(rival);found.push(rival);
+ }
+ return found;
+}
+function renderTrainerNames(){
+ if(!loaded||nameDirty)return;
+ const status=$('trainerNamesStatus'),save=$('saveTrainerNames');
+ try{
+  const groups=trainerSaveGroups();
+  trainerOldPlayer=gameNameFromBytes(work.subarray(groups[0].player,groups[0].player+8));
+  trainerOldRival=gameNameFromBytes(work.subarray(groups[0].rival,groups[0].rival+8));
+  $('playerNameEdit').value=trainerOldPlayer;$('rivalNameEdit').value=trainerOldRival;
+  save.disabled=true;
+  const ramCount=trainerRAMPlayerLocations(groups).length+trainerRAMRivalLocations(groups).length;
+  status.textContent='Currently: '+trainerOldPlayer+' / '+trainerOldRival+' • '+groups.length+' save copies'+(ramCount?' + '+ramCount+' live name blocks':'');
+ }catch(e){
+  save.disabled=true;status.textContent='Name editor unavailable: '+e.message;
+ }
+}
+function nameEditChanged(){
+ if(!loaded)return;
+ nameDirty=$('playerNameEdit').value.trim()!==trainerOldPlayer||$('rivalNameEdit').value.trim()!==trainerOldRival;
+ $('saveTrainerNames').disabled=!nameDirty;
+ $('trainerNamesStatus').textContent=nameDirty?'Unsaved name changes — tap Save Names before exporting.':'No name changes pending.';
+}
+function patchOwnedTrainerNames(groups,oldBytes,newBytes,patches){
+ const trainerId=groups[0].ot,oldName=oldBytes.slice(0,7),newName=newBytes.slice(0,7);
+ let records=0;
+ const applyOT=(bytes,offset)=>{
+  if(!bytes||bytes.length<80)return;
+  const mon=decodeMon(bytes);
+  if(!mon||mon.ot!==trainerId||!originalTrainerNameMatches(bytes,oldName))return;
+  patch(offset+20,newName,patches);records++;
+ };
+ for(const {group} of groups){
+  const sec=group.sectors.get(1);
+  if(!sec)throw Error('Player party section missing.');
+  for(let k=0;k<6;k++){
+   const offset=sec.base+0x38+100*k;
+   applyOT(work.subarray(offset,offset+80),offset);
+  }
+  for(let k=0;k<420;k++){
+   const bytes=getPCFrom(group,k);if(!bytes)throw Error('Missing PC storage data.');
+   const mon=decodeMon(bytes);
+   if(!mon||mon.ot!==trainerId||!originalTrainerNameMatches(bytes,oldName))continue;
+   let cursor=4+80*k+20,done=0;
+   while(done<7){
+    const sector=group.sectors.get(5+Math.floor(cursor/3968));
+    if(!sector)throw Error('PC storage sector missing at slot '+(k+1));
+    const part=Math.min(7-done,3968-cursor%3968);
+    patch(sector.base+cursor%3968,newName.slice(done,done+part),patches);
+    cursor+=part;done+=part;
+   }
+   records++;
+  }
+ }
+ if(monLocations){
+  for(const base of monLocations.partyRAM)for(let k=0;k<6;k++){
+   const offset=base+100*k;applyOT(work.subarray(offset,offset+80),offset);
+  }
+  for(const base of monLocations.pcRAM)for(let k=0;k<420;k++){
+   const offset=base+80*k;applyOT(work.subarray(offset,offset+80),offset);
+  }
+ }
+ return records;
+}
+function saveTrainerNames(){
+ const patches=[];
+ try{
+  if(!loaded)throw Error('Open an SVS first.');
+  if(monDirty||badgeDirty)throw Error('Save pending Pokémon or badge edits first.');
+  const groups=trainerSaveGroups(),oldPlayer=work.slice(groups[0].player,groups[0].player+8),
+        playerInput=$('playerNameEdit').value.trim(),rivalInput=$('rivalNameEdit').value.trim();
+  const playerName=gameNameBytes(playerInput,oldPlayer),
+        rivalName=gameNameBytes(rivalInput,work.slice(groups[0].rival,groups[0].rival+8));
+  const playerChanged=gameNameFromBytes(oldPlayer)!==playerInput;
+  const rivalChanged=gameNameFromBytes(work.subarray(groups[0].rival,groups[0].rival+8))!==rivalInput;
+  if(!playerChanged&&!rivalChanged){nameDirty=false;renderTrainerNames();return}
+  if(playerChanged&&!$('renameOwnedPokemon').checked&&!confirm('Your Pokémon will keep their previous Original Trainer name. Even with the same Trainer ID, the game may treat them as traded Pokémon. Continue without updating their OT names?'))return;
+  const livePlayer=playerChanged?trainerRAMPlayerLocations(groups):[],
+        liveRival=rivalChanged?trainerRAMRivalLocations(groups):[];
+  for(const group of groups){
+   if(playerChanged)patch(group.player,gameNameBytes(playerInput,work.subarray(group.player,group.player+8)),patches);
+   if(rivalChanged)patch(group.rival,gameNameBytes(rivalInput,work.subarray(group.rival,group.rival+8)),patches);
+  }
+  for(const loc of livePlayer)patch(loc,gameNameBytes(playerInput,work.subarray(loc,loc+8)),patches);
+  for(const loc of liveRival)patch(loc,gameNameBytes(rivalInput,work.subarray(loc,loc+8)),patches);
+  let otUpdated=0;
+  if(playerChanged&&$('renameOwnedPokemon').checked)otUpdated=patchOwnedTrainerNames(groups,oldPlayer,playerName,patches);
+  refreshChecksums(patches);
+  if(!snapshot('Rename '+(playerChanged?'player to '+playerInput:'')+(playerChanged&&rivalChanged?' and ':'')+(rivalChanged?'rival to '+rivalInput:'')+(otUpdated?' (updated '+otUpdated+' Pokémon OT copies)':''),patches))throw Error('No name changes recorded.');
+  nameDirty=false;sync();
+  msg($('trainerNamesMsg'),'✓ Names saved into your SVS editing session.'+(otUpdated?' Updated '+otUpdated+' stored Pokémon Original Trainer record copies while keeping IDs/PIDs unchanged.':'')+' Export the edited SVS and test in Delta.','good');
+ }catch(e){
+  for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);
+  msg($('trainerNamesMsg'),e.message,'bad');
+ }
+}
+$('playerNameEdit').addEventListener('input',nameEditChanged);
+$('rivalNameEdit').addEventListener('input',nameEditChanged);
+$('saveTrainerNames').onclick=saveTrainerNames;
+
+function sync(){if(!loaded)return;copies=findCopies(work);renderTrainerNames();renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -708,9 +886,9 @@ function parseBytes(s){let val=s.trim().replace(/0x/ig,'').replace(/[,;:_-]/g,' 
 function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,p-32),end=Math.min(work.length,p+160),rows=[];start-=start%16;
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
-function undo(){let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;undoStack=[];log=[];loaded=true;monDirty=false;badgeDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);monLocations=locateMons();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');sync();hexView();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
-async function exportSVS(){if(!loaded)return;if(badgeDirty){alert('Save your badge changes before exporting.');return;}if(monDirty){msg($('exportMsg'),'Save Pokémon changes before exporting.','bad');alert('You have unsaved Pokémon edits. Tap Save Pokémon before exporting.');return;}let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes. Import this new .svs into Delta and test it.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
+function undo(){if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;undoStack=[];log=[];loaded=true;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);monLocations=locateMons();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');sync();hexView();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function exportSVS(){if(!loaded)return;if(nameDirty){msg($('exportMsg'),'Save your player and rival name edits first.','bad');alert('You have unsaved trainer name edits. Tap Save Names before exporting.');return;}if(badgeDirty){alert('Save your badge changes before exporting.');return;}if(monDirty){msg($('exportMsg'),'Save Pokémon changes before exporting.','bad');alert('You have unsaved Pokémon edits. Tap Save Pokémon before exporting.');return;}let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes. Import this new .svs into Delta and test it.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 $('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyCoins;$('applyPreset').onclick=()=>{try{let[id,p]= $('preset').value.split('|').map(Number);applyItem(id,p,readRequiredQuantity($('presetQty'),'preset quantity'))}catch(e){msg($('editMsg'),e.message,'bad')}};
 for(let i=0;i<pockets.length;i++){let o=document.createElement('option');o.value=i;o.textContent=pockets[i][0];$('customPocket').append(o)}$('customApply').onclick=()=>{try{const quantity=readRequiredQuantity($('customQty'),'custom item quantity');const raw=$('customId').value.trim();if(!/^[0-9]+$/.test(raw))throw Error('Enter a valid item ID.');applyItem(Number(raw),Number($('customPocket').value),quantity)}catch(e){msg($('editMsg'),e.message,'bad')}};
