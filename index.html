@@ -583,6 +583,83 @@ function transferItemPC(id,qty,direction,pocket){
   msg($('editMsg'),e.message,'bad');
  }
 }
+
+// Move every selected item in one verified transaction. A failed validation or
+// checksum leaves the existing SVS untouched; users must confirm real transfer.
+function transferSelectedToPC(){
+ const patches=[];
+ try{
+  if(monDirty||badgeDirty)throw Error('Save any pending Pokémon or badge edits first.');
+  const selected=[...selectedPC.values()].map(x=>({...x}));
+  if(!selected.length)throw Error('Tap Select for PC next to an owned item first.');
+  for(const item of selected){
+   if(item.pocket===1)throw Error('Key Items cannot be transferred to PC.');
+   if(!Number.isInteger(item.qty)||item.qty<1||item.qty>999)throw Error('Choose a valid transfer quantity for '+name(item.id)+'.');
+   const available=selectedOwned(item.pocket,item.id);
+   if(available<item.qty)throw Error(name(item.id)+' has only '+available+' in your bag, but '+item.qty+' are selected.');
+  }
+  const state=pcItemStatus();
+  if(!state.valid){showPCStorageBlock(state.why);return;}
+  const steps=[];
+  for(const record of state.states){
+   const c=record.copy;
+   let pcRows=record.rows.filter(x=>x.id).map(x=>({...x}));
+   const bagByPocket=new Map();
+   const getBag=pocket=>{
+    if(!bagByPocket.has(pocket)){
+     const start=c.start+offsets[pocket],count=pockets[pocket][1],rows=[];
+     for(let i=0;i<count;i++)rows.push({id:u16(work,start+4*i),qty:u16(work,start+4*i+2)^c.key});
+     bagByPocket.set(pocket,{start,count,rows:rows.filter(x=>x.id)});
+    }
+    return bagByPocket.get(pocket);
+   };
+   for(const entry of selected){
+    const bag=getBag(entry.pocket);
+    const bi=bag.rows.findIndex(x=>x.id===entry.id);
+    if(bi<0||bag.rows[bi].qty<entry.qty)throw Error('A save copy lacks '+entry.qty+' '+name(entry.id)+' in '+pockets[entry.pocket][0]+'. No items moved.');
+    const pi=pcRows.findIndex(x=>x.id===entry.id);
+    if(pi>=0){
+     if(pcRows[pi].qty+entry.qty>999)throw Error(name(entry.id)+' in the item PC would exceed 999. Move fewer.');
+     pcRows[pi].qty+=entry.qty;
+    }else{
+     if(pcRows.length>=itemPCSlots)throw Error('Item PC is full (30 different types). Withdraw something first.');
+     pcRows.push({id:entry.id,qty:entry.qty});
+    }
+    bag.rows[bi].qty-=entry.qty;
+    if(bag.rows[bi].qty===0)bag.rows.splice(bi,1);
+   }
+   steps.push({record,c,pcRows,bagByPocket});
+  }
+  if(!confirm('Move '+selected.map(x=>x.qty+' '+name(x.id)).join(', ')+' from your Bag into the item PC?'))return;
+  for(const plan of steps){
+   for(const {start,count,rows} of plan.bagByPocket.values()){
+    for(let i=0;i<count;i++){
+     const row=rows[i]||{id:0,qty:0};
+     patch16(start+4*i,row.id,patches);
+     patch16(start+4*i+2,row.qty^plan.c.key,patches);
+    }
+   }
+   for(let i=0;i<itemPCSlots;i++){
+    const row=plan.pcRows[i]||{id:0,qty:0};
+    patch16(plan.record.base+4*i,row.id,patches);
+    patch16(plan.record.base+4*i+2,row.qty,patches);
+   }
+  }
+  refreshChecksums(patches);
+  if(!snapshot('Move '+selected.length+' item type(s) to PC',patches))throw Error('No changes were needed.');
+  selectedPC.clear();
+  sync();
+  msg($('editMsg'),'✓ Moved '+selected.length+' selected item type(s) to PC. Bag and PC copies were updated. Export your edited SVS.','good');
+  $('selectedPCWarning').textContent='✓ Items moved to PC in the editing session. Download the SVS to keep the changes.';
+ }catch(e){
+  for(let i=patches.length-1;i>=0;i--)work.set(patches[i].old,patches[i].offset);
+  msg($('editMsg'),'Move to PC stopped: '+e.message,'bad');
+  $('selectedPCWarning').textContent='⚠ '+e.message;
+ }
+}
+$('moveSelectedPC').onclick=transferSelectedToPC;
+$('clearSelectedPC').onclick=clearSelectedPC;
+
 function resetInvalidPCItems(){
  const state=pcItemStatus();
  if(state.valid||state.inconsistent||!state.states.length||state.states.some(x=>x.valid))return;
