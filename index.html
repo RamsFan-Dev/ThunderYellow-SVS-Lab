@@ -87,7 +87,7 @@
 @media(max-width:650px){#inventory .inv-select{padding:7px 5px;font-size:11px}#inventory td:first-child{min-width:118px}#inventory td:last-child{min-width:80px}#moveSelectedPC{font-size:12px;padding:9px 10px}#selectedPCCount{font-size:13px}.pc-selected-row{grid-template-columns:minmax(0,1fr) 75px auto;gap:6px}.pc-selected-row .input{width:72px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.8</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.9</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div></section>
@@ -378,7 +378,10 @@ function updateSelectedPCView(){
   remove.onclick=()=>{selectedPC.delete(selectedPCKey(entry.pocket,entry.id));renderInventory();};
   r.append(title,qty,remove);list.append(r);
  }
- warning.textContent='You are selecting quantities to MOVE, not changing the quantity owned. Tap Move Selected to PC when ready.';
+ const state=pcItemStatus();
+ warning.textContent=state.valid
+  ?'✓ Selection ready. Quantities will be moved, not copied; your Bag quantities will decrease.'
+  :'⚠ Selected items are ready, but your current item PC contains invalid storage values. Tap Move Selected to PC to see the repair instructions.';
 }
 function toggleSelectPC(pocket,id){
  if(pocket===1)throw Error('Key Items must remain in the bag.');
