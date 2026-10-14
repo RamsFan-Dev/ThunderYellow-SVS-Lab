@@ -66,19 +66,41 @@
 .party-choice select{min-width:0;font-size:12px;padding:10px}
 .party-choice.locked{border-color:#b68a40}
 @media(max-width:620px){.party-picker{grid-template-columns:1fr}#inventory .move-pc{font-size:11px}#inventory td:last-child{min-width:84px}}
-</style><style>#partySwitcherStatus{white-space:pre-wrap;overflow-wrap:anywhere}</style></head>
+</style><style>#partySwitcherStatus{white-space:pre-wrap;overflow-wrap:anywhere}</style><style>
+#inventory .inv-select{min-height:38px;margin-top:7px;width:100%;padding:7px 9px;border-radius:10px;border:1.5px solid #7689a2;background:#253248;color:#e4ecfb;font-size:12px;font-weight:750;white-space:normal;line-height:1.15}
+#inventory .inv-select.is-selected{border-color:#ffdf86;background:#604b24;color:#fff0bd}
+#inventory .inv-select:disabled{opacity:.45}
+#inventory tr.inv-picked{background:#393224}
+#inventory .inv-edit-actions{display:flex;flex-direction:column;gap:5px}
+#inventory .inv-edit-actions .btn{font-size:11px;min-height:38px;padding:6px 8px!important;white-space:normal}
+#inventory td:first-child{min-width:125px;max-width:190px}
+#inventory td:last-child{min-width:94px}
+.pc-selected-bar{position:relative;border:1.5px solid #51647d;border-radius:13px;padding:13px;margin:12px 0;background:#142235}
+.pc-selected-bar.has-selection{border-color:#e8bd58;background:#29281c}
+.pc-selection-list{display:flex;flex-direction:column;gap:9px;margin-top:11px}
+.pc-selected-row{display:grid;grid-template-columns:minmax(0,1fr) 96px auto;gap:9px;align-items:center;padding:9px 8px;border:1px solid #3e516b;border-radius:10px;background:#172338}
+.pc-selected-row strong{font-size:12px;overflow-wrap:anywhere}
+.pc-selected-row small{display:block;color:var(--muted);font-size:11px}
+.pc-selected-row .input{width:90px;min-height:38px;font-size:13px;padding:6px 8px}
+.pc-selected-row .btn{font-size:12px;padding:7px 9px;min-height:37px}
+#selectedPCWarning{margin:9px 0 0}
+@media(max-width:650px){#inventory .inv-select{padding:7px 5px;font-size:11px}#inventory td:first-child{min-width:118px}#inventory td:last-child{min-width:80px}#moveSelectedPC{font-size:12px;padding:9px 10px}#selectedPCCount{font-size:13px}.pc-selected-row{grid-template-columns:minmax(0,1fr) 75px auto;gap:6px}.pc-selected-row .input{width:72px}}
+</style></head>
 <body><main class="shell">
 <header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.8</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div></section>
 <section class="panel"><div class="feature">03 • Safe edits</div><h2>Coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="preset">Quick item presets</label><select id="preset"><option value="68|0">Rare Candy</option><option value="20|0">Max Potion</option><option value="200|0">Leftovers</option><option value="19|0">Full Restore</option><option value="21|0">Hyper Potion</option><option value="24|0">Revive</option><option value="25|0">Max Revive</option><option value="1|2">Master Ball</option><option value="4|2">Poké Ball</option><option value="2|2">Ultra Ball</option></select><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary">Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
-<hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div><div class="tablewrap"><table class="table"><thead><tr><th>Item</th><th class="smallHide">ID</th><th>Quantity</th><th>Save / Move</th></tr></thead><tbody id="inventory"></tbody></table></div>
+<hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div>
+<div class="callout" id="inventoryHelp" style="margin:10px 0"><strong>Two different actions:</strong> <strong>Set Quantity</strong> changes how many you have in your bag. <strong>Select for PC</strong> marks items to move; select the items first, then tap <strong>Move Selected to PC</strong>. The transfer amount defaults to everything owned and can be changed below.</div>
+<div id="selectedPCBar" class="pc-selected-bar"><div class="row" style="justify-content:space-between"><strong id="selectedPCCount">0 items selected</strong><div class="row"><button id="clearSelectedPC" type="button" class="btn secondary" disabled>Clear</button><button id="moveSelectedPC" type="button" class="btn primary" disabled>📦 Move Selected to PC</button></div></div><div id="selectedPCList" class="pc-selection-list"></div><div id="selectedPCWarning" role="status" class="hint"></div></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Item / Select</th><th class="smallHide">ID</th><th>Owned / New Qty</th><th>Edit Qty</th></tr></thead><tbody id="inventory"></tbody></table></div>
 <details><summary>Add any numeric item ID</summary><div class="grid3"><div><label class="label" for="customPocket">Pocket</label><select id="customPocket"></select></div><div><label class="label" for="customId">Item ID (decimal)</label><input id="customId" class="input" type="number" min="1" max="65535" inputmode="numeric" placeholder="e.g. 68"></div><div><label class="label" for="customQty">Quantity</label><input id="customQty" class="input" type="number" min="0" max="999" placeholder="Set qty" inputmode="numeric"></div></div><button id="customApply" class="btn" style="margin-top:12px">Apply item ID</button><div class="hint">Setting a quantity to 0 removes the item and compacts the pocket. Use the game's actual internal item ID, not the Pokédex number. Wrong IDs may be unsupported by this ROM.</div></details>
 <details id="pcItemsDetails"><summary>🗃️ Item PC storage and Withdraw</summary>
-<div class="hint">Your in-game item PC has 30 storage slots. PC items have plain quantities, while bag quantities are encrypted. Use Move → PC beside an item above; use Withdraw here to bring stored items back into the bag. Key Items cannot be deposited.</div>
+<div class="hint">The in-game item PC has 30 storage slots. Tap <strong>Select for PC</strong> beside bag items, then <strong>Move Selected to PC</strong>. The amount defaults to your owned quantity; edit it in the selection panel. Stored items appear below for withdrawal. Key Items cannot be deposited.</div>
 <div id="pcItemsStatus" class="callout" style="margin:10px 0"></div>
-<div id="pcItemsResetBox" class="hidden callout warn" style="margin:10px 0"><strong>PC item data needs attention.</strong><div class="hint">If this save inherited malformed PC item quantities, you can explicitly reset the 30 PC-item slots. This clears PC-stored items only, not your bag or Pokémon; save a backup first.</div><button id="resetPCItems" type="button" class="btn danger" style="margin-top:8px">Reset invalid PC item storage…</button></div>
+<div id="pcItemsResetBox" class="hidden callout warn" style="margin:10px 0"><strong>PC item data needs attention.</strong><div class="hint">Some existing PC item values are invalid (as in Test 89), so moving items cannot safely proceed yet. You may reset the 30 PC item slots after exporting a backup. This clears <strong>only item PC storage</strong>, never your bag, Pokémon, or ROM. No repair is automatic.</div><button id="resetPCItems" type="button" class="btn danger" style="margin-top:8px">Reset invalid PC item storage…</button></div>
 <div class="tablewrap"><table class="table"><thead><tr><th>Stored item</th><th>Owned</th><th>Withdraw quantity</th><th>Action</th></tr></thead><tbody id="pcItemsTable"></tbody></table></div>
 </details>
 </section>
