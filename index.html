@@ -235,7 +235,7 @@ function findCopies(d){
  return copies;
 }
 function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
-function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderBadges();if(!monDirty)renderPokemon();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -323,7 +323,7 @@ function renderInventory(){
  const special=new Set(list||[]);
  for(const item of items){
   const tr=document.createElement('tr'),nm=document.createElement('td'),id=document.createElement('td'),qt=document.createElement('td'),sv=document.createElement('td');
-  const inp=document.createElement('input'),btn=document.createElement('button');
+  const inp=document.createElement('input'),btn=document.createElement('button'),moveButton=document.createElement('button');
   nm.textContent=name(item.id);
   if(item.missing)nm.className='muted';
   if(list&&!special.has(item.id)){nm.textContent+=' • unexpected pocket item';nm.className='warn'}
@@ -340,7 +340,15 @@ function renderInventory(){
    try{const qty=readRequiredQuantity(inp,'quantity for '+name(item.id));applyItem(item.id,pocket,qty);}
    catch(e){msg($('editMsg'),e.message,'bad')}
   };
-  qt.append(current,inp);sv.append(btn);tr.append(nm,id,qt,sv);tbody.append(tr);
+  moveButton.type='button';moveButton.className='btn secondary move-pc';moveButton.textContent='→ PC';
+  moveButton.title=pocket===1?'Key Items cannot be stored in the PC.':'Move the entered quantity to the item PC.';
+  moveButton.disabled=true;
+  if(pocket!==1&&!item.missing&&item.qty>0){
+   const oldInputHandler=inp.oninput;
+   inp.oninput=()=>{oldInputHandler();const t=inp.value.trim();moveButton.disabled=!pcItemStatus().valid||!/^[0-9]+$/.test(t)||Number(t)<1||Number(t)>item.qty};
+   moveButton.onclick=()=>{try{const amount=readRequiredQuantity(inp,'transfer quantity');if(amount<1||amount>item.qty)throw Error('Move between 1 and '+item.qty+' '+name(item.id)+' to PC.');transferItemPC(item.id,amount,'deposit',pocket)}catch(e){msg($('editMsg'),e.message,'bad')}};
+  }
+  qt.append(current,inp);const actions=document.createElement('div');actions.className='inv-actions';actions.append(btn,moveButton);sv.append(actions);tr.append(nm,id,qt,sv);tbody.append(tr);
  }
 }
 function validateInt(n,lo,hi,label){if(!Number.isInteger(n)||n<lo||n>hi)throw Error(label+' must be between '+fmt(lo)+' and '+fmt(hi))}
@@ -365,6 +373,132 @@ function applyItem(id,pocket,qty){try{
  refreshChecksums(patches);if(snapshot('Set '+name(id)+' (#'+id+') to '+fmt(qty)+' in '+pockets[pocket][0],patches)){sync();msg($('editMsg'),'✓ Updated '+name(id)+' across '+copies.length+' detected copies.','good')}
  else msg($('editMsg'),'No change needed.');
  }catch(e){msg($('editMsg'),e.message,'bad')}}
+
+// Gen III FRLG pcItems[30] at SaveBlock1 +0x298: item IDs and unencrypted quantities.
+// Bag begins at +0x310 and uses the SaveBlock2 encryption key. Confirm all copies before edits.
+const itemPCSlots=30,itemPCRelativeOffset=-0x78;
+function readPCItemCopy(copy){
+ const base=copy.start+itemPCRelativeOffset;
+ if(base<0||base+4*itemPCSlots>work.length)throw Error('PC storage is outside the save.');
+ const rows=[],seen=new Set();let gap=false,valid=true,reason='';
+ for(let i=0;i<itemPCSlots;i++){
+  const id=u16(work,base+i*4),qty=u16(work,base+i*4+2);
+  rows.push({id,qty});
+  if(!id){if(qty){valid=false;reason='Empty PC slots contain nonzero quantities.'}gap=true;}
+  else if(gap||id>600||qty<1||qty>999||seen.has(id)){
+   valid=false;reason='PC item slots contain an impossible quantity, duplicate ID or gap.';
+  }else seen.add(id);
+ }
+ return {copy,base,rows,valid,reason};
+}
+function pcItemStatus(){
+ if(!copies.length)return {valid:false,why:'Load an SVS with verified bag copies.',states:[]};
+ const states=copies.map(readPCItemCopy);
+ if(states.some(x=>!x.valid))return {valid:false,why:'Existing item PC data is malformed in '+states.filter(x=>!x.valid).length+' copy/copies. Deposits and withdrawals are locked until repaired.',states};
+ const signature=x=>x.rows.map(y=>y.id+':'+y.qty).join(',');
+ if(states.some(x=>signature(x)!==signature(states[0])))
+  return {valid:false,why:'PC item copies disagree. Do not modify this save until their differences are diagnosed.',states,inconsistent:true};
+ return {valid:true,why:'PC storage verified in '+states.length+' copies. Quantities are not bag-encrypted.',states};
+}
+function renderPCItems(){
+ const status=$('pcItemsStatus'),box=$('pcItemsResetBox'),table=$('pcItemsTable');
+ if(!status||!table)return;
+ table.replaceChildren();
+ const state=pcItemStatus();status.textContent=state.why;status.className='callout '+(state.valid?'good':'warn');
+ box.classList.toggle('hidden',state.valid||!state.states.length||state.inconsistent||state.states.some(x=>x.valid));
+ if(!state.valid){table.innerHTML='<tr><td colspan="4">PC transfers disabled until storage is validated.</td></tr>';return;}
+ const owned=state.states[0].rows.filter(x=>x.id);
+ const note=document.createElement('tr');
+ if(!owned.length){note.innerHTML='<td colspan="4">The item PC is empty (0 / 30 slots).</td>';table.append(note);return}
+ owned.forEach(it=>{
+  const tr=document.createElement('tr'),a=document.createElement('td'),b=document.createElement('td'),c=document.createElement('td'),d=document.createElement('td');
+  a.textContent=name(it.id);b.textContent=String(it.qty);
+  const input=document.createElement('input');input.type='number';input.inputMode='numeric';input.min='1';input.max=String(it.qty);
+  input.placeholder='Qty';input.className='input qtyField';input.value='';
+  const button=document.createElement('button');button.type='button';button.className='btn secondary';button.textContent='Withdraw';button.disabled=true;
+  input.oninput=()=>{const t=input.value.trim();button.disabled=!/^[0-9]+$/.test(t)||Number(t)<1||Number(t)>it.qty};
+  button.onclick=()=>{try{const count=readRequiredQuantity(input,'withdrawal quantity');if(count<1||count>it.qty)throw Error('Withdraw 1–'+it.qty+' of '+name(it.id));transferItemPC(it.id,count,'withdraw',0)}catch(e){msg($('editMsg'),e.message,'bad')}};
+  c.append(input);d.append(button);tr.append(a,b,c,d);table.append(tr);
+ });
+}
+function findBagPocketForId(id){
+ if(id>=1&&id<=12)return 2;
+ if(id>=133&&id<=175)return 4;
+ if(id>=289&&id<=346)return 3;
+ if((id>=259&&id<=288)||(id>=349&&id<=374))return 1;
+ return 0;
+}
+function transferItemPC(id,qty,direction,pocket){
+ const changes=[];
+ try{
+  if(monDirty||badgeDirty)throw Error('Save any pending Pokémon or badge edits first.');
+  validateInt(id,1,65535,'Item');validateInt(qty,1,999,'Transfer quantity');
+  if(direction!=='deposit'&&direction!=='withdraw')throw Error('Unknown transfer action.');
+  if(direction==='deposit'&&pocket===1)throw Error('Important Key Items must remain in the bag.');
+  const state=pcItemStatus();
+  if(!state.valid)throw Error(state.why);
+  const bagPocket=direction==='deposit'?pocket:findBagPocketForId(id);
+  if(bagPocket===1)throw Error('Key Items cannot be stored in the PC.');
+  const plans=[];
+  for(const pc of state.states){
+   const c=pc.copy,bagStart=c.start+offsets[bagPocket],count=pockets[bagPocket][1],bag=[];
+   for(let i=0;i<count;i++)bag.push({id:u16(work,bagStart+i*4),qty:u16(work,bagStart+i*4+2)^c.key});
+   let pItems=pc.rows.map(r=>({...r}));
+   const bi=bag.findIndex(r=>r.id===id),pi=pItems.findIndex(r=>r.id===id);
+   if(direction==='deposit'){
+    if(bi<0||bag[bi].qty<qty)throw Error('Not enough '+name(id)+' in every bag copy.');
+    if(pi>=0&&pItems[pi].qty+qty>999)throw Error('PC '+name(id)+' would exceed 999.');
+    const free=pi>=0?pi:pItems.findIndex(r=>!r.id);
+    if(free<0)throw Error('The item PC is full (30 slots).');
+    if(pi>=0)pItems[pi].qty+=qty;else pItems[free]={id,qty};
+    bag[bi].qty-=qty;
+    if(bag[bi].qty===0)bag.splice(bi,1);
+   }else{
+    if(pi<0||pItems[pi].qty<qty)throw Error('Not enough '+name(id)+' in each PC copy.');
+    if(bi>=0&&bag[bi].qty+qty>999)throw Error('Bag '+name(id)+' would exceed 999.');
+    if(bi<0&&bag.every(r=>r.id!==0))throw Error('No empty '+pockets[bagPocket][0]+' slot for '+name(id)+'.');
+    if(bi>=0)bag[bi].qty+=qty;else bag[bag.findIndex(r=>r.id===0)]={id,qty};
+    pItems[pi].qty-=qty;
+    if(pItems[pi].qty===0)pItems.splice(pi,1);
+   }
+   const pack=(items,capacity)=>Array.from({length:capacity},(_,i)=>items[i]||{id:0,qty:0});
+   const bagCompact=pack(bag.filter(row=>row.id),count),pcCompact=pack(pItems.filter(row=>row.id),itemPCSlots);
+   plans.push({c,bagStart,bagCompact,pcStart:pc.base,pcCompact});
+  }
+  for(const p of plans){
+   for(let i=0;i<p.bagCompact.length;i++){
+    patch16(p.bagStart+4*i,p.bagCompact[i].id,changes);
+    patch16(p.bagStart+4*i+2,p.bagCompact[i].qty^p.c.key,changes);
+   }
+   for(let i=0;i<itemPCSlots;i++){
+    patch16(p.pcStart+4*i,p.pcCompact[i].id,changes);
+    patch16(p.pcStart+4*i+2,p.pcCompact[i].qty,changes);
+   }
+  }
+  refreshChecksums(changes);
+  if(!snapshot((direction==='deposit'?'Deposit ':'Withdraw ')+qty+' '+name(id)+(direction==='deposit'?' to PC':' from PC'),changes))
+    throw Error('No PC transfer was recorded.');
+  sync();msg($('editMsg'),'✓ '+(direction==='deposit'?'Moved ':'Withdrew ')+qty+' '+name(id)+(direction==='deposit'?' into item PC.':' into bag.')+' Export the SVS when ready.','good');
+ }catch(e){
+  for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);
+  msg($('editMsg'),e.message,'bad');
+ }
+}
+function resetInvalidPCItems(){
+ const state=pcItemStatus();
+ if(state.valid||state.inconsistent||!state.states.length||state.states.some(x=>x.valid))return;
+ if(monDirty||badgeDirty){msg($('editMsg'),'Save pending Pokémon/badge edits first.','bad');return}
+ if(prompt('This clears ALL 30 PC ITEM slots, not bag items or Pokémon. Export a backup of your original SVS first. Type RESET to continue:')!=='RESET')return;
+ if(!confirm('Final confirmation: clear the malformed item PC contents in all '+state.states.length+' copies?'))return;
+ const changes=[];
+ try{
+  for(const pc of state.states)patch(pc.base,new Uint8Array(itemPCSlots*4),changes);
+  refreshChecksums(changes);
+  if(!snapshot('Reset malformed PC item storage',changes))throw Error('PC item slots were already empty.');
+  sync();msg($('editMsg'),'✓ Item PC reset; bag and Pokémon were not changed. Export a NEW SVS and test.','good');
+ }catch(e){for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);msg($('editMsg'),e.message,'bad')}
+}
+$('resetPCItems').onclick=resetInvalidPCItems;
 function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
  if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
