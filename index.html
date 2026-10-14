@@ -96,7 +96,7 @@
 #unsafeStateNotice p{line-height:1.55}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.11</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.12</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <div id="unsafeStateNotice" class="hidden" role="alert" aria-live="assertive">
@@ -170,14 +170,14 @@
  <button id="createMon" class="btn primary wide" style="margin-top:12px">＋ Create Pokémon in selected slot</button>
 </div>
 <div id="monForm" class="hidden">
-<div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability slot</label><select id="monAbility"><option value="0">First ability</option><option value="1">Second ability</option></select></div></div>
+<div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="monLevel">Level (1–100)</label><input class="input" id="monLevel" type="number" min="1" max="100" inputmode="numeric"></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability</label><select class="input" id="monAbility"></select></div></div><div class="hint" id="monLevelHelp" style="margin-top:10px">Changing level sets matching EXP and recalculates party stats.</div><div class="hint" id="monAbilityHelp">Only species-supported abilities are selectable.</div>
 <h3 style="font-size:15px;margin:21px 0 9px">All four moves • PP and PP Ups</h3><div class="hint">Choose a move for each slot, adjust PP and PP Ups, then save the Pokémon changes below.</div><div id="monMoveRows"></div><div class="grid3" style="margin:13px 0"><div><label class="label" for="moveQuickSlot">Apply preset to slot</label><select id="moveQuickSlot"><option value="0">Move 1</option><option value="1">Move 2</option><option value="2">Move 3</option><option value="3">Move 4</option></select></div><div><label class="label" for="moveQuickName">Choose familiar move</label><select id="moveQuickName"></select></div><div style="display:flex;align-items:end"><button class="btn secondary" id="moveQuick">Fill move ID</button></div></div><div class="hint">Move names use Gen 3 IDs internally. The editor does not check whether a Pokémon can learn a move. Current PP and PP Ups are saved separately.</div>
 <details><summary>IVs and EVs</summary>
 <div class="hint" style="margin:4px 0 10px">SVS editor limits: IV 0–31 per stat, EV 0–255 per stat. You may set all six EVs to 255. Zero is preserved for Pokémon that have none.</div>
 <div id="evBudget" class="ev-budget good" role="status" aria-live="polite">EV total: 0 • No combined limit in this editor</div>
 <div id="monStatRows" class="grid3"></div>
 </details>
-<details id="monStats"><summary>Current party battle stats</summary><div class="grid3" id="partyStatRows"></div><div class="hint">The current level shown above is read-only. Changing species or EXP does not recalculate a Pokémon’s level or battle stats. Consider retaining the original species until these are reconciled in Delta.</div></details>
+<details id="monStats"><summary>Current party battle stats</summary><div class="grid3" id="partyStatRows"></div><div class="hint">Changing level or species recalculates party stats and matching EXP, keeping the current HP percentage. Battle stats remain editable when level and species are unchanged.</div></details>
 <div id="monSaveStatus" role="status" class="callout" style="margin-top:15px">No pending edits.</div><button class="btn primary wide" id="saveMon" style="margin-top:12px">💾 Save Pokémon changes</button></div>
 <div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. The party cannot be reordered, emptied or expanded in this version; doing so could interfere with the follower system.</div></div>
 <div id="monMsg" class="status"></div>
@@ -1605,6 +1605,52 @@ function createPokemonInSlot(){
 }
 $('newSpecies').oninput=updateSpeciesHints;$('createMon').onclick=createPokemonInSlot;
 
+
+function namedAbility(raw){return String(raw||'').split('_').map(x=>x[0]+x.slice(1).toLowerCase()).join(' ')}
+function abilityOptions(reset=false,stored=null){
+ const sel=$('monAbility'),sp=Number($('species').value),meta=speciesMeta[sp],slot=stored===null?(reset?0:Number(sel.value||0)):stored;
+ sel.replaceChildren();
+ if(meta&&meta[1]&&meta[1]!=='NONE'){
+  sel.add(new Option(namedAbility(meta[1])+' (first ability)','0'));
+  if(meta[2]&&meta[2]!=='NONE')sel.add(new Option(namedAbility(meta[2])+' (second ability)','1'));
+  else if(slot===1)sel.add(new Option('Second slot (unsupported, currently stored)','1'));
+  $('monAbilityHelp').textContent='Gen 3 Pokémon save records store an ability slot, not a free-choice ability ID.';
+ }else{
+  sel.add(new Option('First slot (ability unknown)','0'));sel.add(new Option('Second slot (ability unknown)','1'));
+  $('monAbilityHelp').textContent='Ability mapping is unavailable for this species; existing slot is preserved.';
+ }
+ sel.value=String(slot);
+}
+function shownLevel(mon,record){
+ return monMode==='party'&&record&&record.length===100&&record[84]>=1&&record[84]<=100?record[84]:speciesStats[mon.sp]?teamLevel(mon):1;
+}
+function recalcStats(sp,l,pid,ivs,evs){
+ const meta=speciesStats[sp];if(!meta)throw Error('Cannot calculate stats for this Pokémon species.');
+ const nature=pid%25,up=Math.floor(nature/5),down=nature%5;
+ return meta.slice(0,6).map((b,i)=>{
+  let v=Math.floor((2*b+ivs[i]+Math.floor(evs[i]/4))*l/100);
+  if(i===0)return sp===303?1:v+l+10;
+  v+=5;
+  if(up!==down){if(up===i-1)v=Math.floor(v*1.1);else if(down===i-1)v=Math.floor(v*.9)}
+  return v;
+ });
+}
+function previewLevel(){
+ const r=getSlotBytes(),mon=r&&decodeMon(r),sp=Number($('species').value),l=Number($('monLevel').value);
+ if(!mon||!speciesStats[sp]||!Number.isInteger(l)||l<1||l>100)return;
+ $('experience').value=startExp(speciesStats[sp][6],l);
+ if(monMode==='party'&&r.length===100){
+  const ivs=Array.from({length:6},(_,i)=>Number($('iv'+i).value));
+  const evs=Array.from({length:6},(_,i)=>Number($('ev'+i).value));
+  if(ivs.every(v=>Number.isInteger(v)&&v>=0&&v<=31)&&evs.every(v=>Number.isInteger(v)&&v>=0&&v<=255)){
+   const stats=recalcStats(sp,l,mon.pid,ivs,evs),oldHP=u16(r,86),oldMax=u16(r,88);
+   const hp=oldHP===0?0:Math.max(1,Math.min(stats[0],Math.round(oldHP*stats[0]/Math.max(1,oldMax))));
+   for(let i=0;i<7;i++)$('stat'+i).value=i===0?hp:stats[i-1];
+  }
+ }
+ $('monLevelHelp').textContent='Lv '+l+' • EXP '+fmt(Number($('experience').value))+' • updated party stats. Tap Save Pokémon, then export SVS.';
+}
+
 function monSourceLabel(m){return (m?monNames[m.sp]||'Species '+m.sp:'Empty')+(m&&m.name?' • '+m.name:'')}
 function renderPokemon(){if(!loaded)return;
  const ok=monLocations&&monLocations.groups.length>0;
@@ -1628,31 +1674,56 @@ function renderPokemon(){if(!loaded)return;
   $('createMon').disabled=monMode==='party'&&(ct>=6||monSlot!==ct);
   $('newHelp').textContent=monMode==='party'&&monSlot!==ct?'Choose the next empty party slot '+(ct+1)+'; later empty slots must stay empty.':'Type a Pokémon name to view suggestions, choose a level, then create it. Newly created Pikachu is not the story starter.';
  }
- $('monSummary').textContent=mon?(monSourceLabel(mon)+(isProtected(mon)?' — protected starter Pikachu':'')+' • PID '+hex(mon.pid)+' • OT '+hex(mon.ot)+(monMode==='party'?' • Lv '+data[84]:'')):(empty?'This slot is empty. You can copy another Pokémon into this PC slot.':'This slot cannot be safely decoded; editing disabled.');
+ $('monSummary').textContent=mon?(monSourceLabel(mon)+(isProtected(mon)?' — protected starter Pikachu':'')+' • PID '+hex(mon.pid)+' • OT '+hex(mon.ot)+' • Lv '+shownLevel(mon,data)):(empty?'This slot is empty. You can copy another Pokémon into this PC slot.':'This slot cannot be safely decoded; editing disabled.');
  $('removeMon').disabled=!mon||isProtected(mon)||monMode!=='box';$('cloneMon').disabled=!mon||isProtected(mon);$('moveMon').disabled=!mon||isProtected(mon)||monMode!=='box';
  if(!mon){refreshMonSaveStatus();return;}
  ensureMonOption(mon.sp,$('species'),'Species');ensureMonOption(mon.held,$('held'),'Item');for(let k=0;k<4;k++)ensureMonOption(mon.moves[k],$('move'+k),'Move');
- const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('friendship',mon.friend);v('monAbility',mon.ability);
+ const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('monLevel',shownLevel(mon,data));v('friendship',mon.friend);abilityOptions(false,mon.ability);
  for(let k=0;k<4;k++){v('move'+k,mon.moves[k]);v('pp'+k,mon.pp[k]);v('up'+k,mon.ppups[k])}
  for(let k=0;k<6;k++){v('iv'+k,mon.iv[k]);v('ev'+k,mon.ev[k]);}showEVBudget();
- $('species').disabled=isProtected(mon);
+ $('monLevelHelp').textContent='Changing level sets matching EXP and recalculates party stats. EXP-only edits preserve the existing party level.';
+  $('species').disabled=isProtected(mon);
  $('monStats').classList.toggle('hidden',monMode!=='party');
  if(monMode==='party'&&data.length>=100){for(let k=0;k<7;k++)v('stat'+k,u16(data,86+k*2));}
  refreshMonSaveStatus();
 }
-function commitMon(){try{let data=getSlotBytes(),mon=decodeMon(data);if(!mon)throw Error('Select a readable Pokémon before editing.');
- const f={sp:readMonNumber('species',1,1400,'Species'),held:readMonNumber('held',0,65535,'Held item'),exp:readMonNumber('experience',0,3000000,'Experience'),friend:readMonNumber('friendship',0,255,'Friendship'),ability:readMonNumber('monAbility',0,1,'Ability slot'),moves:[],pp:[],ppups:[],iv:[],ev:[]};
- for(let k=0;k<4;k++){f.moves.push(readMonNumber('move'+k,0,65535,'Move '+(k+1)));f.pp.push(readMonNumber('pp'+k,0,99,'PP '+(k+1)));f.ppups.push(readMonNumber('up'+k,0,3,'PP Ups '+(k+1)))}
- for(let k=0;k<6;k++){f.iv.push(readMonNumber('iv'+k,0,31,'IV '+statKeys[k]));f.ev.push(readMonNumber('ev'+k,0,255,'EV '+statKeys[k]));}
- if(isProtected(mon)&&f.sp!==25)throw Error('The special starter Pikachu cannot change species.');
- let next=encodeMon(mon,f);
- if(monMode==='party'&&data.length>=100){let extended=new Uint8Array(100);extended.set(next);extended.set(data.slice(80,100),80);
-  for(let k=0;k<7;k++)w16(extended,86+k*2,readMonNumber('stat'+k,0,65535,'Party stat'));next=extended;}
- let patches=[];applySlot(next,patches);refreshChecksums(patches);
- if(snapshot('Edit '+monSourceLabel(mon)+' ('+(monMode==='party'?'party '+(monSlot+1):'box '+(1+Math.floor(monSlot/30))+' slot '+(1+monSlot%30))+')',patches)){
-  monDirty=false;sync();refreshMonSaveStatus('✓ Saved this Pokémon to the editing session. Export the edited .svs when finished.');msg($('monMsg'),'✓ Pokémon changes saved to the SVS session. Export to download your edited file.','good');
- }else{monDirty=false;refreshMonSaveStatus('✓ No changes needed.');msg($('monMsg'),'No changes needed.');}
- }catch(e){msg($('monMsg'),e.message,'bad')}
+function commitMon(){
+ const patches=[];
+ try{
+  const data=getSlotBytes(),mon=decodeMon(data);
+  if(!mon)throw Error('Select a readable Pokémon before editing.');
+  const level=readMonNumber('monLevel',1,100,'Level');
+  const f={sp:readMonNumber('species',1,1400,'Species'),held:readMonNumber('held',0,65535,'Held item'),exp:readMonNumber('experience',0,3000000,'Experience'),friend:readMonNumber('friendship',0,255,'Friendship'),ability:readMonNumber('monAbility',0,1,'Ability slot'),moves:[],pp:[],ppups:[],iv:[],ev:[]};
+  for(let i=0;i<4;i++){f.moves.push(readMonNumber('move'+i,0,65535,'Move '+(i+1)));f.pp.push(readMonNumber('pp'+i,0,99,'PP '+(i+1)));f.ppups.push(readMonNumber('up'+i,0,3,'PP Ups '+(i+1)));}
+  for(let i=0;i<6;i++){f.iv.push(readMonNumber('iv'+i,0,31,'IV '+statKeys[i]));f.ev.push(readMonNumber('ev'+i,0,255,'EV '+statKeys[i]));}
+  if(isProtected(mon)&&f.sp!==25)throw Error('The special starter Pikachu cannot change species.');
+  const meta=speciesMeta[f.sp];
+  if(meta&&meta[1]!=='NONE'&&f.ability===1&&meta[2]==='NONE'&&!(mon.ability===1&&mon.sp===f.sp))throw Error('This species does not support a second ability.');
+  const rebuild=level!==shownLevel(mon,data)||f.sp!==mon.sp;
+  if(rebuild){
+   if(!speciesStats[f.sp])throw Error('Cannot calculate level for this species.');
+   if(teamLevel({sp:f.sp,exp:f.exp})!==level)throw Error('Level and EXP conflict. Edit the Level field again to synchronize EXP.');
+  }
+  let next=encodeMon(mon,f);
+  if(!decodeMon(next))throw Error('Pokémon checksum verification failed; nothing was written.');
+  if(monMode==='party'&&data.length===100){
+   const extended=new Uint8Array(100);extended.set(next);extended.set(data.slice(80,100),80);
+   if(rebuild){
+    extended[84]=level;
+    const stats=recalcStats(f.sp,level,mon.pid,f.iv,f.ev),oldHP=u16(data,86),oldMax=u16(data,88);
+    const hp=oldHP===0?0:Math.max(1,Math.min(stats[0],Math.round(oldHP*stats[0]/Math.max(1,oldMax))));
+    for(let i=0;i<7;i++)w16(extended,86+i*2,i===0?hp:stats[i-1]);
+   }else for(let i=0;i<7;i++)w16(extended,86+i*2,readMonNumber('stat'+i,0,65535,'Party stat'));
+   next=extended;
+  }
+  applySlot(next,patches);refreshChecksums(patches);
+  if(snapshot('Edit '+monSourceLabel(mon)+' ('+(monMode==='party'?'party '+(monSlot+1):'box '+(1+Math.floor(monSlot/30))+' slot '+(1+monSlot%30))+')',patches)){
+   monDirty=false;sync();refreshMonSaveStatus('✓ Saved this Pokémon to the editing session. Export the edited .svs when finished.');msg($('monMsg'),'✓ Pokémon changes saved to the SVS session. Export to download your edited file.','good');
+  }else{monDirty=false;refreshMonSaveStatus('✓ No changes needed.');msg($('monMsg'),'No changes needed.');}
+ }catch(e){
+  for(let i=patches.length-1;i>=0;i--)work.set(patches[i].old,patches[i].offset);
+  msg($('monMsg'),e.message,'bad');
+ }
 }
 function copyMoveMon(move){try{if(monDirty)throw Error('Save Pokémon changes before moving or copying.');if(monMode!=='box'&&move)throw Error('Moving from your active party is disabled to protect follower scripts.');
  const data=getSlotBytes(),mon=decodeMon(data);if(!mon)throw Error('Choose a readable source Pokémon.');if(isProtected(mon))throw Error('Starter Pikachu cannot be copied or moved.');
@@ -1704,6 +1775,7 @@ function enforceLegalStat(event){
  else if(/^pp[0-3]$/.test(el.id))legalNumber(el,0,99);
  else if(el.id==='friendship')legalNumber(el,0,255);
  else if(el.id==='experience')legalNumber(el,0,3000000);
+  else if(el.id==='monLevel')legalNumber(el,1,100);
  else if(/^stat[0-6]$/.test(el.id))legalNumber(el,0,65535);
 }
 function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('option');o.value=i;o.textContent='Box '+(i+1);$('boxSelect').append(o)}
@@ -1716,8 +1788,18 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
  $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);monSlot=boxNo*30;renderPokemon()};
- $('monForm').addEventListener('input',e=>{enforceLegalStat(e);if(e.target.matches('input, select'))markMonDirty()});
- $('monForm').addEventListener('change',e=>{enforceLegalStat(e);if(e.target.matches('input, select'))markMonDirty()});
+ const handleMonEdit=e=>{
+  enforceLegalStat(e);
+  if(e.target.id==='species'){abilityOptions(true);previewLevel();}
+  else if(e.target.id==='monLevel')previewLevel();
+  else if(/^(iv|ev)[0-5]$/.test(e.target.id)){
+   const record=getSlotBytes(),mon=record&&decodeMon(record);
+   if(mon&&(Number($('monLevel').value)!==shownLevel(mon,record)||Number($('species').value)!==mon.sp))previewLevel();
+  }
+  if(e.target.matches('input, select'))markMonDirty();
+ };
+ $('monForm').addEventListener('input',handleMonEdit);
+ $('monForm').addEventListener('change',handleMonEdit);
  
  $('saveMonDock').onclick=commitMon;$('saveMon').onclick=commitMon;$('cloneMon').onclick=()=>copyMoveMon(false);$('moveMon').onclick=()=>copyMoveMon(true);$('removeMon').onclick=deleteMon;
 }
