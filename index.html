@@ -298,6 +298,23 @@ function locateMons(){let groups=getFlashGroups(),partyRAM=[],pcRAM=[];
    let next=getPCFrom(groups[0],1);if(next&&decodeMon(next)&&!work.subarray(i+80,i+160).every((x,j)=>x===next[j]))continue;
    pcRAM.push(i);i+=79;
  }
+
+ // Detect SaveBlock1's active RAM mirror from validated bag inventory copies,
+ // including parties with fewer than four Pokémon (the generic scanner only found >=4).
+ if(groups.length){
+  const save=groups[0].sectors.get(1),storedCount=save?work[save.base+0x34]:255;
+  for(const c of findCopies(work)){
+   const base=c.start-0x310+0x38;
+   if(base<4||base+600>work.length||partyRAM.includes(base))continue;
+   if(flashSectors.some(sec=>base>=sec.base&&base<sec.base+4096))continue;
+   if(work[base-4]!==storedCount||storedCount>6)continue;
+   let same=true;for(let k=0;k<storedCount;k++){
+     const x=base+k*100,y=save.base+0x38+k*100;
+     if(u32(work,x)!==u32(work,y)||u32(work,x+4)!==u32(work,y+4)){same=false;break}
+   }
+   if(same)partyRAM.push(base);
+  }
+ }
  return {groups,partyRAM,pcRAM};
 }
 function getSlotBytes(){if(!monLocations)return null;if(monMode==='party')return monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+monSlot*100,monLocations.partyRAM[0]+monSlot*100+100):getPartyFrom(monLocations.groups[0],monSlot);
@@ -344,7 +361,7 @@ function createNewBox(sp,l){
  box.fill(255,8,18);for(let i=0;i<nm.length;i++){let c=nm.charCodeAt(i);box[8+i]=c>=65&&c<=90?c-65+0xBB:c>=48&&c<=57?c-48+0xA1:0}
  box[18]=2;box[19]=2;box.set(work.slice(sec.base,sec.base+7),20);
  const G={G:new Uint8Array(12),A:new Uint8Array(12),E:new Uint8Array(12),M:new Uint8Array(12)};
- G.M[2]=l;G.M[3]=0x40;
+ G.M[2]=l;G.M[3]=0x20;
  let learned=[];for(const [lvl,move] of levelLearnsets[sp]||[]){if(lvl>l)continue;if(!move||learned.includes(move))continue;learned.push(move);if(learned.length>4)learned.shift()}
  if(!learned.length)learned=[33];
  const iv=[15,15,15,15,15,15];
@@ -358,7 +375,7 @@ function createPartyStats(sp,l,pid,iv){
  const bases=speciesStats[sp],nature=pid%25,up=Math.floor(nature/5),down=nature%5;
  return bases.slice(0,6).map((base,i)=>{
   let n=Math.floor((2*base+iv[i])*l/100);
-  if(i===0)return sp===292?1:n+l+10;
+  if(i===0)return sp===303?1:n+l+10;
   n+=5;const j=i-1;if(up!==down)n=up===j?Math.floor(n*1.1):down===j?Math.floor(n*.9):n;
   return n;
  });
