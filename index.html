@@ -235,7 +235,7 @@ function findCopies(d){
  return copies;
 }
 function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
-function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -768,6 +768,220 @@ function applyShowdownPaste(){
   msg(root,'Import stopped: '+e.message,'bad');showdownPrepared=null;$('showdownImportButton').disabled=true;
  }
 }
+
+// Party Switcher — six existing Pokémon exchanged between party and PC without duplication.
+// Identity-based named templates are saved only in this browser, never silently in the game.
+let partyPlanPreview=null;
+const monIdentity=m=>m?m.pid+':'+m.ot+':'+m.sp:'';
+function teamRoster(){
+ if(!loaded||!monLocations?.groups?.length)throw Error('Open a verified SVS before editing teams.');
+ const groups=monLocations.groups,sec=groups[0].sectors.get(1);
+ if(!sec)throw Error('Party save sector missing.');
+ const counts=groups.map(g=>{const b=g.sectors.get(1);return b?work[b.base+0x34]:255});
+ if(counts.some(x=>x!==6))throw Error('The Party Switcher needs a complete six-Pokémon party with matching flash copies.');
+ const party=[],pc=[],byLoc=new Map();
+ for(let i=0;i<6;i++){
+  const bytes=getPartyFrom(groups[0],i),mon=decodeMon(bytes);
+  if(!mon)throw Error('Party slot '+(i+1)+' is empty or unreadable.');
+  for(const g of groups.slice(1)){
+   const other=decodeMon(getPartyFrom(g,i));
+   if(!other||monIdentity(other)!==monIdentity(mon))throw Error('Party flash copies disagree at slot '+(i+1)+'.');
+  }
+  for(const base of monLocations.partyRAM){
+   const live=decodeMon(work.subarray(base+100*i,base+100*i+80));
+   if(!live||monIdentity(live)!==monIdentity(mon))throw Error('Live party and flash disagree in slot '+(i+1)+'. Save in-game and take a new SVS first.');
+  }
+  const val='P'+i,entry={val,mon,bytes,kind:'party',index:i};
+  party.push(entry);byLoc.set(val,entry);
+ }
+ for(let i=0;i<420;i++){
+  const bytes=getPCFrom(groups[0],i),mon=decodeMon(bytes);
+  if(!mon){if(bytes&&u32(bytes,0)!==0)throw Error('Unreadable PC Pokémon record in box '+(1+Math.floor(i/30))+' slot '+(1+i%30));continue}
+  for(const g of groups.slice(1)){
+   const other=decodeMon(getPCFrom(g,i));
+   if(!other||monIdentity(other)!==monIdentity(mon))throw Error('PC flash copies disagree at box '+(1+Math.floor(i/30))+' slot '+(1+i%30)+'.');
+  }
+  for(const base of monLocations.pcRAM){
+   const other=decodeMon(work.subarray(base+i*80,base+i*80+80));
+   if(!other||monIdentity(other)!==monIdentity(mon))throw Error('Live PC Pokémon differs from flash storage. Save in-game and take a fresh SVS.');
+  }
+  const val='B'+i,entry={val,mon,bytes,kind:'pc',index:i};
+  pc.push(entry);byLoc.set(val,entry);
+ }
+ const protectedSlots=party.filter(x=>isProtected(x.mon));
+ if(protectedSlots.length!==1)throw Error('Expected one original follower Pikachu in the party. Team switching is locked to protect follower behavior.');
+ if(pc.some(x=>isProtected(x.mon)))throw Error('Another copy of the protected starter was detected in PC storage. Resolve that before switching parties.');
+ return {party,pc,byLoc,anchor:protectedSlots[0]};
+}
+function partyPresetStorageKey(){
+ const g=monLocations.groups[0],sec=g.sectors.get(0);
+ if(!sec)throw Error('Trainer identity unavailable.');
+ return 'TY-party-plans-v1:'+String(u32(work,sec.base+10));
+}
+function readPartyPlans(){
+ try{const p=JSON.parse(localStorage.getItem(partyPresetStorageKey())||'[]');return Array.isArray(p)?p.filter(x=>typeof x.name==='string'&&Array.isArray(x.members)&&x.members.length===6).slice(0,30):[]}
+ catch(e){return []}
+}
+function writePartyPlans(plans){
+ try{localStorage.setItem(partyPresetStorageKey(),JSON.stringify(plans));}
+ catch(e){throw Error('Your browser could not save the team plans locally: '+e.message)}
+}
+function refreshPartyPlanList(){
+ const menu=$('partyPresets'),current=menu.value;menu.replaceChildren();
+ menu.add(new Option('Choose a saved team…',''));
+ for(const plan of readPartyPlans())menu.add(new Option(plan.name,plan.name));
+ if([...menu.options].some(x=>x.value===current))menu.value=current;
+}
+function partyPickerValues(){return Array.from({length:6},(_,i)=>$('teamChoice'+i)?.value||'');}
+function partyPreviewInvalid(){
+ partyPlanPreview=null;
+ const b=$('partyApplyButton');if(b)b.disabled=true;
+}
+function renderPartyBuilder(){
+ const target=$('partyPicker');if(!target)return;
+ const old=partyPickerValues();target.replaceChildren();partyPreviewInvalid();
+ try{
+  const roster=teamRoster();
+  for(let i=0;i<6;i++){
+   const parent=document.createElement('div');parent.className='party-choice'+(i===roster.anchor.index?' locked':'');
+   const label=document.createElement('label');label.className='label';label.htmlFor='teamChoice'+i;label.textContent='Party slot '+(i+1)+(i===roster.anchor.index?' • original Pikachu (locked)':'');
+   parent.append(label);
+   if(i===roster.anchor.index){
+    const p=document.createElement('div');p.className='callout good';p.textContent='★ '+monSourceLabel(roster.anchor.mon)+' — stays here';parent.append(p);
+    const hid=document.createElement('input');hid.type='hidden';hid.id='teamChoice'+i;hid.value=roster.anchor.val;parent.append(hid);
+   }else{
+    const sel=document.createElement('select');sel.className='input';sel.id='teamChoice'+i;
+    for(const [label,entry] of [['Current party',roster.party],['PC boxes',roster.pc]]){
+     const opt=document.createElement('optgroup');opt.label=label;
+     for(const mon of entry){
+      if(isProtected(mon.mon))continue;
+      const location=mon.kind==='party'?'Party '+(mon.index+1):'Box '+(Math.floor(mon.index/30)+1)+', slot '+(mon.index%30+1);
+      opt.append(new Option(location+' • '+monSourceLabel(mon.mon),mon.val));
+     }
+     sel.append(opt);
+    }
+    const desired=old[i]&&roster.byLoc.has(old[i])?old[i]:roster.party[i].val;
+    sel.value=desired;sel.onchange=partyPreviewInvalid;parent.append(sel);
+   }
+   target.append(parent);
+  }
+  $('partySwitcherStatus').textContent='Select up to five different party or PC members. The original Pikachu remains in slot '+(roster.anchor.index+1)+'.';
+  refreshPartyPlanList();
+ }catch(e){target.replaceChildren();$('partySwitcherStatus').textContent='Party switching unavailable: '+e.message}
+}
+function validatePartyPlan(){
+ if(monDirty||badgeDirty)throw Error('Save pending Pokémon and badge changes first.');
+ const roster=teamRoster(),values=partyPickerValues();
+ if(values.length!==6||values.some(x=>!roster.byLoc.has(x)))throw Error('Choose six valid Pokémon.');
+ if(new Set(values).size!==6)throw Error('A Pokémon cannot be selected for more than one party slot.');
+ if(values[roster.anchor.index]!==roster.anchor.val)throw Error('The original follower Pikachu must stay in party slot '+(roster.anchor.index+1)+'.');
+ const targets=values.map(x=>roster.byLoc.get(x)),incoming=targets.filter(x=>x.kind==='pc'),
+  chosenParty=new Set(targets.filter(x=>x.kind==='party').map(x=>x.index)),
+  displaced=roster.party.filter(x=>!chosenParty.has(x.index));
+ if(displaced.length!==incoming.length)throw Error('Party / PC exchange plan is inconsistent.');
+ return {roster,values,targets,incoming,displaced};
+}
+function previewPartyPlan(){
+ const status=$('partySwitcherStatus');partyPreviewInvalid();
+ try{
+  const p=validatePartyPlan(),same=p.values.every((x,i)=>x==='P'+i);
+  let lines=p.targets.map((x,i)=>'Slot '+(i+1)+': '+monSourceLabel(x.mon)+(x.kind==='pc'?' ← Box '+(Math.floor(x.index/30)+1)+', slot '+(x.index%30+1):'')).join('\n');
+  if(p.incoming.length)lines+='\n\nGoing to PC: '+p.displaced.map(x=>monSourceLabel(x.mon)).join(', ')+
+   '\nVacated PC slots: '+p.incoming.map(x=>'Box '+(1+Math.floor(x.index/30))+' slot '+(1+x.index%30)).join(', ');
+  if(same)lines+='\n\nThis is already the current party.';
+  status.textContent=lines;
+  if(!same){partyPlanPreview={values:p.values.slice()};$('partyApplyButton').disabled=false;}
+ }catch(e){status.textContent='Cannot preview party: '+e.message}
+}
+function teamLevel(mon){
+ const info=speciesStats[mon.sp];if(!info)throw Error('No supported base stats for '+monSourceLabel(mon));
+ const growth=info[6];let level=1;
+ for(let i=2;i<=100;i++)if(startExp(growth,i)<=mon.exp)level=i;else break;
+ return level;
+}
+function partyRecordFromPC(entry){
+ const mon=entry.mon,level=teamLevel(mon),bases=speciesStats[mon.sp],nature=mon.pid%25;
+ const up=Math.floor(nature/5),down=nature%5,out=new Uint8Array(100);
+ out.set(entry.bytes.slice(0,80));out[84]=level;out[85]=255;
+ const statValues=bases.slice(0,6).map((base,i)=>{
+  let n=Math.floor((2*base+mon.iv[i]+Math.floor(mon.ev[i]/4))*level/100);
+  if(i===0)return mon.sp===303?1:n+level+10;
+  n+=5;const j=i-1;
+  if(up!==down){if(up===j)n=Math.floor(n*1.1);else if(down===j)n=Math.floor(n*0.9)}
+  return n;
+ });
+ // struct Pokemon: hp, maxHP, attack, defense, speed, special attack, special defense
+ for(let i=0;i<7;i++)w16(out,86+i*2,i===0?statValues[0]:statValues[i-1]);
+ if(!decodeMon(out)||out[84]<1||out[84]>100)throw Error('Failed to construct legal party stats for '+monSourceLabel(mon));
+ return out;
+}
+function applyPartyPlan(){
+ const patches=[];
+ try{
+  if(!partyPlanPreview)throw Error('Preview the new party before applying it.');
+  const plan=validatePartyPlan();
+  if(plan.values.some((x,i)=>x!==partyPlanPreview.values[i]))throw Error('Selections changed; preview the plan again.');
+  if(!confirm('Exchange '+plan.incoming.length+' PC Pokémon with your current party? The original follower Pikachu will stay in his slot. Export a NEW SVS for Delta testing.'))return;
+  const full=plan.targets.map(entry=>entry.kind==='party'?entry.bytes.slice():partyRecordFromPC(entry));
+  const outgoing=plan.displaced.map(entry=>entry.bytes.slice(0,80));
+  // Exchange equal numbers of Pokémon; no PC slot is lost or duplicated.
+  for(let i=0;i<6;i++)writeShowdownSlot('party',i,full[i],patches);
+  for(let i=0;i<plan.incoming.length;i++)writeShowdownSlot('box',plan.incoming[i].index,outgoing[i],patches);
+  refreshChecksums(patches);
+  if(!snapshot('Party Switcher: '+plan.incoming.length+' Pokémon exchanged with PC',patches))throw Error('No changes were made.');
+  partyPreviewInvalid();
+  monLocations=locateMons();
+  sync();
+  msg($('partySwitcherStatus'),'✓ Party updated in SVS session. Original Pikachu retained. Download the edited SVS and test in Delta.','good');
+ }catch(e){
+  for(let i=patches.length-1;i>=0;i--)work.set(patches[i].old,patches[i].offset);
+  partyPreviewInvalid();msg($('partySwitcherStatus'),e.message,'bad');
+ }
+}
+function savePartyPlan(){
+ try{
+  const p=validatePartyPlan(),name=$('partyPlanName').value.trim();
+  if(!name||name.length>32)throw Error('Enter a team name of 1–32 characters.');
+  const members=p.targets.map(x=>monIdentity(x.mon)),plans=readPartyPlans();
+  const found=plans.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(found>=0){if(!confirm('Overwrite the saved team plan "'+plans[found].name+'"?'))return;plans.splice(found,1)}
+  if(plans.length>=30)throw Error('Maximum 30 saved team plans on this device.');
+  plans.push({name,members});writePartyPlans(plans);
+  refreshPartyPlanList();$('partyPresets').value=name;
+  msg($('partySwitcherStatus'),'✓ Saved "'+name+'" on this device. Select Apply to update the open SVS.','good');
+ }catch(e){msg($('partySwitcherStatus'),e.message,'bad')}
+}
+function loadPartyPlan(){
+ try{
+  const name=$('partyPresets').value,plan=readPartyPlans().find(x=>x.name===name);
+  if(!plan)throw Error('Choose a saved plan.');
+  const roster=teamRoster(),options=[...roster.party,...roster.pc],used=new Set();
+  const values=plan.members.map((identity,i)=>{
+   const matches=options.filter(e=>monIdentity(e.mon)===identity&&!used.has(e.val));
+   const selected=i===roster.anchor.index?matches.find(x=>x.val===roster.anchor.val):matches[0];
+   if(!selected)throw Error('Saved team "'+name+'" contains a Pokémon that is missing from this SVS, or attempts to move the original follower.');
+   used.add(selected.val);return selected.val;
+  });
+  values.forEach((value,i)=>{$('teamChoice'+i).value=value});
+  $('partyPlanName').value=plan.name;partyPreviewInvalid();
+  msg($('partySwitcherStatus'),'✓ Loaded "'+name+'" into the builder. Preview and Apply to exchange the Pokémon.','good');
+ }catch(e){msg($('partySwitcherStatus'),e.message,'bad')}
+}
+function deletePartyPlan(){
+ try{
+  const name=$('partyPresets').value;if(!name)throw Error('Select a team plan to delete.');
+  if(!confirm('Delete the saved team plan "'+name+'" from this device?'))return;
+  writePartyPlans(readPartyPlans().filter(x=>x.name!==name));
+  refreshPartyPlanList();$('partyPresets').value='';
+  msg($('partySwitcherStatus'),'✓ Removed the saved plan; your SVS has not been changed.','good');
+ }catch(e){msg($('partySwitcherStatus'),e.message,'bad')}
+}
+$('partyPreviewButton').onclick=previewPartyPlan;
+$('partyApplyButton').onclick=applyPartyPlan;
+$('partySavePlan').onclick=savePartyPlan;
+$('partyLoadPlan').onclick=loadPartyPlan;
+$('partyDeletePlan').onclick=deletePartyPlan;
+
 function initializeShowdown(){
  for(let b=1;b<=14;b++)$('showdownBox').add(new Option('Box '+b,b));
  updateShowdownTarget();
