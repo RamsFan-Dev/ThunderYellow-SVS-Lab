@@ -996,12 +996,9 @@ function showdownMoveTargets(sets,starterOnly=false){
  if(!Number.isInteger(start)||start<0||start+sets.length>max)throw Error('The selected slots exceed the destination.');
  const dest=[];
  for(let i=0;i<sets.length;i++){
-  const slot=start+i,raws=groups.map(g=>kind==='party'?getPartyFrom(g,slot):getPCFrom(g,slot));
-  if(raws.some(raw=>!raw))throw Error('Missing save copy for slot '+(slot+1));
-  const mons=raws.map(raw=>decodeMon(raw));
-  if(mons.some(mon=>!mon))throw Error('Slot '+(slot+1)+' has no valid Pokémon to update. Use complete import.');
-  const mon=mons[0];
-  if(mons.some(m=>m.pid!==mon.pid||m.ot!==mon.ot||m.sp!==mon.sp))throw Error('Save copies disagree about slot '+(slot+1)+'. No edits made.');
+  const slot=start+i,raw=kind==='party'?getPartyFrom(groups[0],slot):getPCFrom(groups[0],slot);
+  const mon=raw&&decodeMon(raw);
+  if(!mon)throw Error('The active save has no valid Pokémon in slot '+(slot+1)+'. Use complete import.');
   if(mon.sp!==sets[i].sp)throw Error('Slot '+(slot+1)+' is '+(monNames[mon.sp]||mon.sp)+' but pasted Pokémon is '+sets[i].display+'. Species must match.');
   if(starterOnly&&!isProtected(mon))throw Error('Target is not the protected starter Pikachu.');
   const mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM,sz=kind==='party'?100:80;
@@ -1014,8 +1011,8 @@ function showdownMoveTargets(sets,starterOnly=false){
  }
  return {kind,mode:'moves',starterOnly,dest};
 }
-function showdownMoveRecord(spec,kind,slot){
- const raw=kind==='party'?getPartyFrom(monLocations.groups[0],slot):getPCFrom(monLocations.groups[0],slot),mon=decodeMon(raw);
+function showdownMoveRecord(spec,kind,slot,sourceGroup=monLocations.groups[0]){
+ const raw=kind==='party'?getPartyFrom(sourceGroup,slot):getPCFrom(sourceGroup,slot),mon=decodeMon(raw);
  if(!mon||mon.sp!==spec.sp)throw Error('Target Pokémon no longer matches the preview.');
  const moves=spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]||0):mon.moves.slice();
  const pp=spec.moves.length?moves.map(id=>id?(maxPP[id]||0):0):mon.pp.slice();
@@ -1029,6 +1026,34 @@ function showdownMoveRecord(spec,kind,slot){
  return encoded;
 }
 
+
+function writeShowdownMoveSlot(spec,kind,slot,patches){
+ const latest=monLocations.groups[0];
+ const active=decodeMon(kind==='party'?getPartyFrom(latest,slot):getPCFrom(latest,slot));
+ if(!active||active.sp!==spec.sp)throw Error('The selected active Pokémon has changed.');
+ const next=showdownMoveRecord(spec,kind,slot,latest),width=kind==='party'?100:80;
+ const mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM;
+ for(const base of mirrors)patch(base+width*slot,next,patches);
+ for(const g of monLocations.groups){
+  const before=kind==='party'?getPartyFrom(g,slot):getPCFrom(g,slot),mon=before&&decodeMon(before);
+  // The second FLASH save can be historical. Never replace a different Pokémon
+  // in that older slot: update only records belonging to this exact existing Pokémon.
+  if(!mon||mon.pid!==active.pid||mon.ot!==active.ot||mon.sp!==active.sp)continue;
+  const bytes=showdownMoveRecord(spec,kind,slot,g);
+  if(kind==='party'){
+   const sector=g.sectors.get(1);if(!sector)throw Error('Missing saved party sector.');
+   patch(sector.base+0x38+100*slot,bytes,patches);
+  }else{
+   let copied=0,start=4+slot*80;
+   while(copied<80){
+    const at=start+copied,sec=g.sectors.get(5+Math.floor(at/3968));
+    if(!sec)throw Error('Missing PC save sector.');
+    const n=Math.min(80-copied,3968-at%3968);
+    patch(sec.base+at%3968,bytes.slice(copied,copied+n),patches);copied+=n;
+   }
+  }
+ }
+}
 function showdownTargetSlots(sets,starterOnly=false){
  if(starterOnly||$('showdownImportMode').value==='moves')return showdownMoveTargets(sets,starterOnly);
  const kind=$('showdownTarget').value,box=Number($('showdownBox').value)-1,slot=Number($('showdownSlot').value)-1;
@@ -1195,8 +1220,7 @@ function applyShowdownPaste(){
   const {sets,starterOnly}=showdownPrepared,plan=showdownTargetSlots(sets,starterOnly);
   if(plan.mode!==showdownPrepared.plan.mode||plan.dest.some((x,i)=>x.slot!==showdownPrepared.plan.dest[i].slot||x.replacing!==showdownPrepared.plan.dest[i].replacing))throw Error('The destination changed; preview the import again.');
   if(plan.mode==='moves'){
-   const records=sets.map((spec,i)=>showdownMoveRecord(spec,plan.kind,plan.dest[i].slot));
-   for(let i=0;i<records.length;i++)writeShowdownSlot(plan.kind,plan.dest[i].slot,records[i],patches);
+   for(let i=0;i<sets.length;i++)writeShowdownMoveSlot(sets[i],plan.kind,plan.dest[i].slot,patches);
   }else{
    const replaceCount=plan.dest.filter(x=>x.replacing).length;
    if(replaceCount&&!confirm('Replace '+replaceCount+' existing Pokémon? This cannot be undone after exporting without a backup. Our protected Pikachu will not be replaced.'))return;
