@@ -49,7 +49,7 @@
 .showdown-preview .risky{color:#ffd087}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.5</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.6</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div></section>
@@ -137,28 +137,68 @@ function isBinGzip(file){return file.length>=10&&file[0]===31&&file[1]===139&&fi
 async function gzipTransform(b,mode){if(typeof DecompressionStream==='undefined'||typeof CompressionStream==='undefined')throw Error('This browser does not support built-in gzip streams. Please open in recent Safari or Chrome.');let transform=mode==='unzip'?new DecompressionStream('gzip'):new CompressionStream('gzip');let stream=new Blob([b]).stream().pipeThrough(transform);return new Uint8Array(await new Response(stream).arrayBuffer())}
 function ascii(d,start,len){return String.fromCharCode(...d.slice(start,start+len)).replace(/\x00/g,'').trim()}
 function findCopies(d){
- let found=[],max=d.length-900;
- // A full 42-slot Items pocket is followed by a Key Items pocket.
- // Verify the quantity XOR key against the unused slots and casino coins against the pre-pocket field.
- for(let s=128;s<max;s++){
-  if(d[s+1]!==0||d[s+5]!==0||d[s+9]!==0)continue;
-  let a=u16(d,s),b=u16(d,s+4),c=u16(d,s+8);
-  if(a<1||a>300||b<1||b>300||c<1||c>300)continue;
-  if(d[s+160]!==0||d[s+161]!==0||d[s+164]!==0||d[s+165]!==0)continue;
-  let key=u16(d,s+162);if(!key||key!==u16(d,s+166))continue;
-  let coins=u16(d,s-0x7c)^key;if(coins>9999)continue;
-  let ids=new Set(),empty=false,valid=true,used=0;
-  for(let j=0;j<42;j++){
-   let id=u16(d,s+j*4),q=u16(d,s+j*4+2)^key;
-   if(!id){if(q)valid=false;empty=true}else{if(empty||id>400||q<1||q>999)valid=false;used++;ids.add(id)}
-   if(!valid)break;
-  }
-  if(!valid||used<8||ids.size<7)continue;
-  let firstKeyId=u16(d,s+168);if(firstKeyId!==0&&(firstKeyId<256||firstKeyId>450))continue;
-  found.push({start:s,key,coins,used,firstKeyId});
-  s+=40;
+ // Read validated FireRed flash SaveBlock2 (sector 0) and SaveBlock1 (sector 1).
+ // The bag may be completely full: an empty item slot is NOT required to locate or decrypt it.
+ const groups=new Map();
+ for(const sector of flashSectors){
+  const ctr=u32(d,sector.base+0xffc);
+  if(!groups.has(ctr))groups.set(ctr,new Map());
+  groups.get(ctr).set(sector.id,sector);
  }
- return found;
+ const copies=[];
+ const isGood=(start,key)=>{
+  if(start<128||start+offsets[4]+pockets[4][1]*4>d.length)return false;
+  if((u16(d,start-0x7c)^key)>9999)return false;
+  let used=0,empty=false;const unique=new Set();
+  for(let j=0;j<42;j++){
+   const id=u16(d,start+j*4),qty=u16(d,start+j*4+2)^key;
+   if(!id){if(qty!==0)return false;empty=true;}
+   else {
+    if(empty||qty<1||qty>999||unique.has(id))return false;
+    unique.add(id);used++;
+   }
+  }
+  return used>=1;
+ };
+ for(const [counter,sectors] of groups){
+  const block0=sectors.get(0),block1=sectors.get(1);
+  if(!block0||!block1)continue;
+  const key=u16(d,block0.base+0xf20),start=block1.base+0x310;
+  if(!isGood(start,key))continue;
+  copies.push({start,key,coins:u16(d,start-0x7c)^key,used:Array.from({length:42},(_,j)=>u16(d,start+j*4)).filter(Boolean).length,
+   counter,kind:'flash'});
+ }
+ copies.sort((a,b)=>b.counter-a.counter);
+ // Also update live in-memory SaveBlock1 mirrors, not just the two flash save slots.
+ // Require ten or more matching item IDs AND decrypted quantities against a validated flash copy.
+ // This avoids the old "must have two empty bag slots" detector and avoids editing unrelated RAM.
+ const flashes=copies.slice(),usedStarts=new Set(flashes.map(c=>c.start));
+ if(flashes.length){
+  const flashRanges=flashSectors.map(sec=>[sec.base,sec.base+4096]);
+  const scanEnd=d.length-offsets[4]-pockets[4][1]*4;
+  for(let start=128;start<scanEnd;start++){
+   if(usedStarts.has(start))continue;
+   if(d[start]!==d[flashes[0].start]||d[start+1]!==d[flashes[0].start+1])continue;
+   if(flashRanges.some(([a,b])=>start>=a&&start<b))continue;
+   for(const ref of flashes){
+    let idMatches=0;for(let j=0;j<12;j++)if(u16(d,start+j*4)===u16(d,ref.start+j*4))idMatches++;
+    if(idMatches<10)continue;
+    const firstQty=u16(d,ref.start+2)^ref.key;
+    const key=u16(d,start+2)^firstQty;
+    let qtyMatches=0;
+    for(let j=0;j<12;j++){
+     const refQty=u16(d,ref.start+j*4+2)^ref.key,qty=u16(d,start+j*4+2)^key;
+     if(refQty===qty)qtyMatches++;
+    }
+    if(qtyMatches<10||!isGood(start,key))continue;
+    const mirror={start,key,coins:u16(d,start-0x7c)^key,
+      used:Array.from({length:42},(_,j)=>u16(d,start+j*4)).filter(Boolean).length,
+      counter:ref.counter,kind:'RAM'};
+    copies.unshift(mirror);usedStarts.add(start);start+=42*4-1;break;
+   }
+  }
+ }
+ return copies;
 }
 function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
 function sync(){if(!loaded)return;copies=findCopies(work);renderStats();renderInventory();renderBadges();if(!monDirty)renderPokemon();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
@@ -235,9 +275,7 @@ function applyItem(id,pocket,qty){try{
   if(target<0&&qty>0)target=firstEmpty;
   if(target<0&&qty>0)throw Error('Pocket is full in one detected copy. Nothing was changed.');
   if(target<0)continue;
-  // Keep two empty slots for safe re-detection of the Items pocket after edits.
-  if(pocket===0 && qty>0 && u16(work,target)===0 && target>=start+40*4)
-   throw Error('Keep two empty Items slots for reliable copy detection. Remove another item first.');
+  // The sector-backed inventory detector supports all 42 item slots being occupied.
   plan.push({target,id,qty,key:c.key,needNew:u16(work,target)!==id,start,slots});
  }
  let patches=[];for(const p of plan){
