@@ -322,6 +322,77 @@ function readRequiredQuantity(el,label,max=999){
  if(!/^[0-9]+$/.test(value))throw Error('Enter a '+label+' before tapping Set. To remove an item, explicitly enter 0.');
  const qty=Number(value);validateInt(qty,0,max,label);return qty;
 }
+
+// Selection is independent of the Set Quantity editor. The quantity to transfer
+// defaults to the owned amount. No SVS bytes change until the user taps Move Selected.
+const selectedPC=new Map();
+const selectedPCKey=(pocket,id)=>pocket+':'+id;
+function clearSelectedPC(){selectedPC.clear();renderInventory();}
+function selectedOwned(pocket,id){
+ if(!copies.length)return 0;
+ const item=getItems(work,copies[0],pocket).find(x=>x.id===id);
+ return item?item.qty:0;
+}
+function updateSelectedPCView(){
+ const list=$('selectedPCList'),bar=$('selectedPCBar'),counter=$('selectedPCCount'),
+       move=$('moveSelectedPC'),clear=$('clearSelectedPC'),warning=$('selectedPCWarning');
+ if(!list)return;
+ list.replaceChildren();
+ // Remove items that were deleted by a separate edit or subsequent transfer.
+ for(const [key,selection] of selectedPC){
+  const owned=selectedOwned(selection.pocket,selection.id);
+  if(!owned){selectedPC.delete(key);continue}
+  if(selection.qty>owned)selection.qty=owned;
+ }
+ const rows=[...selectedPC.values()];
+ counter.textContent=rows.length+' item'+(rows.length===1?'':'s')+' selected';
+ clear.disabled=!rows.length;
+ move.disabled=!rows.length;
+ bar.classList.toggle('has-selection',!!rows.length);
+ if(!rows.length){
+  const p=document.createElement('span');p.className='hint';
+  p.textContent='Tap Select for PC beside one or more owned items. You can select items from different bag pockets.';
+  list.append(p);
+  warning.textContent='';
+  return;
+ }
+ for(const entry of rows){
+  const r=document.createElement('div');r.className='pc-selected-row';
+  const title=document.createElement('div');title.innerHTML='';
+  const bold=document.createElement('strong');bold.textContent=name(entry.id);
+  const note=document.createElement('small');
+  const total=selectedOwned(entry.pocket,entry.id);
+  note.textContent=pockets[entry.pocket][0]+' • owned '+total;
+  title.append(bold,note);
+  const qty=document.createElement('input');qty.className='input';qty.type='number';
+  qty.inputMode='numeric';qty.min='1';qty.max=String(total);qty.value=String(entry.qty);
+  qty.setAttribute('aria-label','Transfer quantity of '+name(entry.id));
+  qty.oninput=()=>{
+   const raw=qty.value.trim();entry.qty=/^[0-9]+$/.test(raw)?Number(raw):0;
+   const invalid=[...selectedPC.values()].some(x=>!Number.isInteger(x.qty)||x.qty<1||x.qty>selectedOwned(x.pocket,x.id));
+   move.disabled=invalid;
+   warning.textContent=invalid?'Enter a transfer quantity between 1 and the owned amount.':'';
+  };
+  const remove=document.createElement('button');remove.type='button';
+  remove.className='btn secondary';remove.textContent='Remove';
+  remove.onclick=()=>{selectedPC.delete(selectedPCKey(entry.pocket,entry.id));renderInventory();};
+  r.append(title,qty,remove);list.append(r);
+ }
+ warning.textContent='You are selecting quantities to MOVE, not changing the quantity owned. Tap Move Selected to PC when ready.';
+}
+function toggleSelectPC(pocket,id){
+ if(pocket===1)throw Error('Key Items must remain in the bag.');
+ const qty=selectedOwned(pocket,id),key=selectedPCKey(pocket,id);
+ if(selectedPC.has(key))selectedPC.delete(key);
+ else {if(qty<1)throw Error('You do not own this item.');selectedPC.set(key,{pocket,id,qty})}
+ renderInventory();
+}
+function showPCStorageBlock(reason){
+ const details=$('pcItemsDetails');details.open=true;
+ msg($('editMsg'),'PC transfer blocked: '+reason+' Open the Item PC Storage section below. Test 89 contains invalid PC item data; it cannot be transferred safely until that data is repaired or explicitly reset after making a backup.','bad');
+ const notice=$('selectedPCWarning');if(notice)notice.textContent='⚠ PC storage needs repair before transfer. Open Item PC Storage below.';
+ details.scrollIntoView?.({behavior:'smooth',block:'center'});
+}
 function renderInventory(){
  const p=$('pockets');p.replaceChildren();
  pockets.forEach(([n],i)=>{
@@ -329,7 +400,7 @@ function renderInventory(){
   b.onclick=()=>{activePocket=i;renderInventory()};p.append(b);
  });
  const tbody=$('inventory');tbody.replaceChildren();
- if(!copies.length){tbody.innerHTML='<tr><td colspan="4">Inventory not detected in this file</td></tr>';$('inventoryDesc').textContent='';return}
+ if(!copies.length){tbody.innerHTML='<tr><td colspan="4">Inventory not detected in this file</td></tr>';$('inventoryDesc').textContent='';updateSelectedPCView();return}
  const pocket=activePocket,items=getItems(work,copies[0],pocket),ownedCount=items.length;
  // Display every possible key item and Berry without writing missing entries to the save.
  // A quantity of zero means "not owned"; setting zero on an absent entry makes no changes.
@@ -341,37 +412,43 @@ function renderInventory(){
  }
  const extra=pocket===1?' • complete Key Item catalog':pocket===3?' • all 58 TMs/HMs':pocket===4?' • all 43 Berries':'';
  $('inventoryDesc').textContent=ownedCount+' / '+pockets[pocket][1]+' occupied slots'+extra;
- if(!items.length){tbody.innerHTML='<tr><td colspan="4">Pocket empty</td></tr>';return}
+ if(!items.length){tbody.innerHTML='<tr><td colspan="4">Pocket empty</td></tr>';updateSelectedPCView();return}
  const special=new Set(list||[]);
  for(const item of items){
-  const tr=document.createElement('tr'),nm=document.createElement('td'),id=document.createElement('td'),qt=document.createElement('td'),sv=document.createElement('td');
-  const inp=document.createElement('input'),btn=document.createElement('button'),moveButton=document.createElement('button');
-  nm.textContent=name(item.id);
-  if(item.missing)nm.className='muted';
-  if(list&&!special.has(item.id)){nm.textContent+=' • unexpected pocket item';nm.className='warn'}
+  const tr=document.createElement('tr'),nm=document.createElement('td'),id=document.createElement('td'),
+        qt=document.createElement('td'),sv=document.createElement('td');
+  const edit=document.createElement('input'),setButton=document.createElement('button'),choose=document.createElement('button');
+  const key=selectedPCKey(pocket,item.id),eligible=pocket!==1&&!item.missing&&item.qty>0;
+  if(selectedPC.has(key))tr.classList.add('inv-picked');
+  const nmText=document.createElement('div');nmText.textContent=name(item.id);
+  if(item.missing)nmText.className='muted';
+  if(list&&!special.has(item.id)){nmText.textContent+=' • unexpected pocket item';nmText.className='warn'}
+  nm.append(nmText);
+  choose.type='button';choose.className='inv-select'+(selectedPC.has(key)?' is-selected':'');
+  choose.textContent=selectedPC.has(key)?'✓ Selected':'□ Select for PC';
+  choose.setAttribute('aria-pressed',String(selectedPC.has(key)));
+  choose.disabled=!eligible;choose.title=pocket===1?'Key Items cannot be stored in the item PC.':item.qty===0?'Not owned.':'Select this item to move to the PC.';
+  if(eligible)choose.onclick=()=>{try{toggleSelectPC(pocket,item.id)}catch(e){msg($('editMsg'),e.message,'bad')}};
+  nm.append(choose);
   id.textContent=item.id;id.className='smallHide muted monospace';
-  const current=document.createElement('div');
-  current.className=item.missing?'qty-owned muted':'qty-owned';
-  current.textContent='Owned: '+item.qty;
-  inp.className='input qtyField';inp.type='number';inp.min='0';inp.max='999';
-  inp.inputMode='numeric';inp.value='';inp.placeholder='Set qty';inp.setAttribute('aria-label','New quantity for '+name(item.id));
-  btn.className='btn secondary';btn.style='min-height:34px;padding:5px 11px;font-size:12px';
-  btn.textContent='Set';btn.disabled=true;
-  inp.oninput=()=>{btn.disabled=!/^[0-9]+$/.test(inp.value.trim())||Number(inp.value)>999};
-  btn.onclick=()=>{
-   try{const qty=readRequiredQuantity(inp,'quantity for '+name(item.id));applyItem(item.id,pocket,qty);}
-   catch(e){msg($('editMsg'),e.message,'bad')}
+  const owned=document.createElement('div');owned.className=item.missing?'qty-owned muted':'qty-owned';owned.textContent='Owned: '+item.qty;
+  edit.className='input qtyField';edit.type='number';edit.min='0';edit.max='999';
+  edit.inputMode='numeric';edit.value='';edit.placeholder='New qty';
+  edit.setAttribute('aria-label','Set new bag quantity for '+name(item.id));
+  setButton.type='button';setButton.className='btn secondary';setButton.textContent='Set Quantity';setButton.disabled=true;
+  edit.oninput=()=>{
+   const value=edit.value.trim();
+   setButton.disabled=!/^[0-9]+$/.test(value)||Number(value)>999;
   };
-  moveButton.type='button';moveButton.className='btn secondary move-pc';moveButton.textContent='→ PC';
-  moveButton.title=pocket===1?'Key Items cannot be stored in the PC.':'Move the entered quantity to the item PC.';
-  moveButton.disabled=true;
-  if(pocket!==1&&!item.missing&&item.qty>0){
-   const oldInputHandler=inp.oninput;
-   inp.oninput=()=>{oldInputHandler();const t=inp.value.trim();moveButton.disabled=!pcItemStatus().valid||!/^[0-9]+$/.test(t)||Number(t)<1||Number(t)>item.qty};
-   moveButton.onclick=()=>{try{const amount=readRequiredQuantity(inp,'transfer quantity');if(amount<1||amount>item.qty)throw Error('Move between 1 and '+item.qty+' '+name(item.id)+' to PC.');transferItemPC(item.id,amount,'deposit',pocket)}catch(e){msg($('editMsg'),e.message,'bad')}};
-  }
-  qt.append(current,inp);const actions=document.createElement('div');actions.className='inv-actions';actions.append(btn,moveButton);sv.append(actions);tr.append(nm,id,qt,sv);tbody.append(tr);
+  setButton.onclick=()=>{try{
+   const qty=readRequiredQuantity(edit,'new bag quantity for '+name(item.id));
+   applyItem(item.id,pocket,qty);
+  }catch(e){msg($('editMsg'),e.message,'bad')}};
+  qt.append(owned,edit);
+  const actions=document.createElement('div');actions.className='inv-edit-actions';actions.append(setButton);
+  sv.append(actions);tr.append(nm,id,qt,sv);tbody.append(tr);
  }
+ updateSelectedPCView();
 }
 function validateInt(n,lo,hi,label){if(!Number.isInteger(n)||n<lo||n>hi)throw Error(label+' must be between '+fmt(lo)+' and '+fmt(hi))}
 function applyCoins(){try{if(!copies.length)throw Error('Inventory data was not detected.');let value=readRequiredQuantity($('coins'),'coin amount',9999);let patches=[];for(const c of copies)patch16(c.start-0x7c,value^c.key,patches);refreshChecksums(patches);if(snapshot('Set casino coins to '+fmt(value)+' across '+copies.length+' copy/copies',patches)){sync();msg($('editMsg'),'✓ All '+copies.length+' copies now show '+fmt(value)+' coins.','good')}else msg($('editMsg'),'Coins already have this value.')}catch(e){msg($('editMsg'),e.message,'bad')}}
@@ -536,7 +613,7 @@ function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
 function undo(){let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;undoStack=[];log=[];loaded=true;monDirty=false;badgeDirty=false;refreshMonSaveStatus();activePocket=0;for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);monLocations=locateMons();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');sync();hexView();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;undoStack=[];log=[];loaded=true;monDirty=false;badgeDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);monLocations=locateMons();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');sync();hexView();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
 async function exportSVS(){if(!loaded)return;if(badgeDirty){alert('Save your badge changes before exporting.');return;}if(monDirty){msg($('exportMsg'),'Save Pokémon changes before exporting.','bad');alert('You have unsaved Pokémon edits. Tap Save Pokémon before exporting.');return;}let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes. Import this new .svs into Delta and test it.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 $('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyCoins;$('applyPreset').onclick=()=>{try{let[id,p]= $('preset').value.split('|').map(Number);applyItem(id,p,readRequiredQuantity($('presetQty'),'preset quantity'))}catch(e){msg($('editMsg'),e.message,'bad')}};
