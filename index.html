@@ -468,7 +468,7 @@ function patchOwnedTrainerNames(groups,oldBytes,newBytes,patches){
   }
  }
  if(monLocations){
-  for(const base of monLocations.partyRAM)for(let k=0;k<6;k++){
+  for(const base of [...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])])for(let k=0;k<6;k++){
    const offset=base+100*k;applyOT(work.subarray(offset,offset+80),offset);
   }
   for(const base of monLocations.pcRAM)for(let k=0;k<420;k++){
@@ -1257,7 +1257,8 @@ function applyShowdownReconcile(sets,plan,patches){
   records.push(showdownReconcileWrite(sets[i],i,i<count,primary,mirrors,patches));
  if(sets.length>count){
   patch(sec.base+0x34,Uint8Array.of(sets.length),patches);
-  for(const base of mirrors)patch(base-4,Uint8Array.of(sets.length),patches);
+  for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(sets.length),patches);
+  for(const base of monLocations.gameplayParty)patch(base-0x25B,Uint8Array.of(sets.length),patches);
  }
  refreshChecksums(patches);
  const validation=verifySnapshotIdentity();
@@ -1965,7 +1966,7 @@ function verifyLivePartyMirrors(){
  if(!mirrors.length)throw Error('The active 1–6 Pokémon party in RAM does not match the saved party. Edits would only affect flash and may disappear or damage the save. Start from a fresh in-game save and SVS.');
  if(!monLocations?.partyRAM?.length||monLocations.partyRAM.some(pos=>!mirrors.includes(pos)))
   throw Error('The party RAM mirrors changed or were not detected correctly. Reload a fresh SVS before editing.');
- return {groups,mirrors,count};
+ return {groups,mirrors:[...new Set([...mirrors,...gameplay])],saveMirrors:mirrors,gameplayMirrors:gameplay,count};
 }
 let originalStarterIdentity=null;
 function rememberOriginalStarter(){
