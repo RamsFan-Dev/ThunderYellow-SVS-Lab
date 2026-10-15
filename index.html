@@ -108,6 +108,9 @@
  <p id="unsafeStateReason"></p>
  <p>This SVS can contain an <strong>older game's cartridge-save records</strong> even when the running game has a different Pokémon party. The lab will not substitute those records for your actual Pokémon.</p>
  <p><strong>Editing and SVS export are disabled for this snapshot.</strong> Your uploaded file remains unchanged.</p>
+ <div class="row" style="margin:10px 0"><button id="unsafeExtractTeam" type="button" class="btn secondary">📋 Recover Pokémon Builds (read-only)</button></div>
+ <div id="unsafeExtractMessage" class="hint" role="status">Optional: recover the Pokémon's moves, EVs, IVs, PP, natures and other build settings from this mismatched file. Their old trainer and personality IDs will not be copied.</div>
+ <p><strong>To repair:</strong> Recover the builds here, then load a <strong>fresh SVS from Jak’s game after saving in-game</strong>. The Lab will fill the party-repair importer automatically. Review the preview and apply it; the untouched original starter Pikachu stays protected.</p>
  <p>To enable safe editing, make a <strong>normal in-game save</strong>, then create a <strong>new Delta savestate after the game has finished loading and you can walk around</strong>. Load that new SVS here. If your game hasn't reached the point where you can save yet, continue playing and try later.</p>
 </div>
 <section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div></section>
@@ -147,12 +150,13 @@
  <button id="showdownFixed40" type="button" class="btn secondary">⚡ Optimize 40 PP / 3 PP Ups</button>
 </div>
 <div id="showdownPPPresetStatus" class="hint" role="status">Tap 35 or 40 to fill PP and 3 PP Ups for every nonempty move in the pasted sets. You can also type any current PP from 0–99 into the # PP: line. SVS Lab writes the requested value without a normal move-PP cap; the ROM may still change it during gameplay.</div>
-<div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option><option value="stats">Update existing: FULL STATS + Moves (protect follower)</option></select></div>
+<div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option><option value="stats">Update existing: FULL STATS + Moves (protect follower)</option><option value="reconcile">Repair / build complete party (update existing + add missing)</option></select></div>
 <div class="grid3" style="margin:13px 0 10px">
  <div><label class="label" for="showdownTarget">Import destination</label><select id="showdownTarget" class="input"><option value="box">PC boxes</option><option value="party">Party</option></select></div>
  <div id="showdownBoxPane"><label class="label" for="showdownBox">Starting PC box</label><select id="showdownBox" class="input"></select></div>
  <div><label class="label" for="showdownSlot">Starting slot</label><select id="showdownSlot" class="input"></select></div>
 </div>
+<div id="showdownRepairHelp" class="hint hidden" style="margin:8px 0"><strong>Complete party repair:</strong> Start with a fresh, verified in-game save state. Select Party / Slot 1 and paste up to six consecutive sets in party order. SVS Lab updates matching existing Pokémon, adds missing Pokémon into empty slots, preserves the original follower Pikachu's PID/OT, updates live RAM AND cartridge-save copies, and verifies the result before enabling export. Never applies unsafe flash-only edits.</div>
 <div id="showdownStatsHelp" class="hint hidden" style="margin:8px 0"><strong>Full Stats:</strong> Update an existing matching Pokémon: EVs, IVs, level/EXP, battle stats, held item, friendship, ability, and moves. Non-starter Pokémon can also change gender, nature, and shiny status. Original follower Pikachu keeps its fixed PID, nature, shiny status, and gender—differences from pasted values appear as explicit warnings before applying. This does not create missing party members.</div>
 <div id="showdownMoveHelp" class="hint hidden" style="margin:8px 0">Moves + Ability Only updates existing Pokémon moves, ability, current PP and PP Ups if supplied. Species must match. It preserves PID, OT, level, EXP, nature, shiny status, held item, IVs, EVs, happiness and follower identity. If PP / PP Ups lines are omitted, new moves get default PP and zero PP Ups.</div>
 <label class="tog" style="margin:10px 0" id="showdownOverwriteLabel"><input id="showdownOverwrite" type="checkbox"> Allow replacement of occupied, non-protected slots (requires confirmation)</label>
@@ -1702,7 +1706,7 @@ function monQuickPP(mode){
 function initializeShowdown(){
  for(let b=1;b<=14;b++)$('showdownBox').add(new Option('Box '+b,b));
  updateShowdownTarget();
- const modeUI=()=>{const mode=$('showdownImportMode').value;const moves=mode==='moves',stats=mode==='stats';$('showdownOverwriteLabel').classList.toggle('hidden',moves||stats);$('showdownMoveHelp').classList.toggle('hidden',!moves);$('showdownStatsHelp').classList.toggle('hidden',!stats);invalidateShowdownPreview();};
+ const modeUI=()=>{const mode=$('showdownImportMode').value;const moves=mode==='moves',stats=mode==='stats',repair=mode==='reconcile';$('showdownOverwriteLabel').classList.toggle('hidden',moves||stats||repair);$('showdownMoveHelp').classList.toggle('hidden',!moves);$('showdownStatsHelp').classList.toggle('hidden',!stats);$('showdownRepairHelp').classList.toggle('hidden',!repair);if(repair){$('showdownTarget').value='party';updateShowdownTarget();$('showdownSlot').value='1';}invalidateShowdownPreview();};
  for(const id of ['showdownText','showdownImportMode','showdownTarget','showdownBox','showdownSlot','showdownOverwrite']){
   $(id).addEventListener(id==='showdownText'?'input':'change',()=>{
    if(id==='showdownTarget'){updateShowdownTarget();return;}
