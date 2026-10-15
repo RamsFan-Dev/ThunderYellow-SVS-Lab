@@ -142,6 +142,11 @@
 <p class="hint">Paste one or several complete Pokémon sets, separated by blank lines. Preview the party or PC destination before importing. Level defaults to 100 when omitted; IVs default to 31, and EVs default to 0. Optional SVS Lab lines: # PP: 15 / 15 / 10 / 20 and # PP Ups: 3 / 3 / 0 / 3 (four move slots, 0–3 PP Ups each).</p>
 <label class="label" for="showdownText">Pokémon sets</label>
 <textarea id="showdownText" class="input" rows="9" spellcheck="false" autocomplete="off" placeholder="Squirtle (M) @ Leftovers&#10;Ability: Torrent&#10;EVs: 255 HP / 255 Atk / 255 Def / 255 SpA / 255 SpD / 255 Spe&#10;Hardy Nature&#10;- Tackle&#10;- Tail Whip"></textarea>
+<div class="row" style="margin:11px 0">
+ <button id="showdownMaxLegal" type="button" class="btn secondary">⚡ Fill Max PP + 3 PP Ups</button>
+ <button id="showdownFixed35" type="button" class="btn secondary">35 PP + 3 PP Ups (custom)</button>
+</div>
+<div id="showdownPPPresetStatus" class="hint" role="status">These shortcuts fill PP and PP Ups for all pasted Pokémon; preview and apply the import afterward. Max PP is different for each move. The custom 35 PP value can exceed normal limits and may be corrected by the game.</div>
 <div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option><option value="stats">Update existing: FULL STATS + Moves (protect follower)</option></select></div>
 <div class="grid3" style="margin:13px 0 10px">
  <div><label class="label" for="showdownTarget">Import destination</label><select id="showdownTarget" class="input"><option value="box">PC boxes</option><option value="party">Party</option></select></div>
@@ -199,7 +204,13 @@
 </div>
 <div id="monForm" class="hidden">
 <div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="monLevel">Level (1–100)</label><input class="input" id="monLevel" type="number" min="1" max="100" inputmode="numeric"></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability</label><select class="input" id="monAbility"></select></div><div><label class="label" for="monShiny">Shiny</label><select class="input" id="monShiny"><option value="0">No</option><option value="1">Yes ✨</option></select></div></div><div class="hint" id="monShinyHelp">Changing Shiny requires a new personality ID. Protected starter Pikachu cannot change shininess without risking follower logic.</div><div class="hint" id="monLevelHelp" style="margin-top:10px">Changing level sets matching EXP and recalculates party stats.</div><div class="hint" id="monAbilityHelp">Only species-supported abilities are selectable.</div>
-<h3 style="font-size:15px;margin:21px 0 9px">All four moves • PP and PP Ups</h3><div class="hint">Choose a move for each slot, adjust PP and PP Ups, then save the Pokémon changes below.</div><div id="monMoveRows"></div><div class="grid3" style="margin:13px 0"><div><label class="label" for="moveQuickSlot">Apply preset to slot</label><select id="moveQuickSlot"><option value="0">Move 1</option><option value="1">Move 2</option><option value="2">Move 3</option><option value="3">Move 4</option></select></div><div><label class="label" for="moveQuickName">Choose familiar move</label><select id="moveQuickName"></select></div><div style="display:flex;align-items:end"><button class="btn secondary" id="moveQuick">Fill move ID</button></div></div><div class="hint">Move names use Gen 3 IDs internally. The editor does not check whether a Pokémon can learn a move. Current PP and PP Ups are saved separately.</div>
+<h3 style="font-size:15px;margin:21px 0 9px">All four moves • PP and PP Ups</h3><div class="hint">Choose a move for each slot, adjust PP and PP Ups, then save the Pokémon changes below.</div><div id="monMoveRows"></div>
+<div class="row" style="margin:12px 0">
+ <button id="monMaxPP" type="button" class="btn secondary">⚡ Max PP + 3 PP Ups</button>
+ <button id="mon35PP" type="button" class="btn secondary">35 PP + 3 PP Ups (custom)</button>
+</div>
+<div class="hint">For the selected Pokémon's moves only. These buttons fill the fields but do not save until you tap Save Pokémon. The fixed 35 PP preset can exceed a move's normal maximum.</div>
+<div class="grid3" style="margin:13px 0"><div><label class="label" for="moveQuickSlot">Apply preset to slot</label><select id="moveQuickSlot"><option value="0">Move 1</option><option value="1">Move 2</option><option value="2">Move 3</option><option value="3">Move 4</option></select></div><div><label class="label" for="moveQuickName">Choose familiar move</label><select id="moveQuickName"></select></div><div style="display:flex;align-items:end"><button class="btn secondary" id="moveQuick">Fill move ID</button></div></div><div class="hint">Move names use Gen 3 IDs internally. The editor does not check whether a Pokémon can learn a move. Current PP and PP Ups are saved separately.</div>
 <details><summary>IVs and EVs</summary>
 <div class="hint" style="margin:4px 0 10px">SVS editor limits: IV 0–31 per stat, EV 0–255 per stat. You may set all six EVs to 255. Zero is preserved for Pokémon that have none.</div>
 <div id="evBudget" class="ev-budget good" role="status" aria-live="polite">EV total: 0 • No combined limit in this editor</div>
@@ -987,7 +998,7 @@ function showdownPPFields(spec,moves,existing=null){
   const base=maxPP[id];
   if(!Number.isInteger(base)||base<1)throw Error('Move slot '+(i+1)+' has no supported base PP.');
   const ceiling=base+Math.floor(base*bonus/5);
-  if(current>ceiling)throw Error('Move slot '+(i+1)+' PP '+current+' exceeds its legal maximum '+ceiling+' with '+bonus+' PP Ups.');
+  if(current>ceiling&&!spec.ppCustom)throw Error('Move slot '+(i+1)+' PP '+current+' exceeds its legal maximum '+ceiling+' with '+bonus+' PP Ups. Choose the 35 PP custom preset or add # PP Mode: Custom to permit values above the normal limit.');
  }
  return {pp,ppups:ups};
 }
@@ -1008,7 +1019,7 @@ function parseShowdownImport(input){
   if(nick){nickname=nick[1].trim();pokemon=nick[2].trim()}
   const sp=importLookup(monNames,'Pokémon species',pokemon);
   if(!speciesStats[sp]||!speciesMeta[sp])throw Error('Species '+pokemon+' lacks validated Gen 3 data.');
-  let level=100,nature=0,ability=null,shiny=false,ev=Array(6).fill(0),iv=Array(6).fill(31),friend=speciesStats[sp][7],moves=[],pp=null,ppUps=null,seen=new Set();
+  let level=100,nature=0,ability=null,shiny=false,ev=Array(6).fill(0),iv=Array(6).fill(31),friend=speciesStats[sp][7],moves=[],pp=null,ppUps=null,ppCustom=false,seen=new Set();
   for(const line of lines.slice(1)){
    let m;
    if((m=/^Ability\s*:\s*(.+)$/i.exec(line))){if(seen.has('ability'))throw Error('Duplicate Ability for '+pokemon);ability=m[1].trim();seen.add('ability');}
@@ -1028,6 +1039,7 @@ function parseShowdownImport(input){
     if(ppUps)throw Error(pokemon+' has more than one PP Ups line.');
     ppUps=showdownParsePPValues(m[1],'PP Ups',3);
    }
+   else if((m=/^(?:#\s*)?PP\s*Mode\s*:\s*(Custom|Legal)$/i.exec(line))){if(seen.has('ppMode'))throw Error(pokemon+' has duplicate PP Mode lines.');ppCustom=/^custom$/i.test(m[1]);seen.add('ppMode');}
    else if(line.startsWith('#'))continue;
    else throw Error(pokemon+': unsupported pasted line "'+line+'". Remove it or correct the format.');
   }
@@ -1042,7 +1054,7 @@ function parseShowdownImport(input){
    abilitySlot=match;
   }
   if(meta[1]==='NONE')throw Error(pokemon+' does not have a supported ability.');
-  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,abilityProvided:seen.has('ability'),shiny,ev,iv,friend,moves,pp,ppUps});
+  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,abilityProvided:seen.has('ability'),shiny,ev,iv,friend,moves,pp,ppUps,ppCustom});
  }
  return sets;
 }
@@ -1982,6 +1994,8 @@ function showdownExportRecord(mon,record,withNickname){
  }
  lines.push('# PP: '+mon.pp.join(' / '));
  lines.push('# PP Ups: '+mon.ppups.join(' / '));
+ if(mon.moves.some((move,i)=>move&&maxPP[move]!==undefined&&mon.pp[i]>maxPP[move]+Math.floor(maxPP[move]*mon.ppups[i]/5)))
+  lines.push('# PP Mode: Custom');
  for(const warning of warnings)lines.push('# '+warning);
  return {text:lines.join('\n'),warnings};
 }
