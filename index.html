@@ -1147,6 +1147,7 @@ function writeShowdownMoveSlot(spec,kind,slot,patches){
 // Update the members that already exist; create only the missing trailing slots.
 // A previous mismatched export can supply BUILDS, never its trainer/identity data.
 function showdownReconcileTargets(sets){
+ if(sets.some(spec=>spec.moves.length!==4))throw Error('Complete party repair requires exactly four moves per pasted Pokémon. No edits made.');
  if(!snapshotSafe||!loaded)throw Error('First load a clean SVS whose in-game save matches the running game. The mismatched source remains read-only.');
  if($('showdownTarget').value!=='party')throw Error('Complete Party Repair works only in the Party (not PC boxes).');
  if(Number($('showdownSlot').value)!==1)throw Error('For complete party repair, set Starting slot to 1.');
@@ -1515,6 +1516,12 @@ function applyShowdownPaste(){
    if(/^(?:EVs|IVs|Level|Shiny|Happiness|Friendship)\s*:|^\s*[A-Za-z]+\s+Nature\s*$/mi.test($('showdownText').value)&&
       !confirm('Moves + Ability ONLY does NOT import IVs, EVs, level, nature, held item, happiness or shiny status. Choose FULL STATS + Moves to import them. Continue with moves only?'))return;
    for(let i=0;i<sets.length;i++)writeShowdownMoveSlot(sets[i],plan.kind,plan.dest[i].slot,patches);
+  }else if(plan.mode==='reconcile'){
+   preservedFollowerWarnings=showdownPrepared.plan.warnings||[];
+   if(preservedFollowerWarnings.length&&!confirm("The original Pikachu's nature, shiny and gender are tied to its special PID. These requested fields cannot be changed safely:\n\n"+preservedFollowerWarnings.join('\n')+'\n\nKeep its original identity and import every other available build field?'))return;
+   if(!confirm('REPAIR PARTY ON VERIFIED GAME\n\nUpdate '+plan.count+' existing Pokémon, add '+(sets.length-plan.count)+' missing Pokémon, and preserve the original follower Pikachu, player identity and bag?\n\nThe original upload will remain unchanged.'))return;
+   const repaired=applyShowdownReconcile(sets,plan,patches);
+   if(repaired.added!==sets.length-plan.count)throw Error('Party repair count did not match the preview.');
   }else if(plan.mode==='stats'){
    preservedFollowerWarnings=showdownPrepared.plan.warnings||[];
    if(preservedFollowerWarnings.length&&!confirm('⚠ Original follower Pikachu cannot change shiny status, nature or gender.\n\n'+preservedFollowerWarnings.join('\n')+'\n\nUpdate every other requested stat while preserving the original follower identity?'))return;
@@ -1535,9 +1542,9 @@ function applyShowdownPaste(){
   }
   refreshChecksums(patches);
   {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-import verification failed: '+check.reason+' Changes were rolled back.');}
-  if(!snapshot((plan.mode==='moves'?'Moves/ability updated for ':plan.mode==='stats'?'Full stats updated for ':'Imported ')+sets.length+' Pokémon set(s)',patches))throw Error('No changes could be recorded.');
-  showdownPrepared=null;$('showdownImportButton').disabled=true;sync();
-  msg(root,'✓ '+sets.length+' Pokémon '+(plan.mode==='moves'?'updated: MOVES + ABILITY ONLY':plan.mode==='stats'?'updated: EVs/IVs, Level, EXP, Stats, Items, Happiness, Moves, Ability and permissible nature/shiny/gender':'imported')+' in the SVS session. '+(plan.mode==='stats'&&preservedFollowerWarnings.length?'Pikachu follower nature/shiny/gender were preserved as warned. ':'')+'Export and test in Delta before replacing the original.','good');
+  if(!snapshot((plan.mode==='moves'?'Moves/ability updated for ':plan.mode==='stats'?'Full stats updated for ':plan.mode==='reconcile'?'Repaired party with ':'Imported ')+sets.length+' Pokémon set(s)',patches))throw Error('No changes could be recorded.');
+  showdownPrepared=null;$('showdownImportButton').disabled=true;if(plan.mode==='reconcile')recoveryDraftPending=false;sync();
+  msg(root,'✓ '+sets.length+' Pokémon '+(plan.mode==='moves'?'updated: MOVES + ABILITY ONLY':plan.mode==='stats'?'updated: EVs/IVs, Level, EXP, Stats, Items, Happiness, Moves, Ability and permissible nature/shiny/gender':plan.mode==='reconcile'?'REPAIRED: '+plan.count+' existing updated and '+(sets.length-plan.count)+' added while preserving original Pikachu and active game':'imported')+' in the SVS session. '+((plan.mode==='stats'||plan.mode==='reconcile')&&preservedFollowerWarnings.length?'Pikachu follower nature/shiny/gender were preserved as warned. ':'')+'Export and test in Delta before replacing the original.','good');
  }catch(e){
   for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);
   msg(root,'Import stopped: '+e.message,'bad');showdownPrepared=null;$('showdownImportButton').disabled=true;
