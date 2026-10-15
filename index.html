@@ -1009,13 +1009,13 @@ async function exportSVS(){if(!loaded)return;if(!undoStack.length){msg($('export
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 // The search catalog is read-only until the user explicitly taps an item.
 const searchableItems=Object.entries(named)
- .filter(([id,label])=>Number(id)>0&&!/^Unused\\b/i.test(label))
+ .filter(([id,label])=>Number(id)>0&&!/^Unused\b/i.test(label))
  .map(([id,label])=>({id:Number(id),label,pocket:findBagPocketForId(Number(id))}))
  .sort((a,b)=>a.label.localeCompare(b.label,'en',{sensitivity:'base'}));
 let selectedCatalogId=null;
 function renderItemResults(){
  const typed=$('itemSearch').value.trim(),query=typed.toLowerCase();
- const clean=value=>String(value).normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const clean=value=>String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
  const hexMatch=/^0x[0-9a-f]+$/i.test(typed),h=hexMatch?(typed.slice(2).replace(/^0+/,'')||'0'):null;
  let results=searchableItems.filter(item=>{
   if(!typed)return true;
