@@ -495,6 +495,7 @@ function saveTrainerNames(){
   let otUpdated=0;
   if(playerChanged&&$('renameOwnedPokemon').checked)otUpdated=patchOwnedTrainerNames(groups,oldPlayer,playerName,patches);
   refreshChecksums(patches);
+  {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-rename verification failed: '+check.reason+' Changes were rolled back.');}
   if(!snapshot('Rename '+(playerChanged?'player to '+playerInput:'')+(playerChanged&&rivalChanged?' and ':'')+(rivalChanged?'rival to '+rivalInput:'')+(otUpdated?' (updated '+otUpdated+' Pokémon OT copies)':''),patches))throw Error('No name changes recorded.');
   nameDirty=false;sync();
   msg($('trainerNamesMsg'),'✓ Names saved into your SVS editing session.'+(otUpdated?' Updated '+otUpdated+' stored Pokémon Original Trainer record copies while keeping IDs/PIDs unchanged.':'')+' Export the edited SVS and test in Delta.','good');
@@ -1434,6 +1435,7 @@ function applyShowdownPaste(){
    }
   }
   refreshChecksums(patches);
+  {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-import verification failed: '+check.reason+' Changes were rolled back.');}
   if(!snapshot((plan.mode==='moves'?'Moves/ability updated for ':plan.mode==='stats'?'Full stats updated for ':'Imported ')+sets.length+' Pokémon set(s)',patches))throw Error('No changes could be recorded.');
   showdownPrepared=null;$('showdownImportButton').disabled=true;sync();
   msg(root,'✓ '+sets.length+' Pokémon '+(plan.mode==='moves'?'updated: MOVES + ABILITY ONLY':plan.mode==='stats'?'updated: EVs/IVs, Level, EXP, Stats, Items, Happiness, Moves, Ability and permissible nature/shiny/gender':'imported')+' in the SVS session. '+(plan.mode==='stats'&&preservedFollowerWarnings.length?'Pikachu follower nature/shiny/gender were preserved as warned. ':'')+'Export and test in Delta before replacing the original.','good');
@@ -1603,6 +1605,7 @@ function applyPartyPlan(){
   for(let i=0;i<6;i++)writeShowdownSlot('party',i,full[i],patches);
   for(let i=0;i<plan.incoming.length;i++)writeShowdownSlot('box',plan.incoming[i].index,outgoing[i],patches);
   refreshChecksums(patches);
+  {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-switch verification failed: '+check.reason+' Changes were rolled back.');}
   if(!snapshot('Party Switcher: '+plan.incoming.length+' Pokémon exchanged with PC',patches))throw Error('No changes were made.');
   partyPreviewInvalid();
   monLocations=locateMons();
@@ -1945,6 +1948,7 @@ function createPokemonInSlot(){
    for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(count+1),changes);
   }else applySlot(created.encoded,changes);
   refreshChecksums(changes);
+  {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-creation verification failed: '+check.reason+' Changes were rolled back.');}
   if(!snapshot('Create '+monNames[sp]+' Lv '+l+' in '+monMode+' slot '+(monSlot+1),changes))throw Error('No edits recorded.');
   monDirty=false;sync();msg($('monMsg'),'✓ Created '+monNames[sp]+' at level '+l+'. Export the SVS and test in Delta.','good');
  }catch(e){for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);msg($('monMsg'),e.message,'bad')}
@@ -2217,6 +2221,7 @@ function commitMon(){
    next=extended;
   }
   applySlot(next,patches);refreshChecksums(patches);
+  {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-edit verification failed: '+check.reason+' Changes were rolled back.');}
   if(snapshot('Edit '+monSourceLabel(mon)+' ('+(monMode==='party'?'party '+(monSlot+1):'box '+(1+Math.floor(monSlot/30))+' slot '+(1+monSlot%30))+')',patches)){
    monDirty=false;sync();refreshMonSaveStatus('✓ Saved this Pokémon to the editing session. Export the edited .svs when finished.');msg($('monMsg'),'✓ Pokémon changes saved to the SVS session. Export to download your edited file.','good');
   }else{monDirty=false;refreshMonSaveStatus('✓ No changes needed.');msg($('monMsg'),'No changes needed.');}
