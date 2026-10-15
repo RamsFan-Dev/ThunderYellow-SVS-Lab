@@ -398,12 +398,16 @@ function trainerRAMPlayerLocations(groups){
  return results;
 }
 function trainerRAMRivalLocations(groups){
+ // RivalName is in SaveBlock1 +0x3A4C. Locate it from a verified live
+ // party at SaveBlock1 +0x38, not from the inventory mirror detector:
+ // new games often have fewer than 10 items and therefore no item mirror.
  const found=[],seen=new Set();
- for(const copy of findCopies(work)){
-  if(copy.kind!=='RAM')continue;
-  const rival=(copy.start-0x310)+0x3A4C;
-  if(rival<0||rival+8>work.length||seen.has(rival))continue;
-  if(!groups.some(group=>nameCompare(work.subarray(rival,rival+8),work.subarray(group.rival,group.rival+8))))continue;
+ const flashGroups=groups.map(x=>x.group);
+ const partyBases=activePartyRAMMirrors(flashGroups);
+ for(const party of partyBases){
+  const rival=party-0x38+0x3A4C;
+  if(rival<0x20000||rival+8>Math.min(work.length,0x90000)||seen.has(rival))continue;
+  if(!groups.some(g=>nameCompare(work.subarray(rival,rival+8),work.subarray(g.rival,g.rival+8))))continue;
   seen.add(rival);found.push(rival);
  }
  return found;
