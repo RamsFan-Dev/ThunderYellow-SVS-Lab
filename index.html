@@ -139,7 +139,7 @@
 <section class="panel"><div class="feature">04 • Pokémon manager</div><h2>Party &amp; PC Pokémon Editor</h2><p>Edit existing Pokémon directly in your <strong>.svs</strong>: moves, current PP, PP Ups, experience, friendship, held items, IVs, EVs and battle stats. PC Pokémon may be copied, moved and deleted. The special starter Pikachu is protected from copying or deletion.</p>
 <details id="showdownDetails" style="margin:18px 0">
 <summary>📋 Paste Pokémon sets (Showdown / PKMDS format)</summary>
-<p class="hint">Paste one or several complete Pokémon sets, separated by blank lines. Preview the party or PC destination before importing. Level defaults to 100 when omitted; IVs default to 31, and EVs default to 0 unless specified.</p>
+<p class="hint">Paste one or several complete Pokémon sets, separated by blank lines. Preview the party or PC destination before importing. Level defaults to 100 when omitted; IVs default to 31, and EVs default to 0. Optional SVS Lab lines: # PP: 15 / 15 / 10 / 20 and # PP Ups: 3 / 3 / 0 / 3 (four move slots, 0–3 PP Ups each).</p>
 <label class="label" for="showdownText">Pokémon sets</label>
 <textarea id="showdownText" class="input" rows="9" spellcheck="false" autocomplete="off" placeholder="Squirtle (M) @ Leftovers&#10;Ability: Torrent&#10;EVs: 255 HP / 255 Atk / 255 Def / 255 SpA / 255 SpD / 255 Spe&#10;Hardy Nature&#10;- Tackle&#10;- Tail Whip"></textarea>
 <div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option><option value="stats">Update existing: FULL STATS + Moves (protect follower)</option></select></div>
@@ -149,7 +149,7 @@
  <div><label class="label" for="showdownSlot">Starting slot</label><select id="showdownSlot" class="input"></select></div>
 </div>
 <div id="showdownStatsHelp" class="hint hidden" style="margin:8px 0"><strong>Full Stats:</strong> Update an existing matching Pokémon: EVs, IVs, level/EXP, battle stats, held item, friendship, ability, and moves. Non-starter Pokémon can also change gender, nature, and shiny status. Original follower Pikachu keeps its fixed PID, nature, shiny status, and gender—differences from pasted values appear as explicit warnings before applying. This does not create missing party members.</div>
-<div id="showdownMoveHelp" class="hint hidden" style="margin:8px 0">Moves + Ability Only updates the Pokémon already in the selected slots. Their species must match the pasted sets. It preserves PID, OT, level, EXP, nature, shiny status, held item, IVs, EVs, happiness and follower identity. If Ability is omitted, it stays unchanged. New moves receive their default PP.</div>
+<div id="showdownMoveHelp" class="hint hidden" style="margin:8px 0">Moves + Ability Only updates existing Pokémon moves, ability, current PP and PP Ups if supplied. Species must match. It preserves PID, OT, level, EXP, nature, shiny status, held item, IVs, EVs, happiness and follower identity. If PP / PP Ups lines are omitted, new moves get default PP and zero PP Ups.</div>
 <label class="tog" style="margin:10px 0" id="showdownOverwriteLabel"><input id="showdownOverwrite" type="checkbox"> Allow replacement of occupied, non-protected slots (requires confirmation)</label>
 <div class="hint">Import is blocked if it would replace our special follower Pikachu, cross the party's six-slot limit, or skip an earlier empty party slot. PC batches can continue into the next box.</div>
 <div class="row" style="margin:12px 0"><button id="showdownStarterButton" class="btn secondary" type="button">⚡ Starter Pikachu — Preview Moves + Ability Only</button></div>
@@ -159,7 +159,7 @@
 </details>
 <details id="showdownExportDetails" style="margin:18px 0">
 <summary>📤 Export Pokémon sets for Showdown / Notes</summary>
-<p class="hint">Create a copy-and-paste text list from Pokémon in your currently loaded, verified SVS. This is read-only and never edits the game, party, or save. The list includes levels, abilities, natures, shiny status, items, IVs, EVs, friendship, and moves.</p>
+<p class="hint">Create a copy-and-paste text list from Pokémon in your currently loaded, verified SVS. This is read-only and never edits the game, party, or save. The list includes levels, abilities, natures, shiny status, items, IVs, EVs, friendship, moves, current PP and PP Ups.</p>
 <div class="grid" style="margin:12px 0">
  <div><label class="label" for="showdownExportScope">Which Pokémon?</label>
  <select class="input" id="showdownExportScope">
@@ -174,7 +174,7 @@
 <label class="label" for="showdownExportText">Showdown-format output — long-press to select or use Copy</label>
 <textarea id="showdownExportText" class="input showdown-export-text" rows="12" readonly spellcheck="false" placeholder="Generate a set or a whole party here, then tap Copy for Notes."></textarea>
 <div id="showdownExportStatus" class="status" role="status" aria-live="polite"></div>
-<div class="hint">Values reflect the saved Pokémon records, including any custom 255-per-stat EVs. Pokémon personality ID, Trainer ID, and current PP are not part of Showdown text. Unsupported custom moves/items will be labeled as comments instead of guessed.</div>
+<div class="hint">Values reflect saved Pokémon records, including 255-per-stat EVs. Current PP and PP Ups are exported as # comment lines, which SVS Lab recognizes when reimporting; regular Pokémon Showdown does not preserve them. Unsupported custom moves/items will be labeled as comments instead of guessed.</div>
 </details>
 <details id="partySwitcher"><summary>⚡ Party Builder &amp; Switcher</summary>
 <p class="hint">Build a lineup from the current six party Pokémon and your PC boxes. Save multiple named plans on this device, then activate one to exchange members between party and PC. The original follower Pikachu stays in his current party slot.</p>
@@ -957,6 +957,40 @@ function importStats(line,label,limit,defaultVal){
  }
  return values;
 }
+
+// PP/PP Ups are an SVS Lab extension to Showdown text.
+// Use "# PP: a / b / c / d" and "# PP Ups: a / b / c / d" comments so
+// ordinary Showdown can ignore them, while SVS Lab can round-trip the data.
+function showdownParsePPValues(body,label,maximum){
+ const values=body.split(/\s*\/\s*/);
+ if(values.length!==4)throw Error(label+' needs exactly 4 slash-separated slot values (use 0 for empty slots).');
+ return values.map((v,i)=>{
+  if(!/^\d+$/.test(v.trim()))throw Error(label+' slot '+(i+1)+' must be a whole number.');
+  const num=Number(v.trim());
+  if(num>maximum)throw Error(label+' slot '+(i+1)+' must be from 0 to '+maximum+'.');
+  return num;
+ });
+}
+function showdownPPFields(spec,moves,existing=null){
+ const ups=spec.ppUps?spec.ppUps.slice():(spec.moves.length||!existing)?[0,0,0,0]:existing.ppups.slice();
+ const pp=spec.pp?spec.pp.slice():(spec.ppUps||spec.moves.length||!existing)
+  ?moves.map((id,i)=>id?(maxPP[id]+Math.floor(maxPP[id]*ups[i]/5)):0)
+  :existing.pp.slice();
+ for(let i=0;i<4;i++){
+  const id=moves[i]||0,bonus=ups[i],current=pp[i];
+  if(!Number.isInteger(bonus)||bonus<0||bonus>3||!Number.isInteger(current)||current<0||current>99)
+   throw Error('Invalid PP / PP Ups at move slot '+(i+1)+'.');
+  if(!id){
+   if(bonus||current)throw Error('Move slot '+(i+1)+' is empty; PP and PP Ups must both be 0.');
+   continue;
+  }
+  const base=maxPP[id];
+  if(!Number.isInteger(base)||base<1)throw Error('Move slot '+(i+1)+' has no supported base PP.');
+  const ceiling=base+Math.floor(base*bonus/5);
+  if(current>ceiling)throw Error('Move slot '+(i+1)+' PP '+current+' exceeds its legal maximum '+ceiling+' with '+bonus+' PP Ups.');
+ }
+ return {pp,ppups:ups};
+}
 function parseShowdownImport(input){
  const blocks=String(input).replace(/\r/g,'').trim().split(/\n\s*\n/).filter(Boolean);
  if(!blocks.length)throw Error('Paste at least one Pokémon set.');
@@ -974,7 +1008,7 @@ function parseShowdownImport(input){
   if(nick){nickname=nick[1].trim();pokemon=nick[2].trim()}
   const sp=importLookup(monNames,'Pokémon species',pokemon);
   if(!speciesStats[sp]||!speciesMeta[sp])throw Error('Species '+pokemon+' lacks validated Gen 3 data.');
-  let level=100,nature=0,ability=null,shiny=false,ev=Array(6).fill(0),iv=Array(6).fill(31),friend=speciesStats[sp][7],moves=[],seen=new Set();
+  let level=100,nature=0,ability=null,shiny=false,ev=Array(6).fill(0),iv=Array(6).fill(31),friend=speciesStats[sp][7],moves=[],pp=null,ppUps=null,seen=new Set();
   for(const line of lines.slice(1)){
    let m;
    if((m=/^Ability\s*:\s*(.+)$/i.exec(line))){if(seen.has('ability'))throw Error('Duplicate Ability for '+pokemon);ability=m[1].trim();seen.add('ability');}
@@ -986,6 +1020,14 @@ function parseShowdownImport(input){
    else if((m=/^(.+?)\s+Nature$/i.exec(line))){const found=importNatures.findIndex(x=>importSimplify(x)===importSimplify(m[1]));if(found<0)throw Error('Unknown nature: '+m[1]);nature=found;}
    else if((m=/^Nature\s*:\s*(.+)$/i.exec(line))){const found=importNatures.findIndex(x=>importSimplify(x)===importSimplify(m[1]));if(found<0)throw Error('Unknown nature: '+m[1]);nature=found;}
    else if((m=/^-\s*(.+)$/i.exec(line))){const move=importLookup(moveNames,'move',m[1]);if(!move)throw Error('Choose a real move instead of None.');moves.push(move);if(moves.length>4)throw Error(pokemon+' has more than 4 moves');}
+   else if((m=/^(?:#\s*)?(?:Current\s+)?PPs?\s*:\s*(.+)$/i.exec(line))){
+    if(pp)throw Error(pokemon+' has more than one PP line.');
+    pp=showdownParsePPValues(m[1],'PP',99);
+   }
+   else if((m=/^(?:#\s*)?PP\s*Ups?\s*:\s*(.+)$/i.exec(line))){
+    if(ppUps)throw Error(pokemon+' has more than one PP Ups line.');
+    ppUps=showdownParsePPValues(m[1],'PP Ups',3);
+   }
    else if(line.startsWith('#'))continue;
    else throw Error(pokemon+': unsupported pasted line "'+line+'". Remove it or correct the format.');
   }
@@ -1000,7 +1042,7 @@ function parseShowdownImport(input){
    abilitySlot=match;
   }
   if(meta[1]==='NONE')throw Error(pokemon+' does not have a supported ability.');
-  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,abilityProvided:seen.has('ability'),shiny,ev,iv,friend,moves});
+  sets.push({sp,display:monNames[sp],nickname,gender,held,level,nature,abilitySlot,abilityProvided:seen.has('ability'),shiny,ev,iv,friend,moves,pp,ppUps});
  }
  return sets;
 }
@@ -1031,7 +1073,7 @@ function showdownMoveTargets(sets,starterOnly=false){
    const live=decodeMon(work.slice(base+sz*slot,base+sz*slot+80));
    if(!live||live.pid!==mon.pid||live.ot!==mon.ot||live.sp!==mon.sp)throw Error('Live RAM differs from saved Pokémon in slot '+(slot+1)+'. No edits made.');
   }
-  if((starterOnly||$('showdownImportMode').value==='moves')&&!sets[i].moves.length&&!sets[i].abilityProvided)throw Error(sets[i].display+' has no moves or Ability line to import.');
+  if((starterOnly||$('showdownImportMode').value==='moves')&&!sets[i].moves.length&&!sets[i].abilityProvided&&!sets[i].pp&&!sets[i].ppUps)throw Error(sets[i].display+' has no moves, Ability, PP or PP Ups to import.');
   dest.push({slot,replacing:false,label:kind==='party'?'Party '+(slot+1):'Box '+(Math.floor(slot/30)+1)+', slot '+(slot%30+1)});
  }
  return {kind,mode:'moves',starterOnly,dest};
@@ -1040,8 +1082,7 @@ function showdownMoveRecord(spec,kind,slot,sourceGroup=monLocations.groups[0]){
  const raw=kind==='party'?getPartyFrom(sourceGroup,slot):getPCFrom(sourceGroup,slot),mon=decodeMon(raw);
  if(!mon||mon.sp!==spec.sp)throw Error('Target Pokémon no longer matches the preview.');
  const moves=spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]||0):mon.moves.slice();
- const pp=spec.moves.length?moves.map(id=>id?(maxPP[id]||0):0):mon.pp.slice();
- const ups=spec.moves.length?[0,0,0,0]:mon.ppups.slice();
+ const {pp,ppups:ups}=showdownPPFields(spec,moves,mon);
  const fields={sp:mon.sp,held:mon.held,exp:mon.exp,friend:mon.friend,ability:spec.abilityProvided?spec.abilitySlot:mon.ability,moves,pp,ppups:ups,iv:mon.iv.slice(),ev:mon.ev.slice()};
  const encoded=encodeMon(mon,fields),checked=decodeMon(encoded);
  if(!checked||checked.pid!==mon.pid||checked.ot!==mon.ot||checked.sp!==mon.sp||checked.held!==mon.held||checked.exp!==mon.exp||checked.friend!==mon.friend||shinyStatus(checked.pid,checked.ot)!==shinyStatus(mon.pid,mon.ot))throw Error('Identity-preservation verification failed.');
@@ -1233,10 +1274,9 @@ function showdownBoxRecord(spec){
  box[18]=2;box[19]=2;box.set(work.slice(sec.base,sec.base+7),20);
  const groupData={G:new Uint8Array(12),A:new Uint8Array(12),E:new Uint8Array(12),M:new Uint8Array(12)};
  groupData.M[2]=spec.level;groupData.M[3]=0x20;
+ const moves=Array.from({length:4},(_,i)=>spec.moves[i]||0),{pp,ppups}=showdownPPFields(spec,moves);
  const fields={sp:spec.sp,held:spec.held,exp:startExp(speciesStats[spec.sp][6],spec.level),
- friend:spec.friend,ability:spec.abilitySlot,moves:Array.from({length:4},(_,i)=>spec.moves[i]||0),
- pp:Array.from({length:4},(_,i)=>spec.moves[i]?maxPP[spec.moves[i]]||0:0),
- ppups:[0,0,0,0],iv:spec.iv,ev:spec.ev};
+ friend:spec.friend,ability:spec.abilitySlot,moves,pp,ppups,iv:spec.iv,ev:spec.ev};
  const encoded=encodeMon({pid,ot,bytes:box,group:groupData},fields),decoded=decodeMon(encoded);
  if(!decoded||decoded.sp!==spec.sp||decoded.pid!==pid||decoded.moves.some((v,i)=>v!==fields.moves[i]))throw Error('Generated Pokémon failed encryption/checksum validation.');
  return {encoded,pid,fields};
@@ -1266,8 +1306,7 @@ function showdownFullStatRecord(spec,kind,slot,sourceGroup,newPID){
   sp:mon.sp,held:spec.held,exp:startExp(speciesStats[spec.sp][6],spec.level),
   friend:spec.friend,ability:spec.abilitySlot,
   moves:spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]||0):mon.moves.slice(),
-  pp:spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]?(maxPP[spec.moves[i]]||0):0):mon.pp.slice(),
-  ppups:spec.moves.length?[0,0,0,0]:mon.ppups.slice(),
+  ...showdownPPFields(spec,spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]||0):mon.moves.slice(),mon),
   iv:spec.iv.slice(),ev:spec.ev.slice()
  };
  const box=mon.bytes.slice();
@@ -1941,6 +1980,8 @@ function showdownExportRecord(mon,record,withNickname){
   if(move)lines.push('- '+move);
   else warnings.push('Unknown move ID '+moveId);
  }
+ lines.push('# PP: '+mon.pp.join(' / '));
+ lines.push('# PP Ups: '+mon.ppups.join(' / '));
  for(const warning of warnings)lines.push('# '+warning);
  return {text:lines.join('\n'),warnings};
 }
