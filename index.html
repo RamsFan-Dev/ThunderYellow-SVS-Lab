@@ -1115,7 +1115,7 @@ function showdownMoveTargets(sets,starterOnly=false){
   if(!mon)throw Error('The active save has no valid Pokémon in slot '+(slot+1)+'. Use complete import.');
   if(mon.sp!==sets[i].sp)throw Error('Slot '+(slot+1)+' is '+(monNames[mon.sp]||mon.sp)+' but pasted Pokémon is '+sets[i].display+'. Species must match.');
   if(starterOnly&&!isProtected(mon))throw Error('Target is not the protected starter Pikachu.');
-  const mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM,sz=kind==='party'?100:80;
+  const mirrors=kind==='party'?[...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]:monLocations.pcRAM,sz=kind==='party'?100:80;
   for(const base of mirrors){
    const live=decodeMon(work.slice(base+sz*slot,base+sz*slot+80));
    if(!live||live.pid!==mon.pid||live.ot!==mon.ot||live.sp!==mon.sp)throw Error('Live RAM differs from saved Pokémon in slot '+(slot+1)+'. No edits made.');
@@ -1146,7 +1146,7 @@ function writeShowdownMoveSlot(spec,kind,slot,patches){
  const active=decodeMon(kind==='party'?getPartyFrom(latest,slot):getPCFrom(latest,slot));
  if(!active||active.sp!==spec.sp)throw Error('The selected active Pokémon has changed.');
  const next=showdownMoveRecord(spec,kind,slot,latest),width=kind==='party'?100:80;
- const mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM;
+ const mirrors=kind==='party'?[...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]:monLocations.pcRAM;
  for(const base of mirrors)patch(base+width*slot,next,patches);
  for(const g of monLocations.groups){
   const before=kind==='party'?getPartyFrom(g,slot):getPCFrom(g,slot),mon=before&&decodeMon(before);
@@ -1301,7 +1301,7 @@ function showdownTargetSlots(sets,starterOnly=false){
    replacing=true;
   }
   if(kind==='party'){
-   for(const base of monLocations.partyRAM){
+   for(const base of [...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]){
     const raw=work.slice(base+at*100,base+at*100+80);
     const live=raw.some(b=>b!==0)?decodeMon(raw):null;
     if(raw.some(b=>b!==0)&&!live)throw Error('Unreadable live party data in slot '+(at+1));
@@ -1500,7 +1500,7 @@ function writeShowdownStatSlot(spec,kind,slot,patches){
   pid=showdownPersonality({...spec,gender:desiredGender},active.ot);
  }
  const next=showdownFullStatRecord(spec,kind,slot,latest,pid);
- const size=kind==='party'?100:80,mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM;
+ const size=kind==='party'?100:80,mirrors=kind==='party'?[...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]:monLocations.pcRAM;
  for(const base of mirrors){
   const live=decodeMon(work.slice(base+slot*size,base+slot*size+80));
   if(!live||live.pid!==active.pid||live.ot!==active.ot||live.sp!==active.sp)
@@ -1534,7 +1534,7 @@ function writeShowdownStatSlot(spec,kind,slot,patches){
 function writeShowdownSlot(kind,slot,bytes,patches){
  if(kind==='party'){
   verifyLivePartyMirrors();
-  for(const base of monLocations.partyRAM)patch(base+100*slot,bytes,patches);
+  for(const base of [...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])])patch(base+100*slot,bytes,patches);
   for(const g of monLocations.groups){const sec=g.sectors.get(1);if(!sec)throw Error('Missing party save sector.');patch(sec.base+0x38+100*slot,bytes,patches)}
  }else{
   for(const base of monLocations.pcRAM)patch(base+80*slot,bytes.slice(0,80),patches);
@@ -1575,6 +1575,7 @@ function applyShowdownPaste(){
     const newCount=Math.max(plan.count,plan.dest.at(-1).slot+1);
     for(const g of monLocations.groups){const sec=g.sectors.get(1);patch(sec.base+0x34,Uint8Array.of(newCount),patches)}
     for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(newCount),patches);
+    for(const base of monLocations.gameplayParty)patch(base-0x25B,Uint8Array.of(newCount),patches);
    }
   }
   refreshChecksums(patches);
@@ -1607,7 +1608,7 @@ function teamRoster(){
    const other=decodeMon(getPartyFrom(g,i));
    if(!other||monIdentity(other)!==monIdentity(mon))throw Error('Party flash copies disagree at slot '+(i+1)+'.');
   }
-  for(const base of monLocations.partyRAM){
+  for(const base of [...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]){
    const live=decodeMon(work.subarray(base+100*i,base+100*i+80));
    if(!live||monIdentity(live)!==monIdentity(mon))throw Error('Live party and flash disagree in slot '+(i+1)+'. Save in-game and take a new SVS first.');
   }
@@ -1932,10 +1933,35 @@ function activePartyRAMMirrors(groups=getFlashGroups()){
  }
  return live;
 }
+
+// gPlayerParty[0] uses FRLG EWRAM 0x02024284; gPlayerPartyCount is 0x02024029.
+// They are 0x25B bytes apart. The game's active party is NOT SaveBlock1.party.
+function activeGameplayPartyLocations(groups=getFlashGroups()){
+ const sec=groups[0]?.sectors.get(1),result=[];
+ if(!sec)return result;
+ const count=work[sec.base+0x34],first=decodeMon(getPartyFrom(groups[0],0));
+ if(count<1||count>6||!first)return result;
+ for(let pos=0x20260;pos+600<=Math.min(work.length,0x90000);pos++){
+  if(work[pos]!==work[sec.base+0x38]||u32(work,pos)!==first.pid||u32(work,pos+4)!==first.ot)continue;
+  if(work[pos-0x25B]!==count)continue;
+  let ok=true;
+  for(let i=0;i<count;i++){
+   const saved=decodeMon(getPartyFrom(groups[0],i));
+   const live=decodeMon(work.subarray(pos+100*i,pos+100*i+80));
+   if(!saved||!live||saved.pid!==live.pid||saved.ot!==live.ot||saved.sp!==live.sp){ok=false;break}
+  }
+  if(ok)result.push(pos);
+  if(ok)pos+=599;
+ }
+ return result;
+}
+
 function verifyLivePartyMirrors(){
  const groups=getFlashGroups(),sec=groups[0]?.sectors.get(1);
  if(!sec)throw Error('No current saved Pokémon party found.');
- const count=work[sec.base+0x34],mirrors=activePartyRAMMirrors(groups);
+ const count=work[sec.base+0x34],mirrors=activePartyRAMMirrors(groups),gameplay=activeGameplayPartyLocations(groups);
+ if(!gameplay.length)throw Error('The live gameplay party gPlayerParty does not match the stored party. It is unsafe to edit only flash. Make an in-game save then create a new SVS.');
+ if(!monLocations?.gameplayParty?.length||monLocations.gameplayParty.some(pos=>!gameplay.includes(pos)))throw Error('Gameplay party memory was not detected correctly. Reload a fresh SVS.');
  if(!mirrors.length)throw Error('The active 1–6 Pokémon party in RAM does not match the saved party. Edits would only affect flash and may disappear or damage the save. Start from a fresh in-game save and SVS.');
  if(!monLocations?.partyRAM?.length||monLocations.partyRAM.some(pos=>!mirrors.includes(pos)))
   throw Error('The party RAM mirrors changed or were not detected correctly. Reload a fresh SVS before editing.');
@@ -2010,7 +2036,7 @@ function verifySnapshotIdentity(){
   trainer=true;break;
  }
  // Verify all members even in a party of only 1, 2, or 3 Pokémon.
- party=activePartyRAMMirrors(groups).length>0;
+ party=activePartyRAMMirrors(groups).length>0&&activeGameplayPartyLocations(groups).length>0;
  if(!trainer||!party)return {ok:false,reason:
  'The loaded cartridge save contains '+count+' Pokémon, but '+(!trainer?'the live game has a different or uninitialized trainer':'the live Pokémon party does not match the saved party')+'. This may be a new game with an older cartridge save still present. Do not edit the old Pokémon.'};
  return {ok:true,reason:'Verified active trainer and '+count+' live party Pokémon against the current cartridge save.'};
@@ -2024,8 +2050,8 @@ function setSnapshotSafety(result){
 
 function getPartyFrom(group,slot){const sec=group?.sectors.get(1);return sec?work.slice(sec.base+0x38+slot*100,sec.base+0x38+(slot+1)*100):null}
 function getPCFrom(group,slot){let start=4+slot*80,out=new Uint8Array(80);for(let i=0;i<80;i++){let logical=start+i,sec=group?.sectors.get(5+Math.floor(logical/3968));if(!sec)return null;out[i]=work[sec.base+logical%3968]}return out;}
-function locateMons(){let groups=getFlashGroups(),partyRAM=activePartyRAMMirrors(groups),pcRAM=[];
- if(!groups.length)return {groups,partyRAM,pcRAM};
+function locateMons(){let groups=getFlashGroups(),partyRAM=activePartyRAMMirrors(groups),gameplayParty=activeGameplayPartyLocations(groups),pcRAM=[];
+ if(!groups.length)return {groups,partyRAM,gameplayParty,pcRAM};
  // Find the live PC storage array using an occupied record; its first slot may be empty.
  const tokens=[];for(let slot=0;slot<420&&tokens.length<3;slot++){const b=getPCFrom(groups[0],slot);if(b&&decodeMon(b))tokens.push({slot,bytes:b})}
  if(tokens.length){
@@ -2039,15 +2065,15 @@ function locateMons(){let groups=getFlashGroups(),partyRAM=activePartyRAMMirrors
   }
  }
 
- return {groups,partyRAM,pcRAM};
+ return {groups,partyRAM,gameplayParty,pcRAM};
 }
-function getSlotBytes(){if(!monLocations)return null;if(monMode==='party')return monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+monSlot*100,monLocations.partyRAM[0]+monSlot*100+100):getPartyFrom(monLocations.groups[0],monSlot);
+function getSlotBytes(){if(!monLocations)return null;if(monMode==='party')return monLocations.gameplayParty.length?work.slice(monLocations.gameplayParty[0]+monSlot*100,monLocations.gameplayParty[0]+monSlot*100+100):getPartyFrom(monLocations.groups[0],monSlot);
  return monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+monSlot*80,monLocations.pcRAM[0]+monSlot*80+80):getPCFrom(monLocations.groups[0],monSlot);
 }
 function isProtected(mon){return !!(mon&&mon.sp===25&&((mon.pid===207385026&&mon.ot===1850938314)||(originalStarterIdentity&&mon.pid===originalStarterIdentity.pid&&mon.ot===originalStarterIdentity.ot)))}
 function applySlot(bytes,patches){if(monMode==='party'){
   verifyLivePartyMirrors();
-  for(const b of monLocations.partyRAM){const off=b+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches);}
+  for(const b of [...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]){const off=b+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches);}
   for(const g of monLocations.groups){const sec=g.sectors.get(1);if(!sec)continue;let off=sec.base+0x38+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches)}
  }else{
   for(const b of monLocations.pcRAM)patch(b+80*monSlot,bytes.slice(0,80),patches);
@@ -2125,6 +2151,7 @@ function createPokemonInSlot(){
    applySlot(party,changes);
    for(const g of groups)patch(g.sectors.get(1).base+0x34,Uint8Array.of(count+1),changes);
    for(const base of monLocations.partyRAM)patch(base-4,Uint8Array.of(count+1),changes);
+   for(const base of monLocations.gameplayParty)patch(base-0x25B,Uint8Array.of(count+1),changes);
   }else applySlot(created.encoded,changes);
   refreshChecksums(changes);
   {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-creation verification failed: '+check.reason+' Changes were rolled back.');}
@@ -2337,7 +2364,7 @@ function renderPokemon(){if(!loaded)return;
  const roster=$('monRoster');roster.replaceChildren();let count=monMode==='party'?6:30;
  for(let k=0;k<count;k++){
   const idx=monMode==='party'?k:boxNo*30+k;
-  const bytes=monMode==='party'?(monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+idx*100,monLocations.partyRAM[0]+idx*100+100):getPartyFrom(monLocations.groups[0],idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(monLocations.groups[0],idx));
+  const bytes=monMode==='party'?(monLocations.gameplayParty.length?work.slice(monLocations.gameplayParty[0]+idx*100,monLocations.gameplayParty[0]+idx*100+100):getPartyFrom(monLocations.groups[0],idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(monLocations.groups[0],idx));
   let mon=bytes&&decodeMon(bytes),empty=bytes&&!u32(bytes,0);
   const b=document.createElement('button');b.type='button';b.className='mon-tile'+(idx===monSlot?' chosen':'');b.innerHTML='<strong>'+(k+1)+'. '+(mon?(monNames[mon.sp]||'Species '+mon.sp):(empty?'Empty':'Unreadable'))+'</strong><small>'+(mon?(mon.name||'')+(isProtected(mon)?' · Starter ★':''):'')+'</small>';
   b.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;invalidateShowdownExport();$('newSpecies').value='';$('newSuggestions').replaceChildren();renderPokemon()};roster.append(b);
