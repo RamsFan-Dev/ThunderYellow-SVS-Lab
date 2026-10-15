@@ -1777,6 +1777,148 @@ function previewLevel(){
 }
 
 function monSourceLabel(m){return (m?monNames[m.sp]||'Species '+m.sp:'Empty')+(m&&m.name?' • '+m.name:'')}
+
+// Read-only showdown-format export. It never patches or mutates loaded snapshots.
+// Field mappings are Gen3 personality, growth curve, item IDs, and move IDs.
+let showdownExportPlain='';
+const showdownStatExport=[[0,'HP'],[1,'Atk'],[2,'Def'],[4,'SpA'],[5,'SpD'],[3,'Spe']];
+function showdownExportSpecies(id){
+ if(id===29)return 'Nidoran-F';
+ if(id===32)return 'Nidoran-M';
+ return monNames[id]||'';
+}
+function showdownExportGender(mon){
+ const threshold=speciesMeta[mon.sp]?.[0];
+ if(!Number.isInteger(threshold)||threshold===255)return '';
+ return (mon.pid&255)<threshold?'F':'M';
+}
+function showdownExportRecord(mon,record,withNickname){
+ const sp=showdownExportSpecies(mon.sp);
+ if(!sp)throw Error('Pokémon species #'+mon.sp+' is not in the Gen 3 catalog.');
+ const warnings=[],abilityMeta=speciesMeta[mon.sp];
+ const nick=String(mon.name||'').trim();
+ let front=sp;
+ if(withNickname&&nick&&nick.toLowerCase()!==sp.toLowerCase()&&/^[a-zA-Z0-9 -]{1,10}$/.test(nick))
+   front=nick+' ('+sp+')';
+ else if(withNickname&&nick&&nick.toLowerCase()!==sp.toLowerCase()&&!/^[a-zA-Z0-9 -]{1,10}$/.test(nick))
+   warnings.push('Nickname includes characters not supported by Showdown: '+nick);
+ const gender=showdownExportGender(mon);
+ if(gender)front+=' ('+gender+')';
+ const held=mon.held?named[mon.held]:null;
+ if(held)front+=' @ '+held;
+ else if(mon.held)warnings.push('Unknown held item ID '+mon.held);
+ const level=record.length===100&&record[84]>=1&&record[84]<=100?record[84]:speciesStats[mon.sp]?teamLevel(mon):null;
+ if(level===null)warnings.push('Level cannot be resolved from this species and experience.');
+ const lines=[front];
+ if(level!==null)lines.push('Level: '+level);
+ let rawAbility=abilityMeta?.[mon.ability===1?2:1];
+ if(rawAbility&&rawAbility!=='NONE')lines.push('Ability: '+namedAbility(rawAbility));
+ else warnings.push('Stored ability slot '+(mon.ability+1)+' is not supported by the species ability catalog.');
+ lines.push('Shiny: '+(shinyStatus(mon.pid,mon.ot)?'Yes':'No'));
+ lines.push('EVs: '+showdownStatExport.map(([id,label])=>mon.ev[id]+' '+label).join(' / '));
+ lines.push('IVs: '+showdownStatExport.map(([id,label])=>mon.iv[id]+' '+label).join(' / '));
+ lines.push((importNatures[mon.pid%25]||'Hardy')+' Nature');
+ lines.push('Happiness: '+mon.friend);
+ for(const moveId of mon.moves){
+  if(!moveId)continue;
+  const move=moveNames[moveId];
+  if(move)lines.push('- '+move);
+  else warnings.push('Unknown move ID '+moveId);
+ }
+ for(const warning of warnings)lines.push('# '+warning);
+ return {text:lines.join('\n'),warnings};
+}
+function showdownExportRecords(scope){
+ if(!loaded||!snapshotSafe)throw Error('Open a verified SVS first. Exporting stale saves is blocked.');
+ if(monDirty)throw Error('Save your pending Pokémon edits before generating a Showdown set.');
+ const group=getFlashGroups()[0];
+ if(!group||!monLocations?.groups?.length)throw Error('The current save does not contain verified Pokémon storage.');
+ const sec=group.sectors.get(1);
+ if(!sec)throw Error('No verified party storage sector.');
+ const count=work[sec.base+0x34];
+ if(count<1||count>6)throw Error('The current party size is invalid.');
+ const result=[];
+ const getRecord=(mode,index)=>{
+  const flash=mode==='party'?getPartyFrom(group,index):getPCFrom(group,index),size=mode==='party'?100:80,
+        bases=mode==='party'?monLocations.partyRAM:monLocations.pcRAM;
+  if(!flash||flash.length<size)throw Error('Missing Pokémon data at '+mode+' slot '+(index+1));
+  const flashMon=decodeMon(flash);
+  if(!flashMon){
+   if(u32(flash,0)!==0)throw Error('A Pokémon at '+mode+' slot '+(index+1)+' has an invalid checksum. Nothing exported.');
+   return null;
+  }
+  if(bases.length){
+   const live=work.slice(bases[0]+index*size,bases[0]+index*size+size),
+         liveMon=decodeMon(live);
+   if(!liveMon||liveMon.pid!==flashMon.pid||liveMon.ot!==flashMon.ot||liveMon.sp!==flashMon.sp)
+    throw Error('Live Pokémon at '+mode+' slot '+(index+1)+' differs from stored save. Save in-game and create a new SVS first.');
+   return {mon:liveMon,record:live};
+  }
+  return {mon:flashMon,record:flash};
+ };
+ const add=(mode,index,required=false)=>{
+  const value=getRecord(mode,index);
+  if(!value&&required)throw Error('Selected '+(mode==='party'?'party':'PC')+' slot '+(index+1)+' is empty.');
+  if(value)result.push(value);
+ };
+ if(scope==='selected')add(monMode==='party'?'party':'box',monSlot,true);
+ else if(scope==='party'){for(let i=0;i<count;i++)add('party',i,true);}
+ else if(scope==='box'){for(let i=boxNo*30;i<boxNo*30+30;i++)add('box',i);}
+ else if(scope==='allpc'){for(let i=0;i<420;i++)add('box',i);}
+ else throw Error('Choose a valid export selection.');
+ if(!result.length)throw Error('No Pokémon found in the selected '+(scope==='box'?'PC box':'location')+'.');
+ return result;
+}
+function invalidateShowdownExport(){
+ showdownExportPlain='';
+ const out=$('showdownExportText');
+ if(out)out.value='';
+ for(const id of ['showdownCopy','showdownTxt'])if($(id))$(id).disabled=true;
+ if($('showdownExportStatus'))$('showdownExportStatus').textContent='';
+}
+function generateShowdownExport(){
+ invalidateShowdownExport();
+ try{
+  const records=showdownExportRecords($('showdownExportScope').value),
+        nick=$('showdownExportIncludeNick').value==='yes';
+  const sets=records.map(({mon,record})=>showdownExportRecord(mon,record,nick));
+  showdownExportPlain=sets.map(x=>x.text).join('\n\n')+'\n';
+  $('showdownExportText').value=showdownExportPlain;
+  $('showdownCopy').disabled=false;
+  $('showdownTxt').disabled=false;
+  const warnings=sets.reduce((n,s)=>n+s.warnings.length,0);
+  msg($('showdownExportStatus'),'✓ '+sets.length+' Pokémon '+(sets.length===1?'set':'sets')+' generated from this verified save.'+(warnings?' '+warnings+' catalog warning(s) marked with # in the text.':'' )+' Tap Copy for Notes or select the text manually.',warnings?'warn':'good');
+ }catch(e){msg($('showdownExportStatus'),'Cannot generate Showdown text: '+e.message,'bad');}
+}
+async function copyShowdownExport(){
+ const content=showdownExportPlain;
+ if(!content){msg($('showdownExportStatus'),'Generate the Pokémon text first.','warn');return}
+ try{
+  if(!navigator.clipboard?.writeText)throw Error('Clipboard API unavailable');
+  await navigator.clipboard.writeText(content);
+  msg($('showdownExportStatus'),'✓ Pokémon sets copied. Open Notes and tap Paste.','good');
+ }catch(e){
+  const textarea=$('showdownExportText');textarea.focus();textarea.select();textarea.setSelectionRange(0,textarea.value.length);
+  let copied=false;
+  try{if(typeof document.execCommand==='function')copied=document.execCommand('copy');}catch(_e){}
+  msg($('showdownExportStatus'),copied?'✓ Pokémon sets copied. Open Notes and paste.':'Text selected. Use Copy from the iPhone selection menu, then paste into Notes.',copied?'good':'warn');
+ }
+}
+function downloadShowdownExport(){
+ if(!showdownExportPlain){msg($('showdownExportStatus'),'Generate Pokémon text first.','warn');return}
+ const blob=new Blob([showdownExportPlain],{type:'text/plain;charset=utf-8'}),
+       url=URL.createObjectURL(blob),a=document.createElement('a');
+ const base=(filename||'ThunderYellow').replace(/\.(?:svs|sgm|gz)$/i,'').replace(/[^a-zA-Z0-9_-]/g,'-');
+ a.href=url;a.download=base+'-Showdown-Notes.txt';document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ msg($('showdownExportStatus'),'✓ Downloaded a text copy of the Pokémon sets. The SVS was not modified.','good');
+}
+$('showdownGenerate').onclick=generateShowdownExport;
+$('showdownCopy').onclick=copyShowdownExport;
+$('showdownTxt').onclick=downloadShowdownExport;
+$('showdownExportScope').onchange=invalidateShowdownExport;
+$('showdownExportIncludeNick').onchange=invalidateShowdownExport;
+
 function renderPokemon(){if(!loaded)return;
  const ok=monLocations&&monLocations.groups.length>0;
  $('monWrap').classList.toggle('hidden',!ok);$('monUnavailable').classList.toggle('hidden',ok);
