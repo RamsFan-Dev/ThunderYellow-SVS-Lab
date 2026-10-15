@@ -94,6 +94,10 @@
 #unsafeStateNotice{background:#352127;border:2px solid #ef9494;border-radius:15px;color:#ffe5e5;padding:20px;box-shadow:0 10px 30px #0005}
 #unsafeStateNotice h2{font-size:20px;margin:0 0 10px}
 #unsafeStateNotice p{line-height:1.55}
+</style><style>
+.showdown-export-text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.55;font-size:13px;min-height:260px;resize:vertical;white-space:pre;tab-size:2}
+#showdownExportDetails .row .btn{white-space:normal}
+@media(max-width:650px){#showdownExportDetails .row .btn{font-size:12px;padding:9px 12px}}
 </style></head>
 <body><main class="shell">
 <header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.13</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
@@ -151,6 +155,25 @@
 <div class="hint">Starter shortcut finds your original follower Pikachu even when not in slot 1. Paste multiple Pokémon sets, but only Pikachu’s moves and listed ability will be imported. “Shiny: Yes” and every other set property will be ignored by this shortcut.</div>
 <div class="row" style="margin:12px 0"><button id="showdownPreviewButton" class="btn secondary" type="button">Preview Pokémon import</button><button id="showdownImportButton" class="btn primary" type="button" disabled>💾 Apply preview to SVS session</button></div>
 <div id="showdownPreview" class="status" role="status" aria-live="polite"></div>
+</details>
+<details id="showdownExportDetails" style="margin:18px 0">
+<summary>📤 Export Pokémon sets for Showdown / Notes</summary>
+<p class="hint">Create a copy-and-paste text list from Pokémon in your currently loaded, verified SVS. This is read-only and never edits the game, party, or save. The list includes levels, abilities, natures, shiny status, items, IVs, EVs, friendship, and moves.</p>
+<div class="grid" style="margin:12px 0">
+ <div><label class="label" for="showdownExportScope">Which Pokémon?</label>
+ <select class="input" id="showdownExportScope">
+  <option value="selected">Selected Pokémon in editor</option>
+  <option value="party" selected>Entire current party</option>
+  <option value="box">Current PC box</option>
+  <option value="allpc">All occupied PC boxes</option>
+ </select></div>
+ <div><label class="label" for="showdownExportIncludeNick">Nickname</label><select id="showdownExportIncludeNick" class="input"><option value="yes" selected>Include nicknames</option><option value="no">Use species names only</option></select></div>
+</div>
+<div class="row" style="margin:10px 0"><button id="showdownGenerate" type="button" class="btn secondary">Generate Pokémon text</button><button id="showdownCopy" type="button" class="btn primary" disabled>📋 Copy for Notes</button><button id="showdownTxt" type="button" class="btn secondary" disabled>Download .txt</button></div>
+<label class="label" for="showdownExportText">Showdown-format output — long-press to select or use Copy</label>
+<textarea id="showdownExportText" class="input showdown-export-text" rows="12" readonly spellcheck="false" placeholder="Generate a set or a whole party here, then tap Copy for Notes."></textarea>
+<div id="showdownExportStatus" class="status" role="status" aria-live="polite"></div>
+<div class="hint">Values reflect the saved Pokémon records, including any custom 255-per-stat EVs. Pokémon personality ID, Trainer ID, and current PP are not part of Showdown text. Unsupported custom moves/items will be labeled as comments instead of guessed.</div>
 </details>
 <details id="partySwitcher"><summary>⚡ Party Builder &amp; Switcher</summary>
 <p class="hint">Build a lineup from the current six party Pokémon and your PC boxes. Save multiple named plans on this device, then activate one to exchange members between party and PC. The original follower Pikachu stays in his current party slot.</p>
