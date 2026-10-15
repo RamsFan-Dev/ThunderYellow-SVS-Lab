@@ -490,7 +490,7 @@ $('playerNameEdit').addEventListener('input',nameEditChanged);
 $('rivalNameEdit').addEventListener('input',nameEditChanged);
 $('saveTrainerNames').onclick=saveTrainerNames;
 
-function sync(){if(!loaded||!snapshotSafe)return;copies=findCopies(work);renderTrainerNames();renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();copies=findCopies(work);renderTrainerNames();renderStats();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -939,6 +939,7 @@ const importNatures=['Hardy','Lonely','Brave','Adamant','Naughty','Bold','Docile
 const importStatLabels={hp:0,atk:1,attack:1,def:2,defense:2,spe:3,speed:3,spa:4,spatk:4,spattack:4,specialattack:4,spd:5,spdef:5,spdefense:5,specialdefense:5};
 const importSimplify=value=>String(value).toLowerCase().normalize('NFKD').replace(/♀/g,'female').replace(/♂/g,'male').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 function importLookup(collection,label,typed){
+ if(collection===monNames){const normalized=importSimplify(typed);if(normalized==='nidoranf')return 29;if(normalized==='nidoranm')return 32;}
  const matches=Object.entries(collection).filter(([,name])=>importSimplify(name)===importSimplify(typed));
  if(matches.length!==1)throw Error('Unknown '+label+': "'+typed+'". Check the Gen 3 spelling.');
  return Number(matches[0][0]);
@@ -1932,7 +1933,7 @@ function renderPokemon(){if(!loaded)return;
   const bytes=monMode==='party'?(monLocations.partyRAM.length?work.slice(monLocations.partyRAM[0]+idx*100,monLocations.partyRAM[0]+idx*100+100):getPartyFrom(monLocations.groups[0],idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(monLocations.groups[0],idx));
   let mon=bytes&&decodeMon(bytes),empty=bytes&&!u32(bytes,0);
   const b=document.createElement('button');b.type='button';b.className='mon-tile'+(idx===monSlot?' chosen':'');b.innerHTML='<strong>'+(k+1)+'. '+(mon?(monNames[mon.sp]||'Species '+mon.sp):(empty?'Empty':'Unreadable'))+'</strong><small>'+(mon?(mon.name||'')+(isProtected(mon)?' · Starter ★':''):'')+'</small>';
-  b.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;$('newSpecies').value='';$('newSuggestions').replaceChildren();renderPokemon()};roster.append(b);
+  b.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;invalidateShowdownExport();$('newSpecies').value='';$('newSuggestions').replaceChildren();renderPokemon()};roster.append(b);
  }
  let data=getSlotBytes(),mon=data&&decodeMon(data),empty=data&&u32(data,0)===0;
  $('monForm').classList.toggle('hidden',!mon);$('monActions').classList.toggle('hidden',!mon);
@@ -2062,7 +2063,7 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  for(let k=0;k<6;k++)for(let [prefix,max] of [['iv',31],['ev',255]]){const div=document.createElement('div');div.innerHTML=`<label class="label" for="${prefix}${k}">${statKeys[k]} ${prefix.toUpperCase()}</label><input class="input" id="${prefix}${k}" type="number" min="0" max="${max}" inputmode="numeric">`;$('monStatRows').append(div)}
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
- $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);monSlot=boxNo*30;renderPokemon()};
+ $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
  const handleMonEdit=e=>{
   enforceLegalStat(e);
   if(e.target.id==='species'){abilityOptions(true);previewLevel();}
