@@ -98,9 +98,19 @@
 .showdown-export-text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.55;font-size:13px;min-height:260px;resize:vertical;white-space:pre;tab-size:2}
 #showdownExportDetails .row .btn{white-space:normal}
 @media(max-width:650px){#showdownExportDetails .row .btn{font-size:12px;padding:9px 12px}}
+
+/* Touch-friendly item name / ID search, without affecting inventory save logic */
+.item-search-results{max-height:222px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #485873;border-radius:12px;background:#111b2a;margin:9px 0 7px}
+.item-search-option{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:51px;padding:10px 12px;border:0;border-bottom:1px solid #354257;background:transparent;color:#f3f6ff;text-align:left;font:inherit;cursor:pointer}
+.item-search-option:last-child{border-bottom:0}
+.item-search-option:hover,.item-search-option:focus-visible{background:#28364c;outline:2px solid #ffe16c;outline-offset:-2px}
+.item-search-option.chosen{background:#443a26;border-left:4px solid #ffe16c}
+.item-search-option small{font-size:11px;color:#b7c8de;text-align:right;white-space:nowrap}
+.item-search-empty{padding:13px;color:#b7c8de;font-size:13px}
+#itemSelection{padding:5px 0 3px;min-height:25px}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.21</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.22</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <div id="unsafeStateNotice" class="hidden" role="alert" aria-live="assertive">
@@ -129,7 +139,7 @@
 <div id="trainerNamesMsg" class="status"></div>
 <div class="hint">Supported: uppercase/lowercase letters, numbers, spaces and common in-game punctuation. This does not alter the ROM, nickname, Pokémon personality IDs or trainer IDs. Some scripted dialogue may still use fixed names.</div>
 </section>
-<section class="panel"><div class="feature">03 • Safe edits</div><h2>Coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="preset">Quick item presets</label><select id="preset"><option value="68|0">Rare Candy</option><option value="20|0">Max Potion</option><option value="200|0">Leftovers</option><option value="19|0">Full Restore</option><option value="21|0">Hyper Potion</option><option value="24|0">Revive</option><option value="25|0">Max Revive</option><option value="1|2">Master Ball</option><option value="4|2">Poké Ball</option><option value="2|2">Ultra Ball</option></select><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary">Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
+<section class="panel"><div class="feature">03 • Safe edits</div><h2>Coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="itemSearch">Find an item by name or number</label><input id="itemSearch" class="input" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Super Repel, 83, or 0x0053" aria-controls="itemResults"><div class="hint">Search all named FireRed / LeafGreen items. Tap a match to choose it and its bag pocket.</div><div id="itemResults" class="item-search-results" role="region" aria-label="Matching item names and IDs"></div><div id="itemSelection" class="hint" role="status">Select an item before setting its quantity.</div><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary" disabled>Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
 <hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div>
 <div class="callout" id="inventoryHelp" style="margin:10px 0"><strong>Two different actions:</strong> <strong>Set Quantity</strong> changes how many you have in your bag. <strong>Select for PC</strong> marks items to move; select the items first, then tap <strong>Move Selected to PC</strong>. The transfer amount defaults to everything owned and can be changed below.</div>
 <div id="selectedPCBar" class="pc-selected-bar"><div class="row" style="justify-content:space-between"><strong id="selectedPCCount">0 items selected</strong><div class="row"><button id="clearSelectedPC" type="button" class="btn secondary" disabled>Clear</button><button id="moveSelectedPC" type="button" class="btn primary" disabled>📦 Move Selected to PC</button></div></div><div id="selectedPCList" class="pc-selection-list"></div><div id="selectedPCWarning" role="status" class="hint"></div></div>
@@ -542,7 +552,7 @@ function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();copi
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
- $('applyCoins').disabled=false;$('applyPreset').disabled=false;$('customApply').disabled=false;
+ $('applyCoins').disabled=false;$('applyPreset').disabled=selectedCatalogId===null;$('customApply').disabled=false;
  const vals=new Set(copies.map(c=>c.coins));
  $('copyInfo').innerHTML=`<div class="callout ${vals.size>1?'warn':''}">${vals.size>1?'⚠️ Desynchronized inventory copies found. Editing coins or items will update all '+copies.length+' detected copies.':'✓ Inventory copies identified. Edits are applied across all '+copies.length+' detected copies.'}<div class="small" style="margin-top:6px">${copies.map((c,i)=>'Copy '+(i+1)+' at '+hex(c.start)+': '+fmt(c.coins)+' coins, key '+hex(c.key)).join(' • ')}</div></div>`;
 }
@@ -997,7 +1007,63 @@ function auditExportLiveParty(){
 }
 async function exportSVS(){if(!loaded)return;if(!undoStack.length){msg($('exportMsg'),'No edits have been applied. Preview and APPLY your Pokémon import (or Save Names) before downloading an edited SVS.','bad');return;}if(recoveryDraftPending){msg($('exportMsg'),'Recovered Pokémon builds have NOT been applied to this SVS. Preview and apply Complete Party Repair first, or discard the recovered draft. Export blocked to prevent another unchanged file.','bad');return;}if(snapshotSafe){const latest=verifySnapshotIdentity();if(!latest.ok){msg($('exportMsg'),'Export blocked: '+latest.reason+'. The active game and saved party disagree; no unsafe file will be downloaded.','bad');return;}}if(!snapshotSafe){msg($('exportMsg'),'Unsafe game state. Export blocked until the live trainer and Pokémon party match the stored save.','bad');return;}if(nameDirty){msg($('exportMsg'),'Save your player and rival name edits first.','bad');alert('You have unsaved trainer name edits. Tap Save Names before exporting.');return;}if(badgeDirty){alert('Save your badge changes before exporting.');return;}if(monDirty){msg($('exportMsg'),'Save Pokémon changes before exporting.','bad');alert('You have unsaved Pokémon edits. Tap Save Pokémon before exporting.');return;}let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const exportAudit=auditExportLiveParty();const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes • '+work[getFlashGroups()[0].sectors.get(1).base+0x34]+' party Pokémon verified in live gameplay AND saved data ('+exportAudit.ramCopies+' active save mirrors). In Delta import it as a Save State, then Menu → Load State. Do not use the game’s Continue menu to load an SVS.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
-$('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyCoins;$('applyPreset').onclick=()=>{try{let[id,p]= $('preset').value.split('|').map(Number);applyItem(id,p,readRequiredQuantity($('presetQty'),'preset quantity'))}catch(e){msg($('editMsg'),e.message,'bad')}};
+// The search catalog is read-only until the user explicitly taps an item.
+const searchableItems=Object.entries(named)
+ .filter(([id,label])=>Number(id)>0&&!/^Unused\\b/i.test(label))
+ .map(([id,label])=>({id:Number(id),label,pocket:findBagPocketForId(Number(id))}))
+ .sort((a,b)=>a.label.localeCompare(b.label,'en',{sensitivity:'base'}));
+let selectedCatalogId=null;
+function renderItemResults(){
+ const typed=$('itemSearch').value.trim(),query=typed.toLowerCase();
+ const clean=value=>String(value).normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const hexMatch=/^0x[0-9a-f]+$/i.test(typed),h=hexMatch?(typed.slice(2).replace(/^0+/,'')||'0'):null;
+ let results=searchableItems.filter(item=>{
+  if(!typed)return true;
+  if(hexMatch)return item.id.toString(16).startsWith(h);
+  return clean(item.label).includes(clean(typed))||String(item.id).startsWith(typed.replace(/^#/,''));
+ });
+ if(typed){
+  results.sort((a,b)=>{
+   const score=item=>(String(item.id)===typed||clean(item.label)===clean(typed))?0:1;
+   return score(a)-score(b)||a.label.localeCompare(b.label);
+  });
+ }
+ const parent=$('itemResults');parent.replaceChildren();
+ for(const item of results.slice(0,45)){
+  const btn=document.createElement('button');btn.type='button';
+  btn.className='item-search-option'+(selectedCatalogId===item.id?' chosen':'');
+  btn.setAttribute('aria-pressed',String(selectedCatalogId===item.id));
+  const label=document.createElement('strong');label.textContent=item.label;
+  const meta=document.createElement('small');meta.textContent='#'+item.id+' · 0x'+item.id.toString(16).toUpperCase().padStart(4,'0')+' · '+pockets[item.pocket][0];
+  btn.append(label,meta);
+  btn.onclick=()=>{
+   selectedCatalogId=item.id;
+   $('itemSearch').value=item.label;
+   $('itemSelection').textContent='Selected: '+item.label+' (#'+item.id+', 0x'+item.id.toString(16).toUpperCase().padStart(4,'0')+') → '+pockets[item.pocket][0];
+   $('applyPreset').disabled=!copies.length||!snapshotSafe;
+   renderItemResults();
+  };
+  parent.append(btn);
+ }
+ if(!results.length){
+  const empty=document.createElement('div');empty.className='item-search-empty';
+  empty.textContent='No supported item matches. Try a different name, decimal ID or 0x hex ID.';parent.append(empty);
+ }else if(results.length>45){
+  const more=document.createElement('div');more.className='item-search-empty';
+  more.textContent='Showing 45 of '+results.length+' matches. Type more to narrow the list.';parent.append(more);
+ }
+}
+$('itemSearch').addEventListener('input',()=>{
+ selectedCatalogId=null;$('applyPreset').disabled=true;
+ $('itemSelection').textContent='Select an item from the results before setting quantity.';
+ renderItemResults();
+});
+renderItemResults();
+$('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyCoins;
+$('applyPreset').onclick=()=>{try{
+ if(selectedCatalogId===null)throw Error('Search for an item and tap its name first.');
+ applyItem(selectedCatalogId,findBagPocketForId(selectedCatalogId),readRequiredQuantity($('presetQty'),'item quantity'));
+}catch(e){msg($('editMsg'),e.message,'bad')}};
 for(let i=0;i<pockets.length;i++){let o=document.createElement('option');o.value=i;o.textContent=pockets[i][0];$('customPocket').append(o)}$('customApply').onclick=()=>{try{const quantity=readRequiredQuantity($('customQty'),'custom item quantity');const raw=$('customId').value.trim();if(!/^[0-9]+$/.test(raw))throw Error('Enter a valid item ID.');applyItem(Number(raw),Number($('customPocket').value),quantity)}catch(e){msg($('editMsg'),e.message,'bad')}};
 $('scanEggs').onclick=showEggs;$('clearEggs').onclick=eraseEggs;$('inspectHex').onclick=hexView;$('applyHex').onclick=hexPatch;$('hexOffset').onchange=hexView;$('undo').onclick=undo;$('export').onclick=exportSVS;
 // ThunderYellow SVS Lab v2 — Gen 3 Pokémon record editing (standalone, no network).
