@@ -481,6 +481,11 @@ function saveTrainerNames(){
   if(playerChanged&&!$('renameOwnedPokemon').checked&&!confirm('Your Pokémon will keep their previous Original Trainer name. Even with the same Trainer ID, the game may treat them as traded Pokémon. Continue without updating their OT names?'))return;
   const livePlayer=playerChanged?trainerRAMPlayerLocations(groups):[],
         liveRival=rivalChanged?trainerRAMRivalLocations(groups):[];
+  if(playerChanged&&!livePlayer.length)
+   throw Error('Player name was found in flash, but no matching live trainer-name block was verified. Renaming flash alone leaves the old name in-game. No bytes were changed. Please create a fresh in-game save and SVS.');
+  if(rivalChanged&&!liveRival.length)
+   throw Error('Rival name was found in flash, but no verified live rival-name block was located. A flash-only rename is unsafe; no bytes were changed. Please create a fresh in-game save and SVS.');
+  if(playerChanged)verifyLivePartyMirrors();
   for(const group of groups){
    if(playerChanged)patch(group.player,gameNameBytes(playerInput,work.subarray(group.player,group.player+8)),patches);
    if(rivalChanged)patch(group.rival,gameNameBytes(rivalInput,work.subarray(group.rival,group.rival+8)),patches);
@@ -1443,6 +1448,7 @@ function applyShowdownPaste(){
 let partyPlanPreview=null;
 const monIdentity=m=>m?m.pid+':'+m.ot+':'+m.sp:'';
 function teamRoster(){
+ verifyLivePartyMirrors();
  if(!loaded||!monLocations?.groups?.length)throw Error('Open a verified SVS before editing teams.');
  const groups=monLocations.groups,sec=groups[0].sectors.get(1);
  if(!sec)throw Error('Party save sector missing.');
@@ -1858,6 +1864,7 @@ function getSlotBytes(){if(!monLocations)return null;if(monMode==='party')return
 }
 function isProtected(mon){return !!(mon&&mon.sp===25&&((mon.pid===207385026&&mon.ot===1850938314)||(originalStarterIdentity&&mon.pid===originalStarterIdentity.pid&&mon.ot===originalStarterIdentity.ot)))}
 function applySlot(bytes,patches){if(monMode==='party'){
+  verifyLivePartyMirrors();
   for(const b of monLocations.partyRAM){const off=b+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches);}
   for(const g of monLocations.groups){const sec=g.sectors.get(1);if(!sec)continue;let off=sec.base+0x38+100*monSlot;patch(off,bytes.slice(0,80),patches);if(bytes.length===100)patch(off+80,bytes.slice(80,100),patches)}
  }else{
