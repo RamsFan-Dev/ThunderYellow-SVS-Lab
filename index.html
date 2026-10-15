@@ -142,12 +142,13 @@
 <p class="hint">Paste one or several complete Pokémon sets, separated by blank lines. Preview the party or PC destination before importing. Level defaults to 100 when omitted; IVs default to 31, and EVs default to 0 unless specified.</p>
 <label class="label" for="showdownText">Pokémon sets</label>
 <textarea id="showdownText" class="input" rows="9" spellcheck="false" autocomplete="off" placeholder="Squirtle (M) @ Leftovers&#10;Ability: Torrent&#10;EVs: 255 HP / 255 Atk / 255 Def / 255 SpA / 255 SpD / 255 Spe&#10;Hardy Nature&#10;- Tackle&#10;- Tail Whip"></textarea>
-<div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option></select></div>
+<div style="margin:12px 0"><label class="label" for="showdownImportMode">Import action</label><select id="showdownImportMode" class="input"><option value="create">Add / replace whole Pokémon</option><option value="moves">Update existing: Moves + Ability ONLY (keep identity)</option><option value="stats">Update existing: FULL STATS + Moves (protect follower)</option></select></div>
 <div class="grid3" style="margin:13px 0 10px">
  <div><label class="label" for="showdownTarget">Import destination</label><select id="showdownTarget" class="input"><option value="box">PC boxes</option><option value="party">Party</option></select></div>
  <div id="showdownBoxPane"><label class="label" for="showdownBox">Starting PC box</label><select id="showdownBox" class="input"></select></div>
  <div><label class="label" for="showdownSlot">Starting slot</label><select id="showdownSlot" class="input"></select></div>
 </div>
+<div id="showdownStatsHelp" class="hint hidden" style="margin:8px 0"><strong>Full Stats:</strong> Update an existing matching Pokémon: EVs, IVs, level/EXP, battle stats, held item, friendship, ability, and moves. Non-starter Pokémon can also change gender, nature, and shiny status. Original follower Pikachu keeps its fixed PID, nature, shiny status, and gender—differences from pasted values appear as explicit warnings before applying. This does not create missing party members.</div>
 <div id="showdownMoveHelp" class="hint hidden" style="margin:8px 0">Moves + Ability Only updates the Pokémon already in the selected slots. Their species must match the pasted sets. It preserves PID, OT, level, EXP, nature, shiny status, held item, IVs, EVs, happiness and follower identity. If Ability is omitted, it stays unchanged. New moves receive their default PP.</div>
 <label class="tog" style="margin:10px 0" id="showdownOverwriteLabel"><input id="showdownOverwrite" type="checkbox"> Allow replacement of occupied, non-protected slots (requires confirmation)</label>
 <div class="hint">Import is blocked if it would replace our special follower Pikachu, cross the party's six-slot limit, or skip an earlier empty party slot. PC batches can continue into the next box.</div>
@@ -1080,6 +1081,7 @@ function writeShowdownMoveSlot(spec,kind,slot,patches){
 }
 function showdownTargetSlots(sets,starterOnly=false){
  if(starterOnly||$('showdownImportMode').value==='moves')return showdownMoveTargets(sets,starterOnly);
+ if($('showdownImportMode').value==='stats'){const plan=showdownMoveTargets(sets,false);return {...plan,mode:'stats'};}
  const kind=$('showdownTarget').value,box=Number($('showdownBox').value)-1,slot=Number($('showdownSlot').value)-1;
  if(!loaded||!monLocations?.groups?.length)throw Error('Open a compatible SVS file before previewing.');
  if(kind!=='party'&&kind!=='box')throw Error('Choose a destination.');
@@ -1159,7 +1161,7 @@ function previewShowdown(starterOnly=false){
    const fields=[plan.dest[i].label,set.display+(set.gender?' ('+set.gender+')':'')+(set.shiny?' ✨ Requested Shiny':''),
     plan.mode==='moves'?'Existing level / nature retained':'Lv '+set.level+' • '+importNatures[set.nature],
     set.moves.length+' / 4',
-    plan.mode==='moves'?'MOVES + ABILITY':plan.dest[i].replacing?'REPLACE':'Add'];
+    plan.mode==='moves'?'MOVES + ABILITY':plan.mode==='stats'?'FULL STATS (preserve Pokémon) ⚡':plan.dest[i].replacing?'REPLACE':'Add'];
    for(const [j,field] of fields.entries()){const cell=document.createElement('td');cell.textContent=field;if(j===4&&plan.dest[i].replacing)cell.className='risky';row.append(cell)}
    tbody.append(row);
   });
@@ -1167,8 +1169,29 @@ function previewShowdown(starterOnly=false){
   const info=document.createElement('div');info.className='callout good';
   info.textContent=plan.mode==='moves'?
     '✓ '+sets.length+' existing Pokémon matched. This only changes pasted moves, PP/PP Ups and ability (if given). Shiny, held item, EVs, IVs, nature, level, PID, OT, and follower identity are unchanged. No bytes changed yet.':
+    plan.mode==='stats'?
+    '✓ '+sets.length+' existing Pokémon matched. FULL STATS mode writes IVs, EVs, EXP/level, recalculated battle stats, held item, happiness, moves and ability. Other Pokémon may change PID for nature, shiny and gender. The protected follower PID/OT stays untouched. Review the warning below before applying.':
     '✓ '+sets.length+' Pokémon parsed and '+plan.dest.length+' slots checked. '+plan.dest.filter(x=>x.replacing).length+' slot(s) will be replaced. No SVS bytes changed yet.';
   root.append(info);
+  if(plan.mode==='stats'){
+   const warnings=[];
+   for(let i=0;i<sets.length;i++){
+    const d=plan.dest[i],raw=plan.kind==='party'?getPartyFrom(monLocations.groups[0],d.slot):getPCFrom(monLocations.groups[0],d.slot),mon=decodeMon(raw);
+    if(isProtected(mon)){
+     const immutable=[];
+     if(sets[i].nature!==mon.pid%25)immutable.push('Nature: requested '+importNatures[sets[i].nature]+', will remain '+importNatures[mon.pid%25]);
+     if(sets[i].shiny!==shinyStatus(mon.pid,mon.ot))immutable.push('Shiny: requested '+(sets[i].shiny?'Yes':'No')+', will remain '+(shinyStatus(mon.pid,mon.ot)?'Yes':'No'));
+     if(sets[i].gender&&sets[i].gender!==showdownExportGender(mon))immutable.push('Gender: requested '+sets[i].gender+', will stay '+showdownExportGender(mon));
+     if(immutable.length)warnings.push('Protected starter Pikachu in '+d.label+': '+immutable.join('; ')+'. Other pasted stats WILL be updated.');
+    }
+   }
+   if(warnings.length){
+    const box=document.createElement('div');box.className='callout warn';
+    box.textContent='⚠ PROTECTED FOLLOWER EXCEPTIONS\n'+warnings.join('\n')+'\nThe follower personality cannot be rewritten safely. You must confirm these exceptions before applying.';
+    box.style.whiteSpace='pre-wrap';root.append(box);
+   }
+   plan.warnings=warnings;
+  }
   showdownPrepared={sets,plan,starterOnly,signature:showdownSignature()};
   $('showdownImportButton').disabled=false;
  }catch(e){showdownPrepared=null;$('showdownImportButton').disabled=true;msg(root,e.message,'bad')}
@@ -1487,7 +1510,7 @@ $('partyDeletePlan').onclick=deletePartyPlan;
 function initializeShowdown(){
  for(let b=1;b<=14;b++)$('showdownBox').add(new Option('Box '+b,b));
  updateShowdownTarget();
- const modeUI=()=>{const moves=$('showdownImportMode').value==='moves';$('showdownOverwriteLabel').classList.toggle('hidden',moves);$('showdownMoveHelp').classList.toggle('hidden',!moves);invalidateShowdownPreview();};
+ const modeUI=()=>{const mode=$('showdownImportMode').value;const moves=mode==='moves',stats=mode==='stats';$('showdownOverwriteLabel').classList.toggle('hidden',moves||stats);$('showdownMoveHelp').classList.toggle('hidden',!moves);$('showdownStatsHelp').classList.toggle('hidden',!stats);invalidateShowdownPreview();};
  for(const id of ['showdownText','showdownImportMode','showdownTarget','showdownBox','showdownSlot','showdownOverwrite']){
   $(id).addEventListener(id==='showdownText'?'input':'change',()=>{
    if(id==='showdownTarget'){updateShowdownTarget();return;}
