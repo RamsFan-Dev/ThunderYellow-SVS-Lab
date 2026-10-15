@@ -209,7 +209,7 @@
  <button id="monMaxPP" type="button" class="btn secondary">⚡ Max PP + 3 PP Ups</button>
  <button id="mon35PP" type="button" class="btn secondary">35 PP + 3 PP Ups (custom)</button>
 </div>
-<div class="hint">For the selected Pokémon's moves only. These buttons fill the fields but do not save until you tap Save Pokémon. The fixed 35 PP preset can exceed a move's normal maximum.</div>
+<div class="hint" id="monPPPresetStatus" role="status">For the selected Pokémon's moves only. These buttons fill the fields but do not save until you tap Save Pokémon. The fixed 35 PP preset can exceed a move's normal maximum.</div>
 <div class="grid3" style="margin:13px 0"><div><label class="label" for="moveQuickSlot">Apply preset to slot</label><select id="moveQuickSlot"><option value="0">Move 1</option><option value="1">Move 2</option><option value="2">Move 3</option><option value="3">Move 4</option></select></div><div><label class="label" for="moveQuickName">Choose familiar move</label><select id="moveQuickName"></select></div><div style="display:flex;align-items:end"><button class="btn secondary" id="moveQuick">Fill move ID</button></div></div><div class="hint">Move names use Gen 3 IDs internally. The editor does not check whether a Pokémon can learn a move. Current PP and PP Ups are saved separately.</div>
 <details><summary>IVs and EVs</summary>
 <div class="hint" style="margin:4px 0 10px">SVS editor limits: IV 0–31 per stat, EV 0–255 per stat. You may set all six EVs to 255. Zero is preserved for Pokémon that have none.</div>
@@ -1650,6 +1650,43 @@ $('partyLoadPlan').onclick=loadPartyPlan;
 $('partyDeletePlan').onclick=deletePartyPlan;
 
 
+
+function showdownPPPresetForMoves(moves,mode){
+ if(mode!=='legal'&&mode!=='fixed35')throw Error('Unknown PP preset');
+ return {pp:moves.map(id=>{if(!id)return 0;const base=maxPP[id];if(!Number.isInteger(base)||base<1)throw Error('Unknown base PP for move #'+id);return mode==='fixed35'?35:base+Math.floor(base*3/5)}),ppups:moves.map(id=>id?3:0)};
+}
+function showdownFillPPPreset(mode){
+ try{
+  const value=$('showdownText').value.trim();
+  if(!value)throw Error('Paste Pokémon sets first.');
+  const sets=parseShowdownImport(value),blocks=value.replace(/\r/g,'').split(/\n\s*\n/).filter(Boolean);
+  if(sets.length!==blocks.length)throw Error('Unable to align Pokémon sets.');
+  const next=blocks.map((block,i)=>{
+   const moves=Array.from({length:4},(_,j)=>sets[i].moves[j]||0);
+   if(!moves.some(Boolean))throw Error(sets[i].display+' has no moves listed.');
+   const {pp,ppups}=showdownPPPresetForMoves(moves,mode);
+   const lines=block.split('\n').filter(line=>!/^\s*(?:#\s*)?(?:(?:Current\s+)?PPs?|PP\s*Ups?|PP\s*Mode)\s*:/i.test(line));
+   lines.push('# PP: '+pp.join(' / '),'# PP Ups: '+ppups.join(' / '));
+   if(mode==='fixed35')lines.push('# PP Mode: Custom');
+   return lines.join('\n');
+  });
+  $('showdownText').value=next.join('\n\n');
+  invalidateShowdownPreview();
+  msg($('showdownPPPresetStatus'),mode==='fixed35'?'✓ Filled 35 PP and 3 PP Ups for each nonempty move. This is a custom value, potentially above legal limits; the game may clamp it. Preview before applying.':'✓ Filled each move’s legal maximum PP with 3 PP Ups. Preview before applying.','good');
+ }catch(e){msg($('showdownPPPresetStatus'),'Could not fill PP: '+e.message,'bad')}
+}
+function monQuickPP(mode){
+ try{
+  if(!loaded||!snapshotSafe||$('monForm').classList.contains('hidden'))throw Error('Load a verified SVS and select an occupied Pokémon.');
+  const moves=Array.from({length:4},(_,i)=>Number($('move'+i).value));
+  if(!moves.some(Boolean))throw Error('Choose at least one move.');
+  const {pp,ppups}=showdownPPPresetForMoves(moves,mode);
+  for(let i=0;i<4;i++){$('pp'+i).value=String(pp[i]);$('up'+i).value=String(ppups[i])}
+  markMonDirty();
+  $('monPPPresetStatus').textContent=mode==='fixed35'?'35 PP / 3 PP Ups entered for nonempty moves; custom values may be clamped in-game. Tap Save Pokémon.':'Legal maximum PP / 3 PP Ups entered for nonempty moves. Tap Save Pokémon.';
+ }catch(e){$('monPPPresetStatus').textContent=e.message}
+}
+
 function initializeShowdown(){
  for(let b=1;b<=14;b++)$('showdownBox').add(new Option('Box '+b,b));
  updateShowdownTarget();
@@ -1669,6 +1706,8 @@ function initializeShowdown(){
   }catch(e){msg($('showdownPreview'),e.message,'bad');}
  };
  $('showdownImportButton').onclick=applyShowdownPaste;
+ $('showdownMaxLegal').onclick=()=>showdownFillPPPreset('legal');
+ $('showdownFixed35').onclick=()=>showdownFillPPPreset('fixed35');
  modeUI();
 }
 initializeShowdown();
@@ -2230,6 +2269,8 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  $('held').add(new Option('(No held item)',0));fillNames($('held'),named,false);
  for(let i=0;i<4;i++){let div=document.createElement('div');div.className='mon-move-row';div.innerHTML=`<div><label class="label" for="move${i}">Move ${i+1}</label><select class="input" id="move${i}"></select></div><div><label class="label" for="pp${i}">Current PP</label><input class="input" id="pp${i}" type="number" min="0" max="99" inputmode="numeric"></div><div><label class="label" for="up${i}">PP Ups (0–3)</label><input class="input" id="up${i}" type="number" min="0" max="3" inputmode="numeric"></div>`;$('monMoveRows').append(div);fillNames($('move'+i),moveNames,true)}
  fillNames($('moveQuickName'),moveNames,true);
+ $('monMaxPP').onclick=()=>monQuickPP('legal');
+ $('mon35PP').onclick=()=>monQuickPP('fixed35');
  for(let k=0;k<6;k++)for(let [prefix,max] of [['iv',31],['ev',255]]){const div=document.createElement('div');div.innerHTML=`<label class="label" for="${prefix}${k}">${statKeys[k]} ${prefix.toUpperCase()}</label><input class="input" id="${prefix}${k}" type="number" min="0" max="${max}" inputmode="numeric">`;$('monStatRows').append(div)}
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
