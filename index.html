@@ -1142,7 +1142,100 @@ function writeShowdownMoveSlot(spec,kind,slot,patches){
   }
  }
 }
+
+// Build a complete party on a CURRENT, identity-verified game snapshot only.
+// Update the members that already exist; create only the missing trailing slots.
+// A previous mismatched export can supply BUILDS, never its trainer/identity data.
+function showdownReconcileTargets(sets){
+ if(!snapshotSafe||!loaded)throw Error('First load a clean SVS whose in-game save matches the running game. The mismatched source remains read-only.');
+ if($('showdownTarget').value!=='party')throw Error('Complete Party Repair works only in the Party (not PC boxes).');
+ if(Number($('showdownSlot').value)!==1)throw Error('For complete party repair, set Starting slot to 1.');
+ if(sets.length<1||sets.length>6)throw Error('Complete party repair requires 1–6 Pokémon sets in party order.');
+ const {groups,mirrors,count}=verifyLivePartyMirrors();
+ if(sets.length<count)throw Error('This game already has '+count+' party Pokémon but you supplied '+sets.length+' sets. Full-party repair cannot silently remove Pokémon.');
+ const active=groups[0],dest=[];
+ for(let i=0;i<sets.length;i++){
+  const old=getPartyFrom(active,i),mon=decodeMon(old),existing=i<count;
+  if(existing){
+   if(!mon||mon.sp!==sets[i].sp)throw Error('Party slot '+(i+1)+' is '+(mon?monNames[mon.sp]:'unreadable')+' but the pasted set is '+sets[i].display+'. Reorder the sets to match the real party. No edits applied.');
+   for(const base of mirrors){
+    const live=decodeMon(work.subarray(base+100*i,base+100*i+80));
+    if(!live||live.pid!==mon.pid||live.ot!==mon.ot||live.sp!==mon.sp)
+     throw Error('The running party differs from the saved party in slot '+(i+1)+'. Use a fresh SVS.');
+   }
+  }else{
+   // Anything beyond the active party count is not part of the game party.
+   // It can contain residual bytes, which we replace only in these inactive slots.
+   for(const base of mirrors)if(base+100*(i+1)>work.length)throw Error('No space for party slot '+(i+1)+'.');
+  }
+  dest.push({slot:i,replacing:existing,label:'Party '+(i+1),newMember:!existing});
+ }
+ return {kind:'party',mode:'reconcile',count,dest,source:recoveryDraftTeam?.source||null};
+}
+function showdownReconcileWrite(spec,slot,alreadyExists,source,mirrors,patches){
+ const sec=source.sectors.get(1),offset=sec.base+0x38+100*slot;
+ let record,wasProtected=false,expectedPID=null,expectedOT=null;
+ if(alreadyExists){
+  const previous=getPartyFrom(source,slot),old=decodeMon(previous);
+  if(!old||old.sp!==spec.sp)throw Error('Existing party slot '+(slot+1)+' changed since preview.');
+  wasProtected=isProtected(old);expectedPID=old.pid;expectedOT=old.ot;
+  const gender=spec.gender||showdownExportGender(old)||null;
+  const newPID=wasProtected?old.pid:(
+   old.pid%25===spec.nature&&shinyStatus(old.pid,old.ot)===spec.shiny&&(!gender||showdownExportGender(old)===gender)
+    ?old.pid:showdownPersonality({...spec,gender},old.ot));
+  record=showdownFullStatRecord(spec,'party',slot,source,newPID);
+ }else{
+  const box=showdownBoxRecord(spec);
+  record=showdownPartyRecord(spec,box);
+ }
+ if(!record||record.length!==100||!decodeMon(record))throw Error('Failed to encode party slot '+(slot+1)+'.');
+ for(const base of mirrors)patch(base+100*slot,record,patches);
+ // The latest, checksum-verified flash generation is the one paired with
+ // live RAM. Do not rewrite the old backup-save generation.
+ patch(offset,record,patches);
+ const after=decodeMon(record);
+ if(!after||after.sp!==spec.sp||after.held!==spec.held||after.friend!==spec.friend||
+    after.ability!==spec.abilitySlot||record[84]!==spec.level||
+    ['ev','iv','moves','pp','ppups'].some(k=>JSON.stringify(after[k])!==
+      JSON.stringify(k==='moves'?Array.from({length:4},(_,i)=>spec.moves[i]||0):
+        k==='pp'||k==='ppups'?showdownPPFields(spec,Array.from({length:4},(_,i)=>spec.moves[i]||0))[k]:
+         spec[k])))
+   throw Error('Full-build re-read verification failed at slot '+(slot+1)+'.');
+ if(wasProtected&&(after.pid!==expectedPID||after.ot!==expectedOT))
+  throw Error('Original follower Pikachu identity changed; repair aborted.');
+ return {mon:after,wasProtected};
+}
+function applyShowdownReconcile(sets,plan,patches){
+ const {groups,mirrors,count}=verifyLivePartyMirrors(),primary=groups[0],sec=primary.sectors.get(1);
+ if(count!==plan.count)throw Error('Active party count changed since preview.');
+ let originalFollower=null;
+ for(let i=0;i<count;i++){
+  const mon=decodeMon(getPartyFrom(primary,i));
+  if(isProtected(mon))originalFollower={pid:mon.pid,ot:mon.ot,slot:i};
+ }
+ if(!originalFollower)throw Error('Original follower Pikachu is missing from the existing party. Repair refused to create a replacement.');
+ const records=[];
+ for(let i=0;i<sets.length;i++)
+  records.push(showdownReconcileWrite(sets[i],i,i<count,primary,mirrors,patches));
+ if(sets.length>count){
+  patch(sec.base+0x34,Uint8Array.of(sets.length),patches);
+  for(const base of mirrors)patch(base-4,Uint8Array.of(sets.length),patches);
+ }
+ refreshChecksums(patches);
+ const validation=verifySnapshotIdentity();
+ if(!validation.ok)throw Error('After-repair identity verification failed: '+validation.reason);
+ const final=activePartyRAMMirrors(getFlashGroups());
+ if(!final.length)throw Error('After-repair live party was not found. Changes will be rolled back.');
+ const follower=decodeMon(getPartyFrom(primary,originalFollower.slot));
+ if(!follower||follower.pid!==originalFollower.pid||follower.ot!==originalFollower.ot)
+  throw Error('Pikachu follower identity not preserved; changes will be rolled back.');
+ const finalCount=work[sec.base+0x34];
+ if(finalCount!==sets.length)throw Error('Party size mismatch after repair.');
+ return {added:sets.length-count,updated:count,protectedPID:originalFollower.pid};
+}
+
 function showdownTargetSlots(sets,starterOnly=false){
+ if(!starterOnly&&$('showdownImportMode').value==='reconcile')return showdownReconcileTargets(sets);
  if($('showdownTarget').value==='party')verifyLivePartyMirrors();
  if(starterOnly||$('showdownImportMode').value==='moves')return showdownMoveTargets(sets,starterOnly);
  if($('showdownImportMode').value==='stats'){const plan=showdownMoveTargets(sets,false);return {...plan,mode:'stats'};}
@@ -1225,7 +1318,7 @@ function previewShowdown(starterOnly=false){
    const fields=[plan.dest[i].label,set.display+(set.gender?' ('+set.gender+')':'')+(set.shiny?' ✨ Requested Shiny':''),
     plan.mode==='moves'?'Existing level / nature retained':'Lv '+set.level+' • '+importNatures[set.nature],
     set.moves.length+' / 4',
-    plan.mode==='moves'?'MOVES + ABILITY':plan.mode==='stats'?'FULL STATS (preserve Pokémon) ⚡':plan.dest[i].replacing?'REPLACE':'Add'];
+    plan.mode==='moves'?'MOVES + ABILITY':plan.mode==='stats'?'FULL STATS (preserve Pokémon) ⚡':plan.mode==='reconcile'?(plan.dest[i].newMember?'ADD TO PARTY':'UPDATE & PRESERVE IDENTITY'):plan.dest[i].replacing?'REPLACE':'Add'];
    for(const [j,field] of fields.entries()){const cell=document.createElement('td');cell.textContent=field;if(j===4&&plan.dest[i].replacing)cell.className='risky';row.append(cell)}
    tbody.append(row);
   });
@@ -1233,6 +1326,8 @@ function previewShowdown(starterOnly=false){
   const info=document.createElement('div');info.className='callout good';
   info.textContent=plan.mode==='moves'?
     '✓ '+sets.length+' existing Pokémon matched. This only changes pasted moves, PP/PP Ups and ability (if given). Shiny, held item, EVs, IVs, nature, level, PID, OT, and follower identity are unchanged. No bytes changed yet.':
+    plan.mode==='reconcile'?
+    '✓ Reconciled proposed party: '+plan.count+' existing Pokémon will be updated, '+(sets.length-plan.count)+' missing Pokémon will be added to your verified live game. Trainer identity, original follower Pikachu PID/OT, PC and bag are protected. No edits have occurred yet.':
     plan.mode==='stats'?
     '✓ '+sets.length+' existing Pokémon matched. FULL STATS mode writes IVs, EVs, EXP/level, recalculated battle stats, held item, happiness, moves and ability. Other Pokémon may change PID for nature, shiny and gender. The protected follower PID/OT stays untouched. Review the warning below before applying.':
     '✓ '+sets.length+' Pokémon parsed and '+plan.dest.length+' slots checked. '+plan.dest.filter(x=>x.replacing).length+' slot(s) will be replaced. No SVS bytes changed yet.';
@@ -1242,7 +1337,7 @@ function previewShowdown(starterOnly=false){
    reminder.textContent='⚠ STATS WILL NOT IMPORT in Moves + Ability ONLY mode. Your EVs, IVs, held items, nature, shiny status, level and happiness will remain unchanged. Choose FULL STATS + Moves instead to apply these values.';
    root.append(reminder);
   }
-  if(plan.mode==='stats'){
+  if(plan.mode==='stats'||plan.mode==='reconcile'){
    const warnings=[];
    for(let i=0;i<sets.length;i++){
     const d=plan.dest[i],raw=plan.kind==='party'?getPartyFrom(monLocations.groups[0],d.slot):getPCFrom(monLocations.groups[0],d.slot),mon=decodeMon(raw);
