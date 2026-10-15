@@ -1249,6 +1249,87 @@ function showdownPartyRecord(spec,record){
  for(let i=0;i<7;i++)w16(party,86+i*2,i===0?stats[0]:stats[i-1]);
  return party;
 }
+
+// Full-build update: keep existing OT and follower identity; update all numeric
+// stats and recalculate the Gen III party-stat cache, including 255-per-stat EVs.
+function showdownFullStatRecord(spec,kind,slot,sourceGroup,newPID){
+ const old=kind==='party'?getPartyFrom(sourceGroup,slot):getPCFrom(sourceGroup,slot);
+ const mon=old&&decodeMon(old);
+ if(!mon||mon.sp!==spec.sp)throw Error('Target species no longer matches the preview at slot '+(slot+1)+'.');
+ if(isProtected(mon)&&newPID!==mon.pid)throw Error('Protected follower Pikachu personality must not change.');
+ const fields={
+  sp:mon.sp,held:spec.held,exp:startExp(speciesStats[spec.sp][6],spec.level),
+  friend:spec.friend,ability:spec.abilitySlot,
+  moves:spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]||0):mon.moves.slice(),
+  pp:spec.moves.length?Array.from({length:4},(_,i)=>spec.moves[i]?(maxPP[spec.moves[i]]||0):0):mon.pp.slice(),
+  ppups:spec.moves.length?[0,0,0,0]:mon.ppups.slice(),
+  iv:spec.iv.slice(),ev:spec.ev.slice()
+ };
+ const box=mon.bytes.slice();
+ put32(box,0,newPID);
+ const written=encodeMon({...mon,pid:newPID,bytes:box},fields);
+ const checked=decodeMon(written);
+ if(!checked||checked.pid!==newPID||checked.ot!==mon.ot||checked.sp!==mon.sp||checked.held!==fields.held||
+   checked.exp!==fields.exp||checked.friend!==fields.friend||checked.ability!==fields.ability)
+   throw Error('Full-build checksum/identity verification failed at slot '+(slot+1)+'.');
+ for(const key of ['ev','iv','moves','pp','ppups'])
+  if(JSON.stringify(checked[key])!==JSON.stringify(fields[key]))throw Error('Full-build '+key+' verification failed.');
+ if(isProtected(mon)&&!isProtected(checked))throw Error('The original follower Pikachu identity was changed.');
+ if(kind!=='party')return written;
+ const party=old.slice();party.set(written,0);party[84]=spec.level;
+ const stats=recalcStats(spec.sp,spec.level,newPID,spec.iv,spec.ev);
+ const priorHP=u16(old,86),priorMax=u16(old,88);
+ const currentHP=priorHP===0?0:Math.max(1,Math.min(stats[0],Math.round(priorHP*stats[0]/Math.max(1,priorMax))));
+ for(let j=0;j<7;j++)w16(party,86+j*2,j===0?currentHP:stats[j-1]);
+ if(party[84]!==spec.level||u16(party,88)!==stats[0])
+  throw Error('Party stat cache verification failed at slot '+(slot+1)+'.');
+ return party;
+}
+function writeShowdownStatSlot(spec,kind,slot,patches){
+ const latest=monLocations.groups[0],old=kind==='party'?getPartyFrom(latest,slot):getPCFrom(latest,slot),
+       active=old&&decodeMon(old);
+ if(!active||active.sp!==spec.sp)throw Error('An existing Pokémon was replaced since the import preview.');
+ const currentGender=showdownExportGender(active);
+ const desiredGender=spec.gender||currentGender||null;
+ const protectedStarter=isProtected(active),matchesNature=active.pid%25===spec.nature,
+       matchesShiny=shinyStatus(active.pid,active.ot)===spec.shiny,
+       matchesGender=!desiredGender||currentGender===desiredGender;
+ let pid=active.pid;
+ if(!protectedStarter&&(!matchesNature||!matchesShiny||!matchesGender)){
+  pid=showdownPersonality({...spec,gender:desiredGender},active.ot);
+ }
+ const next=showdownFullStatRecord(spec,kind,slot,latest,pid);
+ const size=kind==='party'?100:80,mirrors=kind==='party'?monLocations.partyRAM:monLocations.pcRAM;
+ for(const base of mirrors){
+  const live=decodeMon(work.slice(base+slot*size,base+slot*size+80));
+  if(!live||live.pid!==active.pid||live.ot!==active.ot||live.sp!==active.sp)
+   throw Error('Live RAM and flash save differ at slot '+(slot+1)+'. Create a new SVS from the running game.');
+  patch(base+slot*size,next,patches);
+ }
+ for(const group of monLocations.groups){
+  const stored=kind==='party'?getPartyFrom(group,slot):getPCFrom(group,slot),
+        mon=stored&&decodeMon(stored);
+  // A secondary flash generation can belong to a previous save. Never replace
+  // unrelated Pokémon in that old slot.
+  if(!mon||mon.pid!==active.pid||mon.ot!==active.ot||mon.sp!==active.sp)continue;
+  const bytes=showdownFullStatRecord(spec,kind,slot,group,pid);
+  if(kind==='party'){
+   const sec=group.sectors.get(1);
+   if(!sec)throw Error('Missing party flash section.');
+   patch(sec.base+0x38+100*slot,bytes,patches);
+  }else{
+   let copied=0,start=4+slot*80;
+   while(copied<80){
+    const at=start+copied,sec=group.sectors.get(5+Math.floor(at/3968));
+    if(!sec)throw Error('Missing PC flash section.');
+    const n=Math.min(80-copied,3968-at%3968);
+    patch(sec.base+at%3968,bytes.slice(copied,copied+n),patches);copied+=n;
+   }
+  }
+ }
+ return {newPID:pid,protectedStarter};
+}
+
 function writeShowdownSlot(kind,slot,bytes,patches){
  if(kind==='party'){
   for(const base of monLocations.partyRAM)patch(base+100*slot,bytes,patches);
@@ -1268,6 +1349,9 @@ function applyShowdownPaste(){
   if(plan.mode!==showdownPrepared.plan.mode||plan.dest.some((x,i)=>x.slot!==showdownPrepared.plan.dest[i].slot||x.replacing!==showdownPrepared.plan.dest[i].replacing))throw Error('The destination changed; preview the import again.');
   if(plan.mode==='moves'){
    for(let i=0;i<sets.length;i++)writeShowdownMoveSlot(sets[i],plan.kind,plan.dest[i].slot,patches);
+  }else if(plan.mode==='stats'){
+   if(plan.warnings?.length&&!confirm('⚠ Original follower Pikachu cannot change shiny status, nature or gender.\n\n'+plan.warnings.join('\n')+'\n\nUpdate every other requested stat while preserving the original follower identity?'))return;
+   for(let i=0;i<sets.length;i++)writeShowdownStatSlot(sets[i],plan.kind,plan.dest[i].slot,patches);
   }else{
    const replaceCount=plan.dest.filter(x=>x.replacing).length;
    if(replaceCount&&!confirm('Replace '+replaceCount+' existing Pokémon? This cannot be undone after exporting without a backup. Our protected Pikachu will not be replaced.'))return;
@@ -1283,9 +1367,9 @@ function applyShowdownPaste(){
    }
   }
   refreshChecksums(patches);
-  if(!snapshot((plan.mode==='moves'?'Moves/ability updated for ':'Imported ')+sets.length+' Pokémon set(s)',patches))throw Error('No changes could be recorded.');
+  if(!snapshot((plan.mode==='moves'?'Moves/ability updated for ':plan.mode==='stats'?'Full stats updated for ':'Imported ')+sets.length+' Pokémon set(s)',patches))throw Error('No changes could be recorded.');
   showdownPrepared=null;$('showdownImportButton').disabled=true;sync();
-  msg(root,'✓ '+sets.length+' Pokémon '+(plan.mode==='moves'?'updated without replacing their identities':'imported')+' in the SVS session. Export and test in Delta before replacing the original.','good');
+  msg(root,'✓ '+sets.length+' Pokémon '+(plan.mode==='moves'?'updated: MOVES + ABILITY ONLY':plan.mode==='stats'?'updated: EVs/IVs, Level, EXP, Stats, Items, Happiness, Moves, Ability and permissible nature/shiny/gender':'imported')+' in the SVS session. '+(plan.mode==='stats'&&plan.warnings?.length?'Pikachu follower nature/shiny/gender were preserved as warned. ':'')+'Export and test in Delta before replacing the original.','good');
  }catch(e){
   for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);
   msg(root,'Import stopped: '+e.message,'bad');showdownPrepared=null;$('showdownImportButton').disabled=true;
