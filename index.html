@@ -1173,6 +1173,11 @@ function previewShowdown(starterOnly=false){
     '✓ '+sets.length+' existing Pokémon matched. FULL STATS mode writes IVs, EVs, EXP/level, recalculated battle stats, held item, happiness, moves and ability. Other Pokémon may change PID for nature, shiny and gender. The protected follower PID/OT stays untouched. Review the warning below before applying.':
     '✓ '+sets.length+' Pokémon parsed and '+plan.dest.length+' slots checked. '+plan.dest.filter(x=>x.replacing).length+' slot(s) will be replaced. No SVS bytes changed yet.';
   root.append(info);
+  if(plan.mode==='moves'&&/^(?:EVs|IVs|Level|Shiny|Happiness|Friendship)\s*:|^\s*[A-Za-z]+\s+Nature\s*$/mi.test($('showdownText').value)){
+   const reminder=document.createElement('div');reminder.className='callout warn';
+   reminder.textContent='⚠ STATS WILL NOT IMPORT in Moves + Ability ONLY mode. Your EVs, IVs, held items, nature, shiny status, level and happiness will remain unchanged. Choose FULL STATS + Moves instead to apply these values.';
+   root.append(reminder);
+  }
   if(plan.mode==='stats'){
    const warnings=[];
    for(let i=0;i<sets.length;i++){
@@ -1348,6 +1353,8 @@ function applyShowdownPaste(){
   const {sets,starterOnly}=showdownPrepared,plan=showdownTargetSlots(sets,starterOnly);
   if(plan.mode!==showdownPrepared.plan.mode||plan.dest.some((x,i)=>x.slot!==showdownPrepared.plan.dest[i].slot||x.replacing!==showdownPrepared.plan.dest[i].replacing))throw Error('The destination changed; preview the import again.');
   if(plan.mode==='moves'){
+   if(/^(?:EVs|IVs|Level|Shiny|Happiness|Friendship)\s*:|^\s*[A-Za-z]+\s+Nature\s*$/mi.test($('showdownText').value)&&
+      !confirm('Moves + Ability ONLY does NOT import IVs, EVs, level, nature, held item, happiness or shiny status. Choose FULL STATS + Moves to import them. Continue with moves only?'))return;
    for(let i=0;i<sets.length;i++)writeShowdownMoveSlot(sets[i],plan.kind,plan.dest[i].slot,patches);
   }else if(plan.mode==='stats'){
    preservedFollowerWarnings=showdownPrepared.plan.warnings||[];
