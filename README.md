@@ -34,3 +34,17 @@ The existing browser-based Delta SVS editor is preserved in the repository's roo
 Test 125N has passed Pikachu Surf/shore transitions and battle follow-up checks in user gameplay testing. Future issues can be tracked independently in [GitHub Issues](https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues).
 
 This is an unofficial fan project, not affiliated with or endorsed by Nintendo, Game Freak, or The Pokémon Company.
+
+
+## Bill's PC sorting (functional test, 2026)
+
+The Bill's PC editor supports all 14 boxes (30 Pokémon slots each). Existing user-created box names are read from the uploaded Delta save and left unchanged.
+
+1. Import a **fresh, verified** Delta \`.svs\` created with the same ROM build.
+2. In **Party & PC Pokémon Editor**, open **PC boxes**, then choose a sort option.
+3. Confirm to physically rearrange **PC Pokémon only** in the loaded editing session. The previous arrangement remains in the original file.
+4. National Pokédex sorting places the first copy of each species into its **exact numbered slot**, leaving empty spaces for missing species. Extra copies are preserved in spare slots.
+5. Sort by **name, type, classification, level, or gender** to compact entries in that order. **Current box slots** only displays the saved physical positions.
+6. Use **Undo** before exporting to reverse the sort, or cancel without making changes. Download the edited \`.svs\` with Export and test in Delta before replacing your backup.
+
+All current features are experimental for save editing: protect your original \`.svs\` and regular \`.sav\`. Sprite icons are intentionally deferred until functionality is verified.
