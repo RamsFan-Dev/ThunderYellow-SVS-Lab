@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#121e2d">
+  <meta name="description" content="Official bug reporting and technical support for Pokemon: ThunderYellow Version (2026 Special Edition).">
+  <title>Pokemon: ThunderYellow Version (2026 Special Edition) — Technical Support</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1723;--card:#152538;--card2:#1b3046;--line:#33465a;--gold:#ffda50;--ink:#f7f9fc;--muted:#b2c1d1;--green:#79ddba}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(ellipse at 88% 3%,#30402a 0,transparent 35%),var(--bg);color:var(--ink);font:16px/1.58 system-ui,-apple-system,"Segoe UI",sans-serif}
+    a{color:var(--gold)}a:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
+    .wrap{width:min(1080px,calc(100% - 36px));margin:0 auto}
+    .skip{position:absolute;left:12px;top:-100px;padding:10px;background:var(--gold);color:var(--bg)}
+    .skip:focus{top:8px}
+    header{border-bottom:1px solid var(--line);background:#0d1723da}
+    nav{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:19px 0}
+    .brand{color:var(--ink);font-weight:900;text-decoration:none;letter-spacing:.03em}
+    .brand strong{color:var(--gold)}
+    .navlinks{display:flex;flex-wrap:wrap;gap:18px;font-size:14px}
+    .navlinks a{color:var(--muted);text-decoration:none}
+    .navlinks a:hover{color:var(--gold)}
+    main{padding-bottom:70px}.hero{padding:82px 0 65px;max-width:900px}
+    .eyebrow{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:900}
+    h1{font-size:clamp(2.2rem,6vw,4.6rem);line-height:1.08;letter-spacing:-.05em;text-wrap:balance;margin:15px 0 24px}
+    h1 span{color:var(--gold)}
+    .lead{color:var(--muted);max-width:710px;font-size:clamp(16px,2vw,19px)}
+    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+    .btn{padding:13px 22px;text-align:center;text-decoration:none;font-weight:800;border-radius:12px;border:1px solid var(--line);display:inline-block}
+    .btn-primary{background:var(--gold);color:#182132;border-color:var(--gold)}
+    .btn-secondary{background:#25364c;color:var(--ink)}
+    .btn:hover{filter:brightness(1.07)}
+    .state{border:1px solid var(--line);border-radius:10px;padding:10px 16px;display:inline-flex;gap:10px;align-items:center;margin-top:24px;color:var(--muted);font-size:13px}
+    .dot{background:var(--green);width:9px;height:9px;border-radius:50%}
+    section{padding:24px 0}h2{letter-spacing:-.03em;font-size:clamp(1.5rem,3vw,2.1rem)}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .panel{border:1px solid var(--line);background:linear-gradient(145deg,var(--card2),var(--card));border-radius:17px;padding:24px}
+    .panel h3{margin:8px 0 7px;font-size:19px}.panel p{color:var(--muted);margin:0;font-size:14px}
+    .number{font-size:12px;letter-spacing:.17em;color:var(--gold);font-weight:900}
+    .detail{border:1px solid var(--line);background:var(--card);padding:24px 28px;border-radius:17px}
+    .detail p,.detail li{color:var(--muted)}.detail li{margin:7px 0}
+    .note{font-size:13px;line-height:1.7;color:var(--muted)}
+    footer{border-top:1px solid var(--line);font-size:13px;color:var(--muted);padding:28px 0 38px}
+    @media(max-width:720px){.hero{padding:56px 0 35px}.grid{grid-template-columns:1fr}.actions .btn{width:100%}.panel{padding:20px}nav{align-items:flex-start}}
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><nav class="wrap" aria-label="Main navigation">
+  <a class="brand" href="#main">POKEMON: <strong>THUNDERYELLOW</strong></a>
+  <div class="navlinks">
+    <a href="#report">Report a bug</a>
+    <a href="https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues">Known issues</a>
+    <a href="https://www.reddit.com/r/PokemonYellowThunder/">Reddit community</a>
+    <a href="../">SVS Lab editor</a>
+  </div>
+</nav></header>
+<main class="wrap" id="main">
+  <div class="hero">
+    <p class="eyebrow">Community support · 2026 Special Edition</p>
+    <h1>Pokemon: <span>ThunderYellow</span> Version (2026 Special Edition)</h1>
+    <p class="lead">Technical bug reporting for the community. Found a Pikachu follower problem, Surf transition bug, battle issue, or game crash? Send a reproducible report and an optional broken Delta save state.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues/new?template=bug-report.yml">Report a bug ↗</a>
+      <a class="btn btn-secondary" href="https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues">View known issues ↗</a>
+    </div>
+    <div class="state"><span class="dot"></span> Working candidate: Test 125N · Pikachu Surf and follower updates</div>
+  </div>
+  <section id="report" aria-labelledby="how">
+    <h2 id="how">Report a problem in three steps</h2>
+    <div class="grid">
+      <article class="panel"><div class="number">01 · CAPTURE</div><h3>Save the problem</h3><p>In Delta, export an .svs save state at the point where the bug occurs. Back up your regular in-game .sav separately.</p></article>
+      <article class="panel"><div class="number">02 · COMPRESS</div><h3>Zip the .svs</h3><p>Add the save state to a .zip archive. Optional screenshots help. Never include a copyrighted full .gba ROM.</p></article>
+      <article class="panel"><div class="number">03 · SUBMIT</div><h3>Send the bug report</h3><p>Include the exact test build, emulator, location, steps to reproduce, and expected behavior. Attach the .zip in the form.</p></article>
+    </div>
+  </section>
+  <section aria-labelledby="help">
+    <div class="detail">
+      <h2 id="help">What to include for a Pikachu follower glitch</h2>
+      <p>For intermittent Surf or tracking problems, several save states from the same ROM build are more useful than a single late-state snapshot.</p>
+      <ul>
+        <li>Before the problem (on land, following normally)</li>
+        <li>Surf entry and after swimming several tiles</li>
+        <li>After a battle, especially a wild encounter you escaped</li>
+        <li>The shore exit and moment Pikachu becomes unsynchronized</li>
+      </ul>
+      <p class="note"><strong>Privacy and compatibility:</strong> GitHub issue attachments may be publicly accessible when published in a public repository. Only upload saves you are comfortable sharing. Use the same ROM build when capturing and replaying an .svs. When testing new builds, start from a regular in-game .sav, not a previous build's .svs.</p>
+      <p><a href="https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues/new?template=bug-report.yml">Open structured bug-report form →</a></p>
+    </div>
+  </section>
+  <section aria-labelledby="community"><h2 id="community">Community</h2><p>For local analysis of your own save state, try the <a href="../">SVS Lab editor</a>. News, screenshots, feature discussion, and updates belong on <a href="https://www.reddit.com/r/PokemonYellowThunder/">r/PokemonYellowThunder</a>. Technical issues belong in the structured tracker, so we can mark them resolved when a fix is confirmed.</p></section>
+</main>
+<footer><div class="wrap"><strong>Pokemon: ThunderYellow Version (2026 Special Edition)</strong><p>Unofficial fan project; not affiliated with or endorsed by Nintendo, Game Freak, or The Pokémon Company. This support page does not distribute game ROMs.</p></div></footer>
+</body>
+</html>
