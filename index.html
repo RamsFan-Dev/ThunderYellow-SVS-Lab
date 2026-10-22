@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#10151f"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>ThunderYellow • SVS Lab</title>
+<title>Pokemon: ThunderYellow Version (2026 Special Edition) • SVS Lab</title>
 <meta name="apple-mobile-web-app-title" content="SVS Lab">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" type="image/svg+xml" href="./icon.svg">
@@ -110,7 +110,7 @@
 #itemSelection{padding:5px 0 3px;min-height:25px}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>ThunderYellow <span style="color:var(--gold)">SVS Lab</span></h1><div class="sub">Delta save-state editor • Local &amp; offline • v2.22</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.23</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -2321,7 +2321,7 @@ function monGenderFromPID(sp,pid){
  if(ratio===0)return 'M';
  return (pid&255)<ratio?'F':'M';
 }
-function updateMonGenderUI(mon){
+function updateMonGenderUI(mon,preserveChoice=false){
  const sel=$('monGender'),sp=Number($('species').value),ratio=speciesMeta[sp]?.[0];
  const prior=sel.value;
  sel.replaceChildren();
@@ -2331,7 +2331,7 @@ function updateMonGenderUI(mon){
  else if(ratio===0)sel.add(new Option('Male ♂ (species-fixed)','M'));
  else {sel.add(new Option('Male ♂','M'));sel.add(new Option('Female ♀','F'));}
  const original=mon?monGenderFromPID(mon.sp,mon.pid):'X';
- const choose=locked?original:([...sel.options].some(o=>o.value===prior)&&prior!=='X'?prior:mon?monGenderFromPID(sp,mon.pid):'X');
+ const choose=locked?original:preserveChoice&&[...sel.options].some(o=>o.value===prior)?prior:mon?monGenderFromPID(sp,mon.pid):'X';
  sel.value=[...sel.options].some(o=>o.value===choose)?choose:sel.options[0].value;
  sel.disabled=locked||ratio===255||ratio===254||ratio===0;
  $('monGenderHelp').textContent=locked?'Original starter Pikachu: gender and personality are locked for follower compatibility.'
@@ -2796,13 +2796,13 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  for(let k=0;k<6;k++)for(let [prefix,max] of [['iv',31],['ev',255]]){const div=document.createElement('div');div.innerHTML=`<label class="label" for="${prefix}${k}">${statKeys[k]} ${prefix.toUpperCase()}</label><input class="input" id="${prefix}${k}" type="number" min="0" max="${max}" inputmode="numeric">`;$('monStatRows').append(div)}
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
- $('pcViewOrder').onchange=()=>{if(!confirmMonDiscard())return;renderPokemon()};
- $('pcDexFilter').oninput=()=>{if(monMode==='box')renderPokemon()};
+ let confirmedPCView='box';$('pcViewOrder').onchange=()=>{if(!confirmMonDiscard()){$('pcViewOrder').value=confirmedPCView;return;}confirmedPCView=$('pcViewOrder').value;renderPokemon()};
+ $('pcDexFilter').oninput=()=>{if(monDirty){msg($('pcOperationsStatus'),'Save or discard Pokémon edits before filtering the PC.','warn');return;}if(monMode==='box')renderPokemon()};
  $('pcAddAll').onclick=bulkAddPCSpecies;$('pcSortAll').onclick=sortAllPCByDex;
- $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
+ $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';confirmedPCView='box';monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
  const handleMonEdit=e=>{
   enforceLegalStat(e);
-  if(e.target.id==='species'){abilityOptions(true);const m=decodeMon(getSlotBytes());updateMonGenderUI(m);previewLevel();}
+  if(e.target.id==='species'){abilityOptions(true);const m=decodeMon(getSlotBytes());updateMonGenderUI(m,true);previewLevel();}
   else if(e.target.id==='monLevel')previewLevel();
   else if(/^(iv|ev)[0-5]$/.test(e.target.id)){
    const record=getSlotBytes(),mon=record&&decodeMon(record);
