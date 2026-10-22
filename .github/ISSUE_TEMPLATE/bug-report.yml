@@ -1,0 +1,103 @@
+name: "Report a bug"
+description: "Report a problem in Pokemon: ThunderYellow Version (2026 Special Edition)"
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Pokemon: ThunderYellow Version (2026 Special Edition)
+        Thank you for helping improve the game. Please capture the issue in a regular gameplay session. If you have a broken Delta save state (.svs), put it in a .zip file and attach it below.
+        **Never include a full .gba ROM, passwords, private messages, or personal information.** Public GitHub issue attachments can be accessed by others.
+  - type: input
+    id: build
+    attributes:
+      label: Game build
+      description: "The precise version where the bug occurred."
+      placeholder: "Test 125N"
+    validations:
+      required: true
+  - type: dropdown
+    id: emulator
+    attributes:
+      label: Emulator
+      options:
+        - "Delta (iOS)"
+        - "mGBA (Windows/macOS/Linux)"
+        - "Other"
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Problem area
+      options:
+        - "Pikachu follower / movement"
+        - "Surf entry / shore exit"
+        - "Battle / wild encounters"
+        - "Pokédex / menus"
+        - "Legendary Pokémon / events"
+        - "Save / load / crash"
+        - "Other"
+    validations:
+      required: true
+  - type: dropdown
+    id: loading_method
+    attributes:
+      label: How was the game loaded?
+      options:
+        - "Regular in-game .sav → Continue"
+        - "Delta .svs save state"
+        - "New Game"
+        - "Not sure"
+    validations:
+      required: true
+  - type: input
+    id: map
+    attributes:
+      label: In-game location
+      placeholder: "Route 21, near shore (optional)"
+    validations:
+      required: false
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: "Please include battles, Surf transitions, turns, warps, and reloads as relevant."
+      placeholder: |
+        1. Load a normal in-game save.
+        2. Start Surf and travel several tiles.
+        3. Complete two battles, return to shore.
+        4. Walk ten steps and observe Pikachu.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened?
+      placeholder: "Pikachu stopped following after exiting Surf."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+      placeholder: "Pikachu should jump onto land and follow one tile behind."
+    validations:
+      required: true
+  - type: upload
+    id: attachment
+    attributes:
+      label: Diagnostic save state (.zip) and optional screenshots
+      description: "Zip the broken Delta .svs file before uploading; please do not include a ROM. ZIP attachments must be 25 MB or less. Remove anything you don't want to make publicly accessible."
+    validations:
+      required: false
+      accept: ".zip,.png,.jpg,.jpeg,.webp"
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: "I have not attached a full ROM or sensitive personal information."
+          required: true
+        - label: "I understand that attachments to public GitHub issues may be downloaded by other people."
+          required: true
