@@ -225,7 +225,7 @@
  <button id="createMon" class="btn primary wide" style="margin-top:12px">＋ Create Pokémon in selected slot</button>
 </div>
 <div id="monForm" class="hidden">
-<div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="monLevel">Level (1–100)</label><input class="input" id="monLevel" type="number" min="1" max="100" inputmode="numeric"></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability</label><select class="input" id="monAbility"></select></div><div><label class="label" for="monShiny">Shiny</label><select class="input" id="monShiny"><option value="0">No</option><option value="1">Yes ✨</option></select></div></div><div class="hint" id="monShinyHelp">Changing Shiny requires a new personality ID. Protected starter Pikachu cannot change shininess without risking follower logic.</div><div class="hint" id="monLevelHelp" style="margin-top:10px">Changing level sets matching EXP and recalculates party stats.</div><div class="hint" id="monAbilityHelp">Only species-supported abilities are selectable.</div>
+<div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="monLevel">Level (1–100)</label><input class="input" id="monLevel" type="number" min="1" max="100" inputmode="numeric"></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability</label><select class="input" id="monAbility"></select></div><div><label class="label" for="monGender">Gender</label><select class="input" id="monGender" aria-describedby="monGenderHelp"></select></div><div><label class="label" for="monShiny">Shiny</label><select class="input" id="monShiny"><option value="0">No</option><option value="1">Yes ✨</option></select></div></div><div class="hint" id="monGenderHelp">In Generation III, gender depends on the Pokémon personality ID. Changing gender preserves nature and shiny status where supported.</div><div class="hint" id="monShinyHelp">Changing Shiny requires a new personality ID. Protected starter Pikachu cannot change shininess without risking follower logic.</div><div class="hint" id="monLevelHelp" style="margin-top:10px">Changing level sets matching EXP and recalculates party stats.</div><div class="hint" id="monAbilityHelp">Only species-supported abilities are selectable.</div>
 <h3 style="font-size:15px;margin:21px 0 9px">All four moves • PP and PP Ups</h3><div class="hint">Choose a move for each slot, adjust PP and PP Ups, then save the Pokémon changes below.</div><div id="monMoveRows"></div>
 <div class="row" style="margin:12px 0">
  <button id="mon35PP" type="button" class="btn secondary">⚡ Optimize 35 PP / 3 PP Ups</button>
@@ -2301,6 +2301,32 @@ function createPokemonInSlot(){
 $('newSpecies').oninput=updateSpeciesHints;$('createMon').onclick=createPokemonInSlot;
 
 
+
+function monGenderFromPID(sp,pid){
+ const ratio=speciesMeta[sp]?.[0];
+ if(ratio===255||ratio===undefined)return 'X';
+ if(ratio===254)return 'F';
+ if(ratio===0)return 'M';
+ return (pid&255)<ratio?'F':'M';
+}
+function updateMonGenderUI(mon){
+ const sel=$('monGender'),sp=Number($('species').value),ratio=speciesMeta[sp]?.[0];
+ const prior=sel.value;
+ sel.replaceChildren();
+ const locked=!!(mon&&isProtected(mon));
+ if(ratio===255||ratio===undefined)sel.add(new Option('Genderless','X'));
+ else if(ratio===254)sel.add(new Option('Female ♀ (species-fixed)','F'));
+ else if(ratio===0)sel.add(new Option('Male ♂ (species-fixed)','M'));
+ else {sel.add(new Option('Male ♂','M'));sel.add(new Option('Female ♀','F'));}
+ const original=mon?monGenderFromPID(mon.sp,mon.pid):'X';
+ const choose=locked?original:([...sel.options].some(o=>o.value===prior)&&prior!=='X'?prior:mon?monGenderFromPID(sp,mon.pid):'X');
+ sel.value=[...sel.options].some(o=>o.value===choose)?choose:sel.options[0].value;
+ sel.disabled=locked||ratio===255||ratio===254||ratio===0;
+ $('monGenderHelp').textContent=locked?'Original starter Pikachu: gender and personality are locked for follower compatibility.'
+ :sel.disabled?'This species has a fixed gender or no gender. The game determines it automatically.'
+ :'Gender changes update the Gen 3 personality ID while keeping your Pokémon’s nature, shininess and trainer identity. Export a fresh SVS to test.';
+}
+
 function shinyStatus(pid,ot){return ((pid&65535)^(pid>>>16)^(ot&65535)^(ot>>>16))<8;}
 function namedAbility(raw){return String(raw||'').split('_').map(x=>x[0]+x.slice(1).toLowerCase()).join(' ')}
 function abilityOptions(reset=false,stored=null){
@@ -2358,11 +2384,7 @@ function showdownExportSpecies(id){
  if(id===32)return 'Nidoran-M';
  return monNames[id]||'';
 }
-function showdownExportGender(mon){
- const threshold=speciesMeta[mon.sp]?.[0];
- if(!Number.isInteger(threshold)||threshold===255)return '';
- return (mon.pid&255)<threshold?'F':'M';
-}
+function showdownExportGender(mon){const sex=monGenderFromPID(mon.sp,mon.pid);return sex==='X'?'':sex;}
 function showdownExportRecord(mon,record,withNickname){
  const sp=showdownExportSpecies(mon.sp);
  if(!sp)throw Error('Pokémon species #'+mon.sp+' is not in the Gen 3 catalog.');
@@ -2519,7 +2541,7 @@ function renderPokemon(){if(!loaded)return;
  $('removeMon').disabled=!mon||isProtected(mon)||monMode!=='box';$('cloneMon').disabled=!mon||isProtected(mon);$('moveMon').disabled=!mon||isProtected(mon)||monMode!=='box';
  if(!mon){refreshMonSaveStatus();return;}
  ensureMonOption(mon.sp,$('species'),'Species');ensureMonOption(mon.held,$('held'),'Item');for(let k=0;k<4;k++)ensureMonOption(mon.moves[k],$('move'+k),'Move');
- const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('monLevel',shownLevel(mon,data));v('friendship',mon.friend);abilityOptions(false,mon.ability);v('monShiny',shinyStatus(mon.pid,mon.ot)?1:0);$('monShiny').disabled=isProtected(mon);$('monShinyHelp').textContent=isProtected(mon)?'Original starter Pikachu: shiny status is locked because follower logic uses its fixed Pokémon ID. Moves and ability are editable.':'Shiny Yes/No changes this Pokémon’s personality ID while preserving its nature and gender. Keep a backup and test in Delta.';
+ const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('monLevel',shownLevel(mon,data));v('friendship',mon.friend);abilityOptions(false,mon.ability);v('monShiny',shinyStatus(mon.pid,mon.ot)?1:0);updateMonGenderUI(mon);$('monShiny').disabled=isProtected(mon);$('monShinyHelp').textContent=isProtected(mon)?'Original starter Pikachu: shiny status is locked because follower logic uses its fixed Pokémon ID. Moves and ability are editable.':'Shiny Yes/No changes this Pokémon’s personality ID while preserving its nature and gender. Keep a backup and test in Delta.';
  for(let k=0;k<4;k++){v('move'+k,mon.moves[k]);v('pp'+k,mon.pp[k]);v('up'+k,mon.ppups[k])}
  for(let k=0;k<6;k++){v('iv'+k,mon.iv[k]);v('ev'+k,mon.ev[k]);}showEVBudget();
  $('monLevelHelp').textContent='Changing level sets matching EXP and recalculates party stats. EXP-only edits preserve the existing party level.';
@@ -2533,7 +2555,7 @@ function commitMon(){
  try{
   const data=getSlotBytes(),mon=decodeMon(data);
   if(!mon)throw Error('Select a readable Pokémon before editing.');
-  const level=readMonNumber('monLevel',1,100,'Level'),shinyWanted=readMonNumber('monShiny',0,1,'Shiny')===1;
+  const level=readMonNumber('monLevel',1,100,'Level'),shinyWanted=readMonNumber('monShiny',0,1,'Shiny')===1,genderWanted=$('monGender').value;
   const f={sp:readMonNumber('species',1,1400,'Species'),held:readMonNumber('held',0,65535,'Held item'),exp:readMonNumber('experience',0,3000000,'Experience'),friend:readMonNumber('friendship',0,255,'Friendship'),ability:readMonNumber('monAbility',0,1,'Ability slot'),moves:[],pp:[],ppups:[],iv:[],ev:[]};
   for(let i=0;i<4;i++){f.moves.push(readMonNumber('move'+i,0,65535,'Move '+(i+1)));f.pp.push(readMonNumber('pp'+i,0,99,'PP '+(i+1)));f.ppups.push(readMonNumber('up'+i,0,3,'PP Ups '+(i+1)));}
   for(let i=0;i<6;i++){f.iv.push(readMonNumber('iv'+i,0,31,'IV '+statKeys[i]));f.ev.push(readMonNumber('ev'+i,0,255,'EV '+statKeys[i]));}
@@ -2547,19 +2569,27 @@ function commitMon(){
    if(teamLevel({sp:f.sp,exp:f.exp})!==level)throw Error('Level and EXP conflict. Edit the Level field again to synchronize EXP.');
   }
   let pid=mon.pid,updatedBytes=mon.bytes.slice();
-   if(shinyStatus(mon.pid,mon.ot)!==shinyWanted){
-    if(f.sp!==mon.sp)throw Error('Change species and shiny in separate saves so gender stays consistent.');
-    const ratio=speciesMeta[mon.sp]?.[0],gender=ratio===255||ratio===undefined?null:(mon.pid&255)<ratio?'F':'M';
-    pid=showdownPersonality({sp:mon.sp,display:monNames[mon.sp]||'Pokémon',nature:mon.pid%25,gender,shiny:shinyWanted},mon.ot);
+  const ratio=speciesMeta[f.sp]?.[0];
+  if(!Number.isInteger(ratio))throw Error('Species gender metadata is not available.');
+  if(!['M','F','X'].includes(genderWanted))throw Error('Choose a supported gender.');
+  if((ratio===255&&genderWanted!=='X')||(ratio===0&&genderWanted!=='M')||(ratio===254&&genderWanted!=='F')||(ratio>0&&ratio<254&&genderWanted==='X'))
+   throw Error('This species does not support the selected gender.');
+  if(isProtected(mon)&&genderWanted!==monGenderFromPID(mon.sp,mon.pid))
+   throw Error('Original starter Pikachu has a protected gender and personality ID.');
+  if(shinyStatus(pid,mon.ot)!==shinyWanted||monGenderFromPID(f.sp,pid)!==genderWanted){
+    if(isProtected(mon))throw Error('Original starter Pikachu personality ID cannot be changed.');
+    pid=showdownPersonality({sp:f.sp,display:monNames[f.sp]||'Pokémon',nature:mon.pid%25,gender:genderWanted==='X'?null:genderWanted,shiny:shinyWanted},mon.ot);
     put32(updatedBytes,0,pid);
-   }
-   let next=encodeMon({...mon,pid,bytes:updatedBytes},f);
-  if(!decodeMon(next)||shinyStatus(decodeMon(next).pid,decodeMon(next).ot)!==shinyWanted)throw Error('Pokémon checksum or shiny verification failed; nothing was written.');
+  }
+  let next=encodeMon({...mon,pid,bytes:updatedBytes},f);
+  const checkMon=decodeMon(next);
+  if(!checkMon||shinyStatus(checkMon.pid,checkMon.ot)!==shinyWanted||monGenderFromPID(f.sp,checkMon.pid)!==genderWanted)
+   throw Error('Pokémon checksum, gender, or shiny validation failed; nothing was written.');
   if(monMode==='party'&&data.length===100){
    const extended=new Uint8Array(100);extended.set(next);extended.set(data.slice(80,100),80);
    if(rebuild){
     extended[84]=level;
-    const stats=recalcStats(f.sp,level,mon.pid,f.iv,f.ev),oldHP=u16(data,86),oldMax=u16(data,88);
+    const stats=recalcStats(f.sp,level,pid,f.iv,f.ev),oldHP=u16(data,86),oldMax=u16(data,88);
     const hp=oldHP===0?0:Math.max(1,Math.min(stats[0],Math.round(oldHP*stats[0]/Math.max(1,oldMax))));
     for(let i=0;i<7;i++)w16(extended,86+i*2,i===0?hp:stats[i-1]);
    }else for(let i=0;i<7;i++)w16(extended,86+i*2,readMonNumber('stat'+i,0,65535,'Party stat'));
@@ -2642,7 +2672,7 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
  const handleMonEdit=e=>{
   enforceLegalStat(e);
-  if(e.target.id==='species'){abilityOptions(true);previewLevel();}
+  if(e.target.id==='species'){abilityOptions(true);const m=decodeMon(getSlotBytes());updateMonGenderUI(m);previewLevel();}
   else if(e.target.id==='monLevel')previewLevel();
   else if(/^(iv|ev)[0-5]$/.test(e.target.id)){
    const record=getSlotBytes(),mon=record&&decodeMon(record);
