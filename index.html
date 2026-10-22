@@ -2566,6 +2566,14 @@ function renderPCBulkSummary(){
   $('pcSortAll').disabled=false;
  }catch(e){info.textContent='Unavailable: '+e.message;$('pcAddAll').disabled=true;$('pcSortAll').disabled=true;}
 }
+function verifyPCWrites(entries){
+ const groups=getFlashGroups();
+ for(const {slot,bytes} of entries){
+  if(!Number.isInteger(slot)||slot<0||slot>=420||bytes.length!==80)throw Error('Invalid expected PC slot during verification.');
+  for(const g of groups){const actual=getPCFrom(g,slot);if(!actual||!actual.every((v,i)=>v===bytes[i]))throw Error('PC write verification failed in saved Box '+(1+Math.floor(slot/30))+'.');}
+  for(const base of monLocations.pcRAM){const actual=work.subarray(base+slot*80,base+(slot+1)*80);if(actual.length!==80||!actual.every((v,i)=>v===bytes[i]))throw Error('PC write verification failed in the live RAM mirror.');}
+ }
+}
 function applyPCEntries(entries,label){
  if(monDirty||badgeDirty)throw Error('Save pending Pokémon and badge edits first.');
  if(!snapshotSafe)throw Error('Open a verified save state first.');
@@ -2577,6 +2585,7 @@ function applyPCEntries(entries,label){
    monSlot=slot;applySlot(bytes,patches);
   }
   refreshChecksums(patches);
+  verifyPCWrites(entries);
   const check=verifySnapshotIdentity();
   if(!check.ok)throw Error('Post-edit save identity verification failed: '+check.reason);
   if(!snapshot(label,patches))throw Error('No PC changes were needed.');
@@ -2606,16 +2615,16 @@ function sortAllPCByDex(){
   if(!confirm('Physically reorder '+occupied.length+' Pokémon across all 14 PC boxes by National Pokédex number? Empty slots will move to the end. This changes the in-game box arrangement. Keep a backup first.'))return;
   const sorted=occupied.slice().sort((a,b)=>nationalDexNo(a.mon.sp)-nationalDexNo(b.mon.sp)||a.index-b.index);
   const changes=[];
-  // Sorting must also clear old, now vacated slots, never deleting Pokémon.
-  // applyPCEntries validates writes; empty entries use a separately validated operation.
+  // Sorting also clears now-vacant slots; all sorted records and empty slots are verified afterward.
   const prevMode=monMode,prevSlot=monSlot,prevBox=boxNo,patches=[];
   try{
    monMode='box';
    for(let i=0;i<420;i++){
     const next=i<sorted.length?sorted[i].bytes:new Uint8Array(80);
-    monSlot=i;applySlot(next,patches);
+    monSlot=i;applySlot(next,patches);changes.push({slot:i,bytes:next});
    }
    refreshChecksums(patches);
+   verifyPCWrites(changes);
    if(!verifySnapshotIdentity().ok)throw Error('Save identity check failed after sorting.');
    if(!snapshot('Sort '+occupied.length+' PC Pokémon by National Pokédex number',patches))throw Error('Pokémon already appear in Pokédex order.');
    monMode=prevMode;monSlot=prevSlot;boxNo=prevBox;sync();
