@@ -144,7 +144,7 @@
 <div id="trainerNamesMsg" class="status"></div>
 <div class="hint">Supported: uppercase/lowercase letters, numbers, spaces and common in-game punctuation. This does not alter the ROM, nickname, Pokémon personality IDs or trainer IDs. Some scripted dialogue may still use fixed names.</div>
 </section>
-<section class="panel"><div class="feature">03 • Safe edits</div><h2>Coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="itemSearch">Find an item by name or number</label><input id="itemSearch" class="input" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Super Repel, 83, or 0x0053" aria-controls="itemResults"><div class="hint">Search all named FireRed / LeafGreen items. Tap a match to choose it and its bag pocket.</div><div id="itemResults" class="item-search-results" role="region" aria-label="Matching item names and IDs"></div><div id="itemSelection" class="hint" role="status">Select an item before setting its quantity.</div><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary" disabled>Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
+<section class="panel"><div class="feature">03 • Safe edits</div><h2>Cash, coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="cashAmount">Cash / Pokédollars (0–999,999)</label><input id="cashAmount" type="number" inputmode="numeric" min="0" max="999999" class="input"><div class="row" style="margin-top:9px"><button id="maxCash" class="chip" type="button">Set 999,999</button><button id="applyCash" class="btn primary" type="button">Apply cash</button></div><div class="hint" id="cashStatus" role="status">Import a verified SVS to inspect your wallet.</div></div><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="itemSearch">Find an item by name or number</label><input id="itemSearch" class="input" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Super Repel, 83, or 0x0053" aria-controls="itemResults"><div class="hint">Search all named FireRed / LeafGreen items. Tap a match to choose it and its bag pocket.</div><div id="itemResults" class="item-search-results" role="region" aria-label="Matching item names and IDs"></div><div id="itemSelection" class="hint" role="status">Select an item before setting its quantity.</div><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary" disabled>Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
 <hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div>
 <div class="callout" id="inventoryHelp" style="margin:10px 0"><strong>Two different actions:</strong> <strong>Set Quantity</strong> changes how many you have in your bag. <strong>Select for PC</strong> marks items to move; select the items first, then tap <strong>Move Selected to PC</strong>. The transfer amount defaults to everything owned and can be changed below.</div>
 <div id="selectedPCBar" class="pc-selected-bar"><div class="row" style="justify-content:space-between"><strong id="selectedPCCount">0 items selected</strong><div class="row"><button id="clearSelectedPC" type="button" class="btn secondary" disabled>Clear</button><button id="moveSelectedPC" type="button" class="btn primary" disabled>📦 Move Selected to PC</button></div></div><div id="selectedPCList" class="pc-selection-list"></div><div id="selectedPCWarning" role="status" class="hint"></div></div>
@@ -556,8 +556,8 @@ function renderLivePartyReport(){
 function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
- if(!copies.length){$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
- $('applyCoins').disabled=false;$('applyPreset').disabled=selectedCatalogId===null;$('customApply').disabled=false;
+ if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
+ $('applyCash').disabled=false;renderCashStatus();$('applyCoins').disabled=false;$('applyPreset').disabled=selectedCatalogId===null;$('customApply').disabled=false;
  const vals=new Set(copies.map(c=>c.coins));
  $('copyInfo').innerHTML=`<div class="callout ${vals.size>1?'warn':''}">${vals.size>1?'⚠️ Desynchronized inventory copies found. Editing coins or items will update all '+copies.length+' detected copies.':'✓ Inventory copies identified. Edits are applied across all '+copies.length+' detected copies.'}<div class="small" style="margin-top:6px">${copies.map((c,i)=>'Copy '+(i+1)+' at '+hex(c.start)+': '+fmt(c.coins)+' coins, key '+hex(c.key)).join(' • ')}</div></div>`;
 }
@@ -750,6 +750,52 @@ function renderInventory(){
  updateSelectedPCView();
 }
 function validateInt(n,lo,hi,label){if(!Number.isInteger(n)||n<lo||n>hi)throw Error(label+' must be between '+fmt(lo)+' and '+fmt(hi))}
+
+/* FRLG: SaveBlock1.money +0x290 is a 32-bit integer XORed with
+   SaveBlock2.encryptionKey +0xF20 (32-bit). Inventory starts +0x310.
+   Wallets must be patched across validated FLASH and in-RAM mirrors. */
+function verifiedCashSources(){
+ if(!copies.length)throw Error('The saved bag and wallet could not be verified.');
+ const groups=getFlashGroups(),result=[];
+ for(const c of copies){
+  const g=groups.find(g=>g.count===c.counter);
+  const sec=g?.sectors.get(0);
+  if(!sec)throw Error('A wallet encryption key is missing.');
+  const key=u32(work,sec.base+0xF20);
+  if((key&65535)!==c.key)throw Error('The wallet key does not match a validated inventory copy.');
+  const off=c.start-0x80;
+  if(off<0||off+4>work.length)throw Error('The wallet address is outside this save state.');
+  const value=(u32(work,off)^key)>>>0;
+  if(value>999999)throw Error('A wallet copy has an invalid amount. Re-save in-game and export a fresh Delta SVS.');
+  result.push({offset:off,key,value,kind:c.kind});
+ }
+ if(!result.some(c=>c.kind==='flash'))throw Error('No verified FLASH wallet was found.');
+ return result;
+}
+function renderCashStatus(){
+ try{
+  const sources=verifiedCashSources();
+  const preferred=sources.find(c=>c.kind==='RAM')||sources[0];
+  $('cashAmount').value=String(preferred.value);
+  $('cashStatus').textContent='Current: '+fmt(preferred.value)+' Pokédollars • '+sources.length+' verified save copy/copies.'+(new Set(sources.map(c=>c.value)).size>1?' FLASH and live RAM differ; Apply will synchronize them.':'');
+  $('applyCash').disabled=false;
+ }catch(e){$('cashStatus').textContent='⚠ '+e.message;$('applyCash').disabled=true;}
+}
+function applyCash(){
+ const patches=[];
+ try{
+  if(!loaded||!snapshotSafe||monDirty||badgeDirty)throw Error('Open a verified SVS and save pending Pokémon or badge changes first.');
+  const value=readRequiredQuantity($('cashAmount'),'cash amount',999999);
+  const wallets=verifiedCashSources();
+  for(const w of wallets){const bytes=new Uint8Array(4);put32(bytes,0,(value^w.key)>>>0);patch(w.offset,bytes,patches);}
+  refreshChecksums(patches);
+  if(!verifySnapshotIdentity().ok)throw Error('Post-edit save identity verification failed.');
+  if(snapshot('Set cash to '+fmt(value)+' Pokédollars in '+wallets.length+' copies',patches)){
+   sync();msg($('editMsg'),'✓ Updated your cash to '+fmt(value)+'. Export a new SVS to use it in Delta.','good');
+  }else msg($('editMsg'),'Cash already has this value.');
+ }catch(e){for(let i=patches.length-1;i>=0;i--)work.set(patches[i].old,patches[i].offset);msg($('editMsg'),'Cash edit blocked: '+e.message,'bad');}
+}
+
 function applyCoins(){try{if(!copies.length)throw Error('Inventory data was not detected.');let value=readRequiredQuantity($('coins'),'coin amount',9999);let patches=[];for(const c of copies)patch16(c.start-0x7c,value^c.key,patches);refreshChecksums(patches);if(snapshot('Set casino coins to '+fmt(value)+' across '+copies.length+' copy/copies',patches)){sync();msg($('editMsg'),'✓ All '+copies.length+' copies now show '+fmt(value)+' coins.','good')}else msg($('editMsg'),'Coins already have this value.')}catch(e){msg($('editMsg'),e.message,'bad')}}
 function applyItem(id,pocket,qty){try{
  validateInt(id,1,65535,'Item ID');validateInt(pocket,0,4,'Pocket');validateInt(qty,0,999,'Quantity');if(!copies.length)throw Error('Could not detect inventory copies.');let plan=[];
@@ -1064,6 +1110,7 @@ $('itemSearch').addEventListener('input',()=>{
  renderItemResults();
 });
 renderItemResults();
+$('maxCash').onclick=()=>{$('cashAmount').value=999999};$('applyCash').onclick=applyCash;
 $('maxCoins').onclick=()=>{$('coins').value=9999};$('applyCoins').onclick=applyCoins;
 $('applyPreset').onclick=()=>{try{
  if(selectedCatalogId===null)throw Error('Search for an item and tap its name first.');
