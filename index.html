@@ -218,7 +218,7 @@
  <div class="grid3"><div><label class="label" for="boxSelect">Bill's PC — Box (1–14)</label><select class="input" id="boxSelect"></select></div>
  <div><label class="label" for="pcViewOrder">View PC Pokémon</label><select class="input" id="pcViewOrder"><option value="box">Current box slots</option><option value="dex">National Pokédex number (#1–386)</option><option value="name">Species name (A–Z)</option><option value="category">Pokédex classification (Seed, Mouse…)</option><option value="type">Elemental type (Electric, Water…)</option><option value="level">Level (highest first)</option><option value="gender">Gender (F, M, Genderless)</option></select></div>
  <div><label class="label" for="pcDexFilter">Filter by species or Pokédex #</label><input class="input" id="pcDexFilter" type="search" placeholder="Name, number, type, or classification"></div></div>
- <div class="hint" style="margin:9px 0">Choosing a sort order lets you browse PC Pokémon without changing their stored slots. Tap any entry to edit the Pokémon in its original Box and Slot.</div><div class="row" style="margin:12px 0"><button class="btn secondary" type="button" id="pcSortAll">Apply selected sort to PC boxes</button><span class="hint">The sorting menu changes only the view. This button rearranges stored PC Pokémon after confirmation, leaving your party untouched.</span></div>
+ <div class="hint" style="margin:9px 0">Selecting a sort order reorganizes Bill's PC after your confirmation. Your existing box names and party stay unchanged. Current box slots only views the arrangement; to reverse a sort, use Undo before exporting.</div><div class="row" style="margin:12px 0"><button class="btn secondary" type="button" id="pcSortAll">Reapply selected sort</button><span class="hint">Sorting runs when you select an option and confirm. Pokédex-number sorting respects numbered slots and leaves gaps for missing species.</span></div>
  <label class="tog" style="margin:8px 0 12px"><input id="pcEmptyPreviews" type="checkbox"> Show Pokédex-number placeholders in empty PC slots</label><div class="hint" style="margin-bottom:12px">Placeholders suggest missing Pokémon but do not create or replace them. Click an empty slot to fill it separately.</div><details id="pcBulkDetails"><summary>📦 Add one of every available in-game Pokémon to Bill's PC</summary>
  <p class="hint">Add only missing species from the full 386-Pokémon Gen 3 catalog (National Pokédex #1–386), preserving your party, starter Pikachu, and occupied PC slots. No duplicates of species you already own. Any empty slots are filled in National Dex order.</p>
  <div class="grid"><div><label class="label" for="pcBulkLevel">Level for newly added Pokémon (1–100)</label><input id="pcBulkLevel" class="input" type="number" min="1" max="100" value="5" inputmode="numeric"></div><div><label class="label">Capacity</label><div id="pcBulkSummary" class="callout">Import a verified SVS to calculate available slots.</div></div></div>
@@ -2626,6 +2626,28 @@ function bulkAddPCSpecies(){
   msg($('pcOperationsStatus'),'✓ Added '+changes.length+' species to empty PC slots without replacing any Pokémon. Export your edited SVS and test in Delta.','good');
  }catch(e){msg($('pcOperationsStatus'),'Bulk add blocked: '+e.message,'bad');}
 }
+
+function boxNameFromSVS(boxIndex){
+ const g=monLocations?.groups?.[0];
+ if(!g)return 'Box '+(boxIndex+1);
+ const d=new Uint8Array(9);
+ for(let j=0;j<9;j++){
+  const logical=0x8344+boxIndex*9+j;
+  const sector=g.sectors.get(5+Math.floor(logical/3968));
+  if(!sector)return 'Box '+(boxIndex+1);
+  d[j]=work[sector.base+logical%3968];
+ }
+ const name=gameNameFromBytes(d);
+ return name&&!name.includes('�')?name:'Box '+(boxIndex+1);
+}
+function updatePCBoxLabels(){
+ const select=$('boxSelect');
+ if(!select||select.options.length!==14)return;
+ for(let i=0;i<14;i++){
+  const name=boxNameFromSVS(i),fallback='Box '+(i+1);
+  select.options[i].textContent=name===fallback?fallback:fallback+' · '+name;
+ }
+}
 function sortAllPCByDex(){
  try{
   if(monDirty||badgeDirty)throw Error('Save pending Pokémon or badge edits before sorting.');
@@ -2634,20 +2656,56 @@ function sortAllPCByDex(){
   const slots=pcRosterSnapshot(),occupied=slots.filter(x=>x.mon);
   if(!occupied.length)throw Error('Bill’s PC is empty.');
   if(occupied.some(x=>isProtected(x.mon)))throw Error('A protected starter Pikachu was found in PC; sorting is disabled.');
-  if(!confirm('Rearrange '+occupied.length+' Pokémon across all 14 PC boxes by '+labels[mode]+'?\n\nExisting Pokémon are preserved, and blank slots are moved to the end. This changes their in-game locations. Back up your original .svs first.'))return;
-  const sorted=occupied.slice().sort((a,b)=>pcSorter(a,b,mode));
-  const oldMode=monMode,oldSlot=monSlot,oldBox=boxNo,changes=[],patches=[];let success=false;
+  if(!confirm('Rearrange '+occupied.length+' Pokémon across all 14 PC boxes by '+labels[mode]+'?\n\n'+
+    (mode==='dex'?'Pokédex sorting will place the first copy of each Pokémon into its numbered slot, leaving gaps for species you do not own. Extra copies go in spare slots.':
+       'Pokémon will be packed into the first available boxes in the chosen order.')+
+    '\n\nYour custom box names, party and starter will not change. Make sure you have a backup of your original .svs.'))return false;
+  // Generate a complete 420-slot target array BEFORE touching any save bytes.
+  const destinations=Array(420).fill(null),sorted=occupied.slice().sort((a,b)=>pcSorter(a,b,mode));
+  if(mode==='dex'){
+   const overflow=[];
+   for(const entry of sorted){
+    const index=nationalDexNo(entry.mon.sp)-1;
+    if(index>=0&&index<386&&destinations[index]===null)destinations[index]=entry.bytes;
+    else overflow.push(entry);
+   }
+   // Duplicates first use the 34 spare positions after National Dex 386, then
+   // remaining gaps if needed. Never overwrite any primary Pokédex position.
+   const spare=[];
+   for(let i=386;i<420;i++)if(destinations[i]===null)spare.push(i);
+   for(let i=0;i<386;i++)if(destinations[i]===null)spare.push(i);
+   if(overflow.length>spare.length)throw Error('Not enough storage slots to preserve duplicates.');
+   for(let j=0;j<overflow.length;j++)destinations[spare[j]]=overflow[j].bytes;
+  }else{
+   for(let i=0;i<sorted.length;i++)destinations[i]=sorted[i].bytes;
+  }
+  const zeros=new Uint8Array(80);
+  const wanted=destinations.map((bytes,i)=>({slot:i,bytes:bytes||zeros}));
+  // Verify every existing Pokémon record is included exactly once.
+  const id=bytes=>Array.from(bytes).join(',');
+  const expected=new Map();
+  for(const p of occupied)expected.set(id(p.bytes),(expected.get(id(p.bytes))||0)+1);
+  for(const p of wanted){
+   if(!u32(p.bytes,0))continue;
+   const token=id(p.bytes),n=expected.get(token)||0;
+   if(!n)throw Error('Sort verification found a missing or duplicated Pokémon; no changes were made.');
+   expected.set(token,n-1);
+  }
+  if([...expected.values()].some(n=>n!==0))throw Error('Sort verification lost a Pokémon; no changes were made.');
+  const oldMode=monMode,oldSlot=monSlot,oldBox=boxNo,patches=[];let success=false;
   try{
    monMode='box';
-   for(let i=0;i<420;i++){const next=i<sorted.length?sorted[i].bytes:new Uint8Array(80);monSlot=i;applySlot(next,patches);changes.push({slot:i,bytes:next});}
-   refreshChecksums(patches);verifyPCWrites(changes);
+   for(const entry of wanted){monSlot=entry.slot;applySlot(entry.bytes,patches);}
+   refreshChecksums(patches);verifyPCWrites(wanted);
    if(!verifySnapshotIdentity().ok)throw Error('Save identity verification failed after sorting.');
-   if(!snapshot('Sort '+occupied.length+' PC Pokémon by '+labels[mode],patches))throw Error('Pokémon already appear in this order.');
+   const changed=snapshot('Sort '+occupied.length+' PC Pokémon by '+labels[mode],patches);
    success=true;monMode=oldMode;monSlot=0;boxNo=0;sync();
-   msg($('pcOperationsStatus'),'✓ Sorted '+occupied.length+' stored Pokémon by '+labels[mode]+'. Export your edited SVS to test in Delta.','good');
+   msg($('pcOperationsStatus'),changed?'✓ Rearranged '+occupied.length+' Pokémon by '+labels[mode]+'. All '+occupied.length+' records preserved; box names unchanged. Export your edited SVS to test in Delta.':
+     '✓ Bill’s PC was already in this order. No Pokémon or box names changed.','good');
   }catch(e){for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);throw e;}
   finally{monMode=oldMode;if(!success){monSlot=oldSlot;boxNo=oldBox;}}
- }catch(e){msg($('pcOperationsStatus'),'PC sort blocked: '+e.message,'bad');}
+  return true;
+ }catch(e){msg($('pcOperationsStatus'),'PC sort blocked: '+e.message,'bad');return false;}
 }
 
 function renderPokemon(){if(!loaded)return;
@@ -2656,7 +2714,7 @@ function renderPokemon(){if(!loaded)return;
  if(!ok){$('monUnavailable').textContent='No compatible FireRed flash save sections found. Pokémon editing is disabled.';return;}
  const currentBox=Math.floor(monSlot/30);
  $('monTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===monMode));
- $('boxSelector').classList.toggle('hidden',monMode!=='box');$('boxSelect').value=boxNo;
+ $('boxSelector').classList.toggle('hidden',monMode!=='box');if(monMode==='box')updatePCBoxLabels();$('boxSelect').value=boxNo;
  const roster=$('monRoster');roster.replaceChildren();
  const inPC=monMode==='box',sortMode=inPC?$('pcViewOrder').value:'box',sortedView=inPC&&sortMode!=='box';
  const filter=inPC?$('pcDexFilter').value.trim().toLowerCase():'';const group=monLocations.groups[0];
@@ -2664,9 +2722,13 @@ function renderPokemon(){if(!loaded)return;
  if(sortedView){const rows=indices.map(i=>({index:i,mon:decodeMon(getPCFrom(group,i))}));rows.sort((a,b)=>pcSorter(a,b,sortMode));indices=rows.map(x=>x.index);}
  const previews=new Map();
  if(inPC&&!sortedView&&$('pcEmptyPreviews').checked){
-  try{const available=pcBulkAvailability(pcRosterSnapshot());
-   for(let i=0;i<Math.min(available.empty.length,available.missing.length);i++)previews.set(available.empty[i].index,available.missing[i]);
-  }catch(e){msg($('pcOperationsStatus'),'Placeholders unavailable: '+e.message,'warn');}
+  // Slot 1 represents National Dex #1, slot 31 represents #31, etc.
+  // Don't shift suggestions to earlier gaps or obscure occupied slots.
+  const lookup=new Map(Object.keys(monNames).map(Number).filter(n=>speciesStats[n]).map(n=>[nationalDexNo(n),n]));
+  for(let i=boxNo*30;i<(boxNo+1)*30;i++){
+   const original=getPCFrom(group,i);
+   if(original&&u32(original,0)===0&&lookup.has(i+1))previews.set(i,lookup.get(i+1));
+  }
  }
  if(filter)indices=indices.filter(i=>{
   const m=decodeMon(getPCFrom(group,i)),suggested=previews.get(i);
@@ -2828,7 +2890,17 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  for(let k=0;k<6;k++)for(let [prefix,max] of [['iv',31],['ev',255]]){const div=document.createElement('div');div.innerHTML=`<label class="label" for="${prefix}${k}">${statKeys[k]} ${prefix.toUpperCase()}</label><input class="input" id="${prefix}${k}" type="number" min="0" max="${max}" inputmode="numeric">`;$('monStatRows').append(div)}
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
- let confirmedPCView='box';$('pcViewOrder').onchange=()=>{if(!confirmMonDiscard()){$('pcViewOrder').value=confirmedPCView;return;}confirmedPCView=$('pcViewOrder').value;renderPokemon()};
+ let confirmedPCView='box';$('pcViewOrder').onchange=()=>{
+  const previous=confirmedPCView,selected=$('pcViewOrder').value;
+  if(!confirmMonDiscard()){$('pcViewOrder').value=previous;return;}
+  if(selected==='box'){
+   confirmedPCView='box';renderPokemon();
+   msg($('pcOperationsStatus'),'Viewing saved Box and Slot positions. No Pokémon were moved.','good');
+   return;
+  }
+  if(sortAllPCByDex()){confirmedPCView=selected;renderPokemon();}
+  else{$('pcViewOrder').value=previous;renderPokemon();}
+ };
  $('pcDexFilter').oninput=()=>{if(monDirty){msg($('pcOperationsStatus'),'Save or discard Pokémon edits before filtering the PC.','warn');return;}if(monMode==='box')renderPokemon()};
  $('pcAddAll').onclick=bulkAddPCSpecies;$('pcSortAll').onclick=sortAllPCByDex;
  $('pcEmptyPreviews').onchange=()=>{if(!confirmMonDiscard()){$('pcEmptyPreviews').checked=!$('pcEmptyPreviews').checked;return;}renderPokemon()};
