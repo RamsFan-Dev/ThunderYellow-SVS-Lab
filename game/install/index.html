@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#081321">
+<title>ThunderYellow Game Installer — Pokemon: ThunderYellow Version (2026 Special Edition)</title>
+<meta name="description" content="Prepare for the first ThunderYellow release: verify your own Pokemon LeafGreen USA Rev 1 GBA game locally on iPhone or desktop. No ROM uploads.">
+<link rel="canonical" href="https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/install/">
+<link rel="icon" href="../../icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header"><nav class="container nav" aria-label="Main navigation">
+<a class="logo" href="../">POKEMON: <span>THUNDERYELLOW</span><br><span class="small">2026 SPECIAL EDITION</span></a>
+<div class="links"><a href="../">Game</a><a href="../downloads/">Release status</a><a aria-current="page" href="./">Game installer</a><a href="../artwork/">Cover art</a><a href="../../support/">Support</a><a href="https://www.reddit.com/r/PokemonYellowThunder/">Reddit</a></div>
+</nav></header>
+<main class="container" id="main">
+<section class="page-title install-intro">
+<div class="eyebrow">First-release preparation · GBA · Mobile-friendly</div>
+<h1>One game. <em>Simple installation.</em></h1>
+<p class="lead">The first public ThunderYellow release will be delivered as a complete, playable <code>.gba</code> game generated <strong>on your own device</strong> from your legally obtained, compatible LeafGreen ROM and our verified update patch. No separate manual IPS patching will be necessary.</p>
+<div class="pill" id="releasePill">Game is not yet publicly released</div>
+</section>
+<section class="section" aria-labelledby="local-check">
+<div class="grid two">
+<article class="panel install-panel">
+<div class="step">01 / YOUR OWN GAME</div>
+<h2 id="local-check">Check your LeafGreen ROM</h2>
+<p>Choose your <strong>Pokémon LeafGreen (USA), Rev 1 / 1.1</strong> <code>.gba</code> from Files. The checker verifies the 16 MiB file, GBA revision and known matching fingerprint directly in your browser.</p>
+<label class="file-label" for="baseFile">Select your LeafGreen Rev 1 file</label>
+<input class="file-picker" id="baseFile" type="file" accept=".gba,application/octet-stream" aria-describedby="privacy">
+<div class="actions"><button class="btn btn-yellow" type="button" id="verifyButton" disabled>Verify my game</button></div>
+<p class="small" id="fileLabel">No file selected.</p>
+<p class="verify-status" id="verifyStatus" role="status" aria-live="polite">Your original game remains on your device.</p>
+</article>
+<article class="panel install-panel">
+<div class="step">02 / THUNDERYELLOW BUILD</div>
+<h2>Get your finished game</h2>
+<p><strong>Development candidate: Test 125N.</strong> This is still an internal test designation, not an announced public release.</p>
+<p id="releaseDetail">The verified first-release patch is not yet available. When we publish it, this page will automatically enable game generation for compatible files.</p>
+<div class="actions"><button id="buildButton" class="btn btn-yellow" type="button" disabled hidden>Create ThunderYellow .gba ↓</button><a class="btn btn-dark" href="../downloads/">View release status →</a></div>
+<p id="buildStatus" role="status" aria-live="polite" class="small">Nothing will be downloaded until a real release is verified.</p>
+<progress id="buildProgress" max="4" value="0" hidden aria-label="Build progress"></progress>
+<div id="readyBlock" hidden><p class="result-ok">Game file verified. Save it to Files and import into Delta.</p><a id="saveGame" class="btn btn-yellow" download="Pokemon-ThunderYellow-2026.gba">Save complete game ↓</a></div>
+</article>
+</div>
+<div class="notice" id="privacy" style="margin-top:20px"><strong>No Nintendo ROM is hosted here.</strong> This installer never uploads or transmits your game file; it only reads it locally. When a game update is released, your browser will download a small patch and produce a complete ThunderYellow <code>.gba</code> for you to keep.</div>
+</section>
+<section class="section" aria-labelledby="compatibility">
+<h2 id="compatibility">Which LeafGreen version works?</h2>
+<div class="grid two">
+<div class="panel">
+<div class="step">EXPECTED SOURCE</div>
+<h3>LeafGreen USA Rev 1</h3>
+<p>Game code <code>BPGE</code>, revision <code>1</code>, 16,777,216 bytes (16 MiB). A different region or revision will not match.</p>
+<div class="fact"><dt>SHA-1</dt><dd class="mono">7862c67bdecbe21d1d69ce082ce34327e1c6ed5e</dd></div>
+<p class="small">This fingerprint is an exact file identity check, not a link to a ROM download.</p>
+</div>
+<div class="panel">
+<div class="step">INTENDED OUTPUT</div>
+<h3>ThunderYellow first public edition</h3>
+<p>When the project is ready, the installer will check the published patch and finished game against recorded hashes before enabling a download.</p>
+<p>A game build will not be offered here until the verified LeafGreen-based patch is created and the first public version is approved for release.</p>
+</div>
+</div>
+</section>
+<section class="section" aria-labelledby="delta">
+<h2 id="delta">Playing on iPhone with Delta</h2>
+<div class="grid"><article class="panel"><div class="step">01 / SOURCE</div><h3>Keep your original safe</h3><p>Store your personally obtained compatible LeafGreen file in Files. Never overwrite the original.</p></article>
+<article class="panel"><div class="step">02 / INSTALL</div><h3>Make a new .gba</h3><p>After public release, select your file above and follow the installer. The newly built ROM will have a different filename.</p></article>
+<article class="panel"><div class="step">03 / PLAY</div><h3>Import into Delta</h3><p>Save the new game in Files and import it into Delta. Start a new game, or use a compatible normal in-game save where appropriate. Back up existing saves.</p></article></div>
+</section>
+<section class="section"><div class="highlight"><div><div class="eyebrow">While we finish development</div><h3>Get the original cover artwork</h3><p>The first game release is pending, but the ThunderYellow cover art is already available.</p></div><a class="btn btn-yellow" href="../artwork/">View and download cover art →</a></div></section>
+</main>
+<footer class="footer"><div class="container footer-flex"><div><strong>Pokemon: ThunderYellow Version (2026 Special Edition)</strong><p>Unofficial fan project, not endorsed by Nintendo, Game Freak, The Pokémon Company, or ESRB. This site does not supply commercial game ROMs or link to unauthorized ROM downloads.</p></div><div><a href="../">Game</a> · <a href="../downloads/">Release status</a> · <a href="../../support/">Support</a></div></div></footer>
+<script>
+"use strict";
+(() => {
+const input = document.getElementById("baseFile");
+const verifyButton = document.getElementById("verifyButton");
+const buildButton = document.getElementById("buildButton");
+const verifyStatus = document.getElementById("verifyStatus");
+const buildStatus = document.getElementById("buildStatus");
+const releasePill = document.getElementById("releasePill");
+const releaseDetail = document.getElementById("releaseDetail");
+const fileLabel = document.getElementById("fileLabel");
+const progress = document.getElementById("buildProgress");
+const ready = document.getElementById("readyBlock");
+const save = document.getElementById("saveGame");
+const MANIFEST_URL = "../releases/latest.json";
+const EXPECTED_BASE_SHA1 = "7862c67bdecbe21d1d69ce082ce34327e1c6ed5e";
+let manifest = null, verifiedRom = null, generatedUrl = null, verifying = false;
+function hex(buffer) {return Array.from(new Uint8Array(buffer), x => x.toString(16).padStart(2,"0")).join("");}
+async function hash(name, bytes) {return hex(await crypto.subtle.digest(name,bytes));}
+function resetOutput() {ready.hidden=true; save.removeAttribute("href"); if(generatedUrl){URL.revokeObjectURL(generatedUrl);generatedUrl=null;}}
+function allowed() {
+ return Boolean(manifest && manifest.publicRelease === true && manifest.releaseStatus === "released" &&
+  manifest.base && manifest.base.sha1 === EXPECTED_BASE_SHA1 &&
+  manifest.patch && manifest.patch.format === "ips" && manifest.patch.path &&
+  /^[a-zA-Z0-9/_\-.]+\.ips$/.test(manifest.patch.path) && manifest.patch.sha256 &&
+  /^[a-f0-9]{64}$/i.test(manifest.patch.sha256) &&
+  manifest.expectedOutputSha256 && /^[a-f0-9]{64}$/i.test(manifest.expectedOutputSha256));
+}
+function refreshBuild() {buildButton.hidden=!allowed();buildButton.disabled=!allowed()||!verifiedRom||verifying;}
+function info(text) {verifyStatus.textContent=text;}
+function applyIPS(source, patch) {
+ const output=source.slice();
+ if(patch.length<8 || String.fromCharCode(...patch.subarray(0,5)) !== "PATCH")throw Error("Invalid IPS patch.");
+ let p=5, stopped=false;
+ while(p+3<=patch.length){
+   if(patch[p]===69 && patch[p+1]===79 && patch[p+2]===70){p+=3;stopped=true;break;}
+   if(p+5>patch.length)throw Error("Truncated patch record.");
+   const off=(patch[p]*65536)+(patch[p+1]*256)+patch[p+2];
+   let len=patch[p+3]*256+patch[p+4];p+=5;
+   if(!len){
+     if(p+3>patch.length)throw Error("Truncated run-length record.");
+     len=patch[p]*256+patch[p+1];const value=patch[p+2];p+=3;
+     if(off+len>output.length)throw Error("Patch exceeds the ROM size.");
+     output.fill(value,off,off+len);
+   }else{
+     if(p+len>patch.length || off+len>output.length)throw Error("Invalid patch bounds.");
+     output.set(patch.subarray(p,p+len),off);p+=len;
+   }
+ }
+ if(!stopped||p!==patch.length)throw Error("Unexpected IPS data at end of patch.");
+ return output;
+}
+async function loadManifest(){
+ try {
+   const r=await fetch(MANIFEST_URL,{cache:"no-store"});
+   if(!r.ok)throw Error("Could not load release information.");
+   manifest=await r.json();
+   if(manifest.base?.sha1!==EXPECTED_BASE_SHA1)throw Error("Unsupported base revision in release manifest.");
+   if(allowed()){
+     releasePill.textContent="First public release available";
+     releaseDetail.textContent="A first-release patch is available. Select and verify your original LeafGreen file, then create your complete game locally.";
+     buildStatus.textContent="Verify a compatible base ROM to enable game creation.";
+   }else{
+     releasePill.textContent="First public game release pending";
+     releaseDetail.textContent="Internal development candidate: Test 125N. No approved public game patch is published yet. This installer is ready to recognize the correct LeafGreen ROM.";
+     buildStatus.textContent="Release patch pending. Your ROM can be checked now; game creation stays locked until release.";
+   }
+ } catch(e){
+   manifest=null;
+   releasePill.textContent="Release information unavailable";
+   releaseDetail.textContent="Game generation is disabled because the release information could not be verified.";
+   buildStatus.textContent="Could not verify the release manifest. Try again after the website is available.";
+ }
+ refreshBuild();
+}
+input.addEventListener("change",()=>{
+ verifiedRom=null;resetOutput();
+ const f=input.files?.[0];
+ fileLabel.textContent=f?f.name+" · "+f.size.toLocaleString()+" bytes":"No file selected.";
+ verifyButton.disabled=!f;
+ info(f?"Ready to inspect your file locally.":"Your original game remains on your device.");
+ refreshBuild();
+});
+verifyButton.addEventListener("click",async()=>{
+ const f=input.files?.[0];if(!f)return;
+ verifying=true;verifyButton.disabled=true;verifiedRom=null;resetOutput();refreshBuild();
+ try{
+   if(!window.crypto?.subtle)throw Error("Open this page over HTTPS in a modern browser.");
+   if(f.size!==16777216)throw Error("Unsupported size: expected a 16 MiB LeafGreen Rev 1 file.");
+   info("Reading GBA header…");
+   const rom=new Uint8Array(await f.arrayBuffer());
+   const code=String.fromCharCode(...rom.subarray(0xAC,0xB0));
+   const rev=rom[0xBC];
+   if(code!=="BPGE"||rev!==1)throw Error("This is not LeafGreen USA revision 1 (BPGE, Rev 1).");
+   info("Verifying original game fingerprint…");
+   const sha1=await hash("SHA-1",rom);
+   if(sha1!==EXPECTED_BASE_SHA1)throw Error("This ROM does not match the supported original LeafGreen USA Rev 1 fingerprint. No modifications made.");
+   verifiedRom=rom;
+   info("Compatible LeafGreen Rev 1 file verified. Nothing has been uploaded.");
+   if(!allowed())buildStatus.textContent="Your LeafGreen ROM matches. The ThunderYellow game cannot be built until the first public patch is published.";
+   else buildStatus.textContent="Compatible ROM verified. You can now create the ThunderYellow game.";
+ }catch(e){info("Verification not completed: "+e.message);}
+ finally{verifying=false;verifyButton.disabled=!input.files?.[0];refreshBuild();}
+});
+buildButton.addEventListener("click",async()=>{
+ if(!allowed()||!verifiedRom)return;
+ resetOutput();buildButton.disabled=true;progress.hidden=false;
+ try{
+   buildStatus.textContent="1/4 · Downloading release patch…";progress.value=1;
+   const path=new URL("../releases/"+manifest.patch.path, location.href);
+   const r=await fetch(path,{cache:"no-store"});
+   if(!r.ok)throw Error("Release patch download failed.");
+   const patch=new Uint8Array(await r.arrayBuffer());
+   buildStatus.textContent="2/4 · Checking patch integrity…";progress.value=2;
+   if((await hash("SHA-256",patch)).toLowerCase()!==manifest.patch.sha256.toLowerCase())throw Error("Patch fingerprint failed. No game was created.");
+   buildStatus.textContent="3/4 · Generating game locally…";progress.value=3;
+   const game=applyIPS(verifiedRom,patch);
+   buildStatus.textContent="4/4 · Validating the complete game…";progress.value=4;
+   if((await hash("SHA-256",game)).toLowerCase()!==manifest.expectedOutputSha256.toLowerCase())throw Error("Game fingerprint failed. No download offered.");
+   generatedUrl=URL.createObjectURL(new Blob([game],{type:"application/octet-stream"}));
+   save.href=generatedUrl;
+   save.download="Pokemon-ThunderYellow-2026-Special-Edition.gba";
+   ready.hidden=false;buildStatus.textContent="Success. Your complete game has been verified.";
+ }catch(e){buildStatus.textContent="Unable to finish: "+e.message;}
+ finally{progress.hidden=true;refreshBuild();}
+});
+window.addEventListener("pagehide",resetOutput);
+loadManifest();
+})();
+</script>
+</body></html>
