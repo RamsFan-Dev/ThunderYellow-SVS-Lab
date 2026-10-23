@@ -2687,20 +2687,34 @@ function previewPCBulkAdd(){
  }catch(e){invalidatePCBulkPreview();msg($('pcOperationsStatus'),'Bulk preview blocked: '+e.message,'bad');}
 }
 function bulkAddPCSpecies(){
+ const plan=pcBulkPlan;
  try{
-  const slots=pcRosterSnapshot(),available=pcBulkAvailability(slots);
-  const level=readMonNumber('pcBulkLevel',1,100,'Bulk Pokémon level');
-  if(!available.missing.length)throw Error('You already have every supported species in your party or PC.');
-  if(available.missing.length>available.empty.length)throw Error('PC storage has only '+available.empty.length+' empty slots, but '+available.missing.length+' species are missing. Free PC slots without touching your starter or party.');
-  if(!confirm('Add '+available.missing.length+' missing species at level '+level+' to Bill\'s PC? Existing Pokémon and the party are preserved. Please keep a backup of your original SVS.'))return;
-  const changes=available.missing.map((sp,i)=>({slot:available.empty[i].index,bytes:createNewBox(sp,level).encoded}));
-  // Validate all generated Gen 3 records before writing any of them.
-  if(changes.some((entry,i)=>decodeMon(entry.bytes)?.sp!==available.missing[i]))throw Error('A generated Pokémon failed checksum validation.');
-  applyPCEntries(changes,'Add '+changes.length+' missing ThunderYellow Pokémon to Bill\'s PC');
-  msg($('pcOperationsStatus'),'✓ Added '+changes.length+' species to empty PC slots without replacing any Pokémon. Export your edited SVS and test in Delta.','good');
- }catch(e){msg($('pcOperationsStatus'),'Bulk add blocked: '+e.message,'bad');}
+  if(!plan)throw Error('Preview the additions first.');
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save or discard pending edits first.');
+  if(readMonNumber('pcBulkLevel',1,100,'Bulk Pokémon level')!==plan.level)throw Error('Requested level changed since preview.');
+  const slots=pcRosterSnapshot(),cap=pcBulkAvailability(slots);
+  if(cap.missing.length!==plan.count||cap.missing.some((sp,i)=>sp!==plan.entries[i].species)||cap.party.length!==plan.party.length)
+   throw Error('Species or party changed since preview.');
+  for(let i=0;i<420;i++){
+   if(!slots[i].bytes.every((x,j)=>x===plan.originals[i][j]))
+    throw Error('Box '+(1+Math.floor(i/30))+' changed since preview. Preview again.');
+  }
+  for(let i=0;i<cap.party.length;i++){
+   if(!cap.party[i].every((x,j)=>x===plan.party[i][j]))
+    throw Error('Party changed since preview.');
+  }
+  const identity=verifySnapshotIdentity();
+  if(!identity.ok)throw Error('Save state verification failed: '+identity.reason);
+  if(!confirm('Add '+plan.count+' missing Pokémon at level '+plan.level+' to the exact slots shown?\n\n'+
+   plan.exact+' go to numbered Dex slots; '+plan.collisions+' use fallback slots.\n\nExisting Pokémon, duplicates, box names and the party are preserved. Back up the original .svs and .sav.'))return;
+  const changes=plan.entries.map(e=>({slot:e.slot,bytes:createNewBox(e.species,plan.level).encoded}));
+  if(changes.some((x,i)=>decodeMon(x.bytes)?.sp!==plan.entries[i].species))
+   throw Error('A generated Pokémon failed encrypted checksum validation.');
+  applyPCEntries(changes,'Add '+plan.count+' missing Pokémon to Bill’s PC');
+  invalidatePCBulkPreview();
+  msg($('pcOperationsStatus'),'✓ Added '+plan.count+' missing species ('+plan.exact+' exact slots, '+plan.collisions+' fallbacks). Export a new SVS and test in Delta.','good');
+ }catch(e){invalidatePCBulkPreview();msg($('pcOperationsStatus'),'Bulk add blocked: '+e.message,'bad');}
 }
-
 function boxNameFromSVS(boxIndex){
  const g=monLocations?.groups?.[0];
  if(!g)return 'Box '+(boxIndex+1);
