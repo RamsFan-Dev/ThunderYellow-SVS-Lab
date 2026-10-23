@@ -218,7 +218,7 @@
  <div class="grid3"><div><label class="label" for="boxSelect">Bill's PC — Box (1–14)</label><select class="input" id="boxSelect"></select></div>
  <div><label class="label" for="pcViewOrder">View PC Pokémon</label><select class="input" id="pcViewOrder"><option value="box">Current box slots</option><option value="dex">National Pokédex number (#1–386)</option><option value="name">Species name (A–Z)</option><option value="category">Pokédex classification (Seed, Mouse…)</option><option value="type">Elemental type (Electric, Water…)</option><option value="level">Level (highest first)</option><option value="gender">Gender (F, M, Genderless)</option></select></div>
  <div><label class="label" for="pcDexFilter">Filter by species or Pokédex #</label><input class="input" id="pcDexFilter" type="search" placeholder="Name, number, type, or classification"></div></div>
- <div class="hint" style="margin:9px 0">Selecting a sort order reorganizes Bill's PC after your confirmation. Your existing box names and party stay unchanged. Current box slots only views the arrangement; to reverse a sort, use Undo before exporting.</div><div class="row" style="margin:12px 0"><button class="btn secondary" type="button" id="pcSortAll">Reapply selected sort</button><span class="hint">Sorting runs when you select an option and confirm. Pokédex-number sorting respects numbered slots and leaves gaps for missing species.</span></div>
+ <div class="hint" style="margin:9px 0"><strong>View only:</strong> Changing the dropdown sorts the display, not your game. Your original Box/Slot positions and custom box names are preserved. To physically rearrange saved PC slots, preview the changes below, then explicitly confirm and apply. Undo remains available before export.</div><div class="row" style="margin:12px 0"><button class="btn secondary" type="button" id="pcSortAll">Preview physical PC sort</button><button class="btn primary" type="button" id="pcSortApply" disabled>Confirm &amp; apply physical sort</button></div><div id="pcSortPreview" class="status" role="status" aria-live="polite"></div>
  <label class="tog" style="margin:8px 0 12px"><input id="pcEmptyPreviews" type="checkbox"> Show Pokédex-number placeholders in empty PC slots</label><div class="hint" style="margin-bottom:12px">Placeholders suggest missing Pokémon but do not create or replace them. Click an empty slot to fill it separately.</div><details id="pcBulkDetails"><summary>📦 Add one of every available in-game Pokémon to Bill's PC</summary>
  <p class="hint">Add only missing species from the full 386-Pokémon Gen 3 catalog (National Pokédex #1–386), preserving your party, starter Pikachu, and occupied PC slots. No duplicates of species you already own. Any empty slots are filled in National Dex order.</p>
  <div class="grid"><div><label class="label" for="pcBulkLevel">Level for newly added Pokémon (1–100)</label><input id="pcBulkLevel" class="input" type="number" min="1" max="100" value="5" inputmode="numeric"></div><div><label class="label">Capacity</label><div id="pcBulkSummary" class="callout">Import a verified SVS to calculate available slots.</div></div></div>
@@ -565,7 +565,7 @@ function renderLivePartyReport(){
  node.className='status good';
 }
 
-function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -1047,7 +1047,7 @@ function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
 function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;invalidatePCSortPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
 
 function auditExportLiveParty(){
  const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1);
@@ -2582,8 +2582,8 @@ function renderPCBulkSummary(){
   const cap=pcBulkAvailability(pcRosterSnapshot());
   info.textContent=cap.total+' supported species • '+cap.missing.length+' missing • '+cap.empty.length+' empty PC slots';
   $('pcAddAll').disabled=cap.missing.length===0||cap.missing.length>cap.empty.length;
-  $('pcSortAll').disabled=$('pcViewOrder').value==='box';
- }catch(e){info.textContent='Unavailable: '+e.message;$('pcAddAll').disabled=true;$('pcSortAll').disabled=true;}
+  $('pcSortAll').disabled=$('pcViewOrder').value==='box';$('pcSortApply').disabled=!pcSortPlan||pcSortPlan.mode!==$('pcViewOrder').value||pcSortPlan.moves.length===0;
+ }catch(e){info.textContent='Unavailable: '+e.message;$('pcAddAll').disabled=true;$('pcSortAll').disabled=true;$('pcSortApply').disabled=true;}
 }
 function verifyPCWrites(entries){
  const groups=getFlashGroups();
@@ -2648,64 +2648,114 @@ function updatePCBoxLabels(){
   select.options[i].textContent=name===fallback?fallback:fallback+' · '+name;
  }
 }
-function sortAllPCByDex(){
+let pcSortPlan=null;
+function invalidatePCSortPreview(){
+ pcSortPlan=null;
+ if($('pcSortPreview'))$('pcSortPreview').replaceChildren();
+ if($('pcSortApply'))$('pcSortApply').disabled=true;
+}
+function buildPCSortPlan(slots,mode){
+ const labels={dex:'National Pokédex number',name:'species name',category:'Pokédex classification',type:'elemental type',level:'level',gender:'gender'};
+ if(!labels[mode])throw Error('Choose a physical sorting order first.');
+ if(slots.length!==420)throw Error('Expected exactly 420 PC slots.');
+ const occupied=slots.filter(entry=>entry.mon);
+ if(!occupied.length)throw Error('Bill’s PC is empty.');
+ if(occupied.some(entry=>isProtected(entry.mon)))throw Error('Protected starter Pikachu found in PC; sorting is disabled.');
+ const sorted=occupied.slice().sort((a,b)=>pcSorter(a,b,mode));
+ const destinations=Array(420).fill(null);
+ if(mode==='dex'){
+  const overflow=[];
+  for(const entry of sorted){
+   const index=nationalDexNo(entry.mon.sp)-1;
+   if(index>=0&&index<386&&!destinations[index])destinations[index]=entry;
+   else overflow.push(entry);
+  }
+  const spare=[];
+  for(let i=386;i<420;i++)if(!destinations[i])spare.push(i);
+  for(let i=0;i<386;i++)if(!destinations[i])spare.push(i);
+  if(overflow.length>spare.length)throw Error('Not enough storage to preserve every duplicate.');
+  for(let j=0;j<overflow.length;j++)destinations[spare[j]]=overflow[j];
+ }else{
+  sorted.forEach((entry,i)=>{destinations[i]=entry;});
+ }
+ const key=bytes=>Array.from(bytes).join(',');
+ const expected=new Map();
+ for(const entry of occupied){const id=key(entry.bytes);expected.set(id,(expected.get(id)||0)+1);}
+ const emptyBytes=new Uint8Array(80);
+ const wanted=destinations.map((entry,slot)=>({slot,bytes:entry?entry.bytes:emptyBytes}));
+ for(const entry of wanted){
+  if(!entry.bytes.some(byte=>byte!==0))continue;
+  const id=key(entry.bytes),remaining=expected.get(id)||0;
+  if(remaining<=0)throw Error('PC preview found a missing or duplicated Pokémon; nothing changed.');
+  expected.set(id,remaining-1);
+ }
+ if([...expected.values()].some(count=>count!==0))throw Error('PC preview would lose a Pokémon; nothing changed.');
+ const moves=destinations.flatMap((entry,to)=>entry&&entry.index!==to?[{from:entry.index,to,mon:entry.mon}]:[]);
+ return {mode,label:labels[mode],count:occupied.length,originals:slots.map(entry=>entry.bytes.slice()),wanted,moves};
+}
+function previewPCSort(){
+ invalidatePCSortPreview();
  try{
-  if(monDirty||badgeDirty)throw Error('Save pending Pokémon or badge edits before sorting.');
-  const mode=$('pcViewOrder').value,labels={dex:'National Pokédex number',name:'species name',category:'Pokédex classification',type:'elemental type',level:'level',gender:'gender'};
-  if(!labels[mode])throw Error('Choose a sorting option instead of Current box slots.');
-  const slots=pcRosterSnapshot(),occupied=slots.filter(x=>x.mon);
-  if(!occupied.length)throw Error('Bill’s PC is empty.');
-  if(occupied.some(x=>isProtected(x.mon)))throw Error('A protected starter Pikachu was found in PC; sorting is disabled.');
-  if(!confirm('Rearrange '+occupied.length+' Pokémon across all 14 PC boxes by '+labels[mode]+'?\n\n'+
-    (mode==='dex'?'Pokédex sorting will place the first copy of each Pokémon into its numbered slot, leaving gaps for species you do not own. Extra copies go in spare slots.':
-       'Pokémon will be packed into the first available boxes in the chosen order.')+
-    '\n\nYour custom box names, party and starter will not change. Make sure you have a backup of your original .svs.'))return false;
-  // Generate a complete 420-slot target array BEFORE touching any save bytes.
-  const destinations=Array(420).fill(null),sorted=occupied.slice().sort((a,b)=>pcSorter(a,b,mode));
-  if(mode==='dex'){
-   const overflow=[];
-   for(const entry of sorted){
-    const index=nationalDexNo(entry.mon.sp)-1;
-    if(index>=0&&index<386&&destinations[index]===null)destinations[index]=entry.bytes;
-    else overflow.push(entry);
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save or discard pending edits before previewing a PC sort.');
+  const plan=buildPCSortPlan(pcRosterSnapshot(),$('pcViewOrder').value);
+  const root=$('pcSortPreview'),intro=document.createElement('p');
+  intro.className='hint';
+  intro.textContent='READ-ONLY PREVIEW: '+plan.count+' Pokémon preserved • '+plan.moves.length+' Pokémon change physical slots • all 14 custom box names and your party are unchanged. Nothing has been written to the save.';
+  root.append(intro);
+  if(plan.moves.length){
+   const frame=document.createElement('div');frame.className='showdown-preview';
+   const table=document.createElement('table'),head=document.createElement('thead'),heading=document.createElement('tr');
+   for(const title of ['Pokémon','Current box / slot','After sorting']){const cell=document.createElement('th');cell.textContent=title;heading.append(cell);}
+   head.append(heading);table.append(head);
+   const body=document.createElement('tbody');
+   for(const movement of plan.moves){
+    const row=document.createElement('tr'),p=movement.mon;
+    for(const value of ['#'+String(nationalDexNo(p.sp)).padStart(3,'0')+' '+(monNames[p.sp]||'Species '+p.sp),
+       'Box '+(1+Math.floor(movement.from/30))+' / Slot '+(1+movement.from%30),
+       'Box '+(1+Math.floor(movement.to/30))+' / Slot '+(1+movement.to%30)]){
+     const cell=document.createElement('td');cell.textContent=value;row.append(cell);
+    }
+    body.append(row);
    }
-   // Duplicates first use the 34 spare positions after National Dex 386, then
-   // remaining gaps if needed. Never overwrite any primary Pokédex position.
-   const spare=[];
-   for(let i=386;i<420;i++)if(destinations[i]===null)spare.push(i);
-   for(let i=0;i<386;i++)if(destinations[i]===null)spare.push(i);
-   if(overflow.length>spare.length)throw Error('Not enough storage slots to preserve duplicates.');
-   for(let j=0;j<overflow.length;j++)destinations[spare[j]]=overflow[j].bytes;
-  }else{
-   for(let i=0;i<sorted.length;i++)destinations[i]=sorted[i].bytes;
+   table.append(body);frame.append(table);root.append(frame);
   }
-  const zeros=new Uint8Array(80);
-  const wanted=destinations.map((bytes,i)=>({slot:i,bytes:bytes||zeros}));
-  // Verify every existing Pokémon record is included exactly once.
-  const id=bytes=>Array.from(bytes).join(',');
-  const expected=new Map();
-  for(const p of occupied)expected.set(id(p.bytes),(expected.get(id(p.bytes))||0)+1);
-  for(const p of wanted){
-   if(!u32(p.bytes,0))continue;
-   const token=id(p.bytes),n=expected.get(token)||0;
-   if(!n)throw Error('Sort verification found a missing or duplicated Pokémon; no changes were made.');
-   expected.set(token,n-1);
+  pcSortPlan=plan;
+  $('pcSortApply').disabled=plan.moves.length===0;
+  msg($('pcOperationsStatus'),plan.moves.length?'Preview ready: review the old and new positions, then choose Confirm & apply physical sort.':'All PC Pokémon are already in the selected physical order. No changes needed.','good');
+ }catch(e){invalidatePCSortPreview();msg($('pcOperationsStatus'),'Cannot preview PC sort: '+e.message,'bad');}
+}
+function applyPCSort(){
+ const plan=pcSortPlan;
+ try{
+  if(!plan)throw Error('Preview the physical sort before applying it.');
+  if($('pcViewOrder').value!==plan.mode)throw Error('The sort order changed. Preview again.');
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save pending edits before applying the sort.');
+  const current=pcRosterSnapshot();
+  for(let i=0;i<420;i++){
+   if(!current[i].bytes.every((v,j)=>v===plan.originals[i][j]))
+    throw Error('Box '+(1+Math.floor(i/30))+' changed since preview. Preview again; no Pokémon were moved.');
   }
-  if([...expected.values()].some(n=>n!==0))throw Error('Sort verification lost a Pokémon; no changes were made.');
-  const oldMode=monMode,oldSlot=monSlot,oldBox=boxNo,patches=[];let success=false;
+  const identity=verifySnapshotIdentity();
+  if(!identity.ok)throw Error('Live save identity changed: '+identity.reason);
+  if(!confirm('Apply the previewed '+plan.label+' sort?\n\n'+plan.moves.length+' Pokémon will move to new PC slots across 14 boxes. Your Pokémon records, party, starter Pikachu and in-game box names will remain unchanged.\n\nKeep your original .svs and .sav backups. You can use Undo before export.'))return;
+  const previousMode=monMode,previousSlot=monSlot,previousBox=boxNo,patches=[];
   try{
    monMode='box';
-   for(const entry of wanted){monSlot=entry.slot;applySlot(entry.bytes,patches);}
-   refreshChecksums(patches);verifyPCWrites(wanted);
-   if(!verifySnapshotIdentity().ok)throw Error('Save identity verification failed after sorting.');
-   const changed=snapshot('Sort '+occupied.length+' PC Pokémon by '+labels[mode],patches);
-   success=true;monMode=oldMode;monSlot=0;boxNo=0;sync();
-   msg($('pcOperationsStatus'),changed?'✓ Rearranged '+occupied.length+' Pokémon by '+labels[mode]+'. All '+occupied.length+' records preserved; box names unchanged. Export your edited SVS to test in Delta.':
-     '✓ Bill’s PC was already in this order. No Pokémon or box names changed.','good');
-  }catch(e){for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);throw e;}
-  finally{monMode=oldMode;if(!success){monSlot=oldSlot;boxNo=oldBox;}}
-  return true;
- }catch(e){msg($('pcOperationsStatus'),'PC sort blocked: '+e.message,'bad');return false;}
+   for(const entry of plan.wanted){monSlot=entry.slot;applySlot(entry.bytes,patches);}
+   refreshChecksums(patches);verifyPCWrites(plan.wanted);
+   const check=verifySnapshotIdentity();
+   if(!check.ok)throw Error('Post-sort save verification failed: '+check.reason);
+   const changed=snapshot('Physically sort '+plan.count+' PC Pokémon by '+plan.label,patches);
+   monMode=previousMode;monSlot=0;boxNo=0;
+   $('pcViewOrder').value='box';
+   invalidatePCSortPreview();
+   sync();
+   msg($('pcOperationsStatus'),changed?'✓ Applied '+plan.label+' PC sort. '+plan.count+' Pokémon records preserved. Box names and party are unchanged. Export a new SVS and test it in Delta.':'No PC slots needed changing.','good');
+  }catch(e){
+   for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);
+   throw e;
+  }finally{monMode=previousMode;if(pcSortPlan){monSlot=previousSlot;boxNo=previousBox;}}
+ }catch(e){invalidatePCSortPreview();msg($('pcOperationsStatus'),'PC sort blocked: '+e.message,'bad');}
 }
 
 function renderPokemon(){if(!loaded)return;
@@ -2893,18 +2943,13 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  let confirmedPCView='box';$('pcViewOrder').onchange=()=>{
   const previous=confirmedPCView,selected=$('pcViewOrder').value;
   if(!confirmMonDiscard()){$('pcViewOrder').value=previous;return;}
-  if(selected==='box'){
-   confirmedPCView='box';renderPokemon();
-   msg($('pcOperationsStatus'),'Viewing saved Box and Slot positions. No Pokémon were moved.','good');
-   return;
-  }
-  if(sortAllPCByDex()){confirmedPCView=selected;renderPokemon();}
-  else{$('pcViewOrder').value=previous;renderPokemon();}
+  confirmedPCView=selected;invalidatePCSortPreview();renderPokemon();
+  msg($('pcOperationsStatus'),selected==='box'?'Viewing original Box/Slot positions. No Pokémon were moved.':'Viewing '+$('pcViewOrder').selectedOptions[0].textContent+' (display only). No Pokémon were moved.','good');
  };
  $('pcDexFilter').oninput=()=>{if(monDirty){msg($('pcOperationsStatus'),'Save or discard Pokémon edits before filtering the PC.','warn');return;}if(monMode==='box')renderPokemon()};
- $('pcAddAll').onclick=bulkAddPCSpecies;$('pcSortAll').onclick=sortAllPCByDex;
+ $('pcAddAll').onclick=bulkAddPCSpecies;$('pcSortAll').onclick=previewPCSort;$('pcSortApply').onclick=applyPCSort;
  $('pcEmptyPreviews').onchange=()=>{if(!confirmMonDiscard()){$('pcEmptyPreviews').checked=!$('pcEmptyPreviews').checked;return;}renderPokemon()};
- $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';confirmedPCView='box';monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
+ $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
  const handleMonEdit=e=>{
   enforceLegalStat(e);
   if(e.target.id==='species'){abilityOptions(true);const m=decodeMon(getSlotBytes());updateMonGenderUI(m,true);previewLevel();}
