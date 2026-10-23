@@ -4,7 +4,7 @@
   "releaseStatus": "unreleased",
   "publicRelease": false,
   "publicVersion": null,
-  "developmentCandidate": "Test 125N",
+  "developmentCandidate": null,
   "base": {
     "displayName": "Pokemon LeafGreen (USA), revision 1 (1.1)",
     "fileSize": 16777216,
@@ -14,5 +14,5 @@
   },
   "patch": null,
   "expectedOutputSha256": null,
-  "notes": "A release patch for this exact user-provided source ROM has not been created or verified. No public game build is currently available. Do not bundle a full commercial ROM."
+  "notes": "The first public release remains in development. No approved base-game patch is published, and no complete commercial ROM is distributed. Internal testing designations are not public release versions."
 }
