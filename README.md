@@ -3,9 +3,10 @@
 ## Official game website and downloads
 
 - **[Official game homepage](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/)**
-- **[Game update / cover art downloads](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/downloads/)**
+- **[First public release status](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/downloads/)**
+- **[Download project cover art](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/artwork/)**
 
-The downloads page offers the verified **ThunderYellow v1 → Test 125N preview IPS patch** (requires the exact v1 game ROM) and the project's original cover artwork. Test 125N is a gameplay-tested **preview**, not a certified final release. A patch against a clean legally obtained LeafGreen Rev 1 base ROM is **not yet published**. Do not distribute full commercial ROMs.
+**Game release status: NOT YET RELEASED.** No version of Pokemon: ThunderYellow Version (2026 Special Edition) has been publicly released. Previous files labeled "v1" and "Test 125N" were internal development/test builds, not public releases. The prior public v1-to-Test 125N patch download and installer were mistakenly offered as though players already had a public v1; both have been withdrawn from the current published branch. A genuine first release package, ideally a verified patch requiring a legally obtained compatible Pokémon LeafGreen (USA, Rev 1) base ROM, remains to be prepared and gameplay-tested. **Do not distribute full commercial ROMs.**
 
 **Community technical support and Delta save-state diagnostics**
 
@@ -38,7 +39,7 @@ The existing browser-based Delta SVS editor is preserved in the repository's roo
 
 ## Current gameplay-testing reference
 
-Test 125N has passed Pikachu Surf/shore transitions and battle follow-up checks in user gameplay testing. Future issues can be tracked independently in [GitHub Issues](https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues).
+Internal Test 125N passed selected Pikachu Surf/shore transitions and battle follow-up checks. This is development validation, not a public release or full regression test. Future issues can be tracked independently in [GitHub Issues](https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues).
 
 This is an unofficial fan project, not affiliated with or endorsed by Nintendo, Game Freak, or The Pokémon Company.
 
