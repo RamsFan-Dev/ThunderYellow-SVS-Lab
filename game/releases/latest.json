@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "project": "Pokemon: ThunderYellow Version (2026 Special Edition)",
+  "releaseStatus": "unreleased",
+  "publicRelease": false,
+  "publicVersion": null,
+  "developmentCandidate": "Test 125N",
+  "base": {
+    "displayName": "Pokemon LeafGreen (USA), revision 1 (1.1)",
+    "fileSize": 16777216,
+    "gameCode": "BPGE",
+    "revision": 1,
+    "sha1": "7862c67bdecbe21d1d69ce082ce34327e1c6ed5e"
+  },
+  "patch": null,
+  "expectedOutputSha256": null,
+  "notes": "A release patch for this exact user-provided source ROM has not been created or verified. No public game build is currently available. Do not bundle a full commercial ROM."
+}
