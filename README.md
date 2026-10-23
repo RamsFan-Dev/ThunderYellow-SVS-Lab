@@ -8,7 +8,7 @@
 - **[Play on iPhone & Android / find LeafGreen cartridge and backup](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/play/)**
 - **[Download project cover art](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/artwork/)**
 
-**Game release status: NOT YET RELEASED.** No version of Pokemon: ThunderYellow Version (2026 Special Edition) has been publicly released. Previous files labeled "v1" and "Test 125N" were internal development/test builds, not public releases. The prior public v1-to-Test 125N patch download and installer were mistakenly offered as though players already had a public v1; both have been withdrawn from the current published branch. The planned first public build is based on internal **Test 125N** (pending full regression verification). The new browser installer can verify a user-provided **Pokémon LeafGreen (USA, Rev 1 / 1.1)** file locally by size, GBA header and exact SHA-1 (`7862c67bdecbe21d1d69ce082ce34327e1c6ed5e`). It will generate a self-contained `.gba` on-device once the exact first-release patch has been created, tested and published. **No game patch is released at this time; the installer is intentionally locked from creating a ROM. Do not distribute full commercial ROMs.**
+**Game release status: FIRST PUBLIC RELEASE — IN DEVELOPMENT.** Pokemon: ThunderYellow Version (2026 Special Edition) has not been publicly released. The game is undergoing further testing and release packaging; internal development build numbers are not public product versions. The browser installer can verify a user-provided **Pokémon LeafGreen (USA, Rev 1 / 1.1)** file locally by size, GBA header and exact SHA-1 (`7862c67bdecbe21d1d69ce082ce34327e1c6ed5e`). Once a verified, approved first-release patch is published, it will generate a complete standalone `.gba` on-device. **No game patch is released at this time; the installer intentionally cannot create a ThunderYellow ROM yet. Do not distribute full commercial ROMs.**
 
 **Emulators and original-game sourcing:** The site includes direct links to [Delta for iOS](https://apps.apple.com/us/app/delta-game-emulator/id1048524688), [Pizza Boy A Basic for Android](https://play.google.com/store/apps/details?id=it.dbtecno.pizzaboygba), a [search for authentic LeafGreen GBA cartridges](https://www.ebay.com/sch/i.html?_nkw=pokemon+leaf+green+version+authentic), and the [GB Operator cartridge-backup guide](https://www.epilogue.co/support/getting-started/what-is-gb-operator). The user must supply a lawfully sourced original compatible LeafGreen USA Rev 1 backup; a physical cartridge alone does not guarantee the right revision. There are **no commercial ROM downloads** linked, included or hosted.
 
@@ -22,7 +22,7 @@
 
 ## Bug reporting
 
-Describe your ROM test build (for example, Test 125N), Delta or other emulator version, the in-game location, what went wrong, and the exact steps to reproduce the issue. Attach your broken `.svs` file inside a `.zip` archive (up to 25 MB). Screenshots and multiple states from a single test sequence are welcome. **Do not upload a full copyrighted .gba ROM.**
+Describe your ROM version or internal test build (if known), Delta or other emulator version, the in-game location, what went wrong, and the exact steps to reproduce the issue. Attach your broken `.svs` file inside a `.zip` archive (up to 25 MB). Screenshots and multiple states from a single test sequence are welcome. **Do not upload a full copyrighted .gba ROM.**
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
@@ -43,7 +43,7 @@ The existing browser-based Delta SVS editor is preserved in the repository's roo
 
 ## Current gameplay-testing reference
 
-Internal Test 125N passed selected Pikachu Surf/shore transitions and battle follow-up checks. This is development validation, not a public release or full regression test. Future issues can be tracked independently in [GitHub Issues](https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues).
+Selected internal builds passed Pikachu Surf/shore transitions and battle follow-up checks. This is development validation, not a public release or full regression test. Future issues can be tracked independently in [GitHub Issues](https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues).
 
 This is an unofficial fan project, not affiliated with or endorsed by Nintendo, Game Freak, or The Pokémon Company.
 
