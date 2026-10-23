@@ -37,7 +37,7 @@
 <article class="panel install-panel">
 <div class="step">02 / THUNDERYELLOW BUILD</div>
 <h2>Get your finished game</h2>
-<p><strong>Development candidate: Test 125N.</strong> This is still an internal test designation, not an announced public release.</p>
+<p><strong>First Public Release — In Development.</strong> The finished game is not yet available for download.</p>
 <p id="releaseDetail">The verified first-release patch is not yet available. When we publish it, this page will automatically enable game generation for compatible files.</p>
 <div class="actions"><button id="buildButton" class="btn btn-yellow" type="button" disabled hidden>Create ThunderYellow .gba ↓</button><a class="btn btn-dark" href="../downloads/">View release status →</a></div>
 <p id="buildStatus" role="status" aria-live="polite" class="small">Nothing will be downloaded until a real release is verified.</p>
@@ -140,7 +140,7 @@ async function loadManifest(){
      buildStatus.textContent="Verify a compatible base ROM to enable game creation.";
    }else{
      releasePill.textContent="First public game release pending";
-     releaseDetail.textContent="Internal development candidate: Test 125N. No approved public game patch is published yet. This installer is ready to recognize the correct LeafGreen ROM.";
+     releaseDetail.textContent="The first public game release is in development. No approved game patch is published yet. This installer can already verify the correct LeafGreen ROM.";
      buildStatus.textContent="Release patch pending. Your ROM can be checked now; game creation stays locked until release.";
    }
  } catch(e){
