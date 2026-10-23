@@ -13,7 +13,7 @@ body:
     attributes:
       label: Game build
       description: "The precise version where the bug occurred."
-      placeholder: "Test 125N"
+      placeholder: "Enter the build shown in your test notes, if known"
     validations:
       required: true
   - type: dropdown
