@@ -1753,6 +1753,100 @@ function applyShowdownPaste(){
 // Party Switcher — six existing Pokémon exchanged between party and PC without duplication.
 // Identity-based named templates are saved only in this browser, never silently in the game.
 let partyPlanPreview=null;
+// Read-only strategy guides. Level goals are advisory, not ROM-confirmed caps.
+const gymCoachGuides=[
+ {id:'brock',label:'1 • Pewter — Brock',name:'Brock / Boulder Badge',focus:'Rock / Ground',minimum:14,
+  good:['WATER','GRASS','FIGHTING'],warn:['FIRE','FLYING','ELECTRIC'],tms:[297,291,319,327],
+  tip:'Grass and Water attacks work well against Rock/Ground. Electric attacks cannot hit Ground types.'},
+ {id:'misty',label:'2 • Cerulean — Misty',name:'Misty / Cascade Badge',focus:'Water',minimum:21,
+  good:['ELECTRIC','GRASS'],warn:['FIRE','ROCK','GROUND'],tms:[297,324,312,307],
+  tip:'Check for an actual Grass or Electric move. A matching Pokémon type alone does not guarantee an effective attack.'},
+ {id:'surge',label:'3 • Vermilion — Lt. Surge',name:'Lt. Surge / Thunder Badge',focus:'Electric',minimum:24,
+  good:['GROUND'],warn:['WATER','FLYING'],tms:[316,314,327],
+  tip:'Ground attacks counter many Electric foes. Protect Water and Flying teammates from Electric damage.'},
+ {id:'erika',label:'4 • Celadon — Erika',name:'Erika / Rainbow Badge',focus:'Grass',minimum:30,
+  good:['FIRE','FLYING','ICE','PSYCHIC','BUG'],warn:['WATER','GROUND','ROCK'],tms:[328,323,301,317],
+  tip:'Use Fire, Flying, Ice or other coverage moves. Watch out for status effects and carry healing items.'},
+ {id:'koga',label:'5 • Fuchsia — Koga',name:'Koga / Soul Badge',focus:'Poison',minimum:41,
+  good:['PSYCHIC','GROUND'],warn:['GRASS','FIGHTING'],tms:[317,316,314],
+  tip:'Psychic and Ground offense helps, but prepare for poison and status conditions.'},
+ {id:'sabrina',label:'6 • Saffron — Sabrina',name:'Sabrina / Marsh Badge',focus:'Psychic',minimum:43,
+  good:['DARK','GHOST','BUG'],warn:['FIGHTING','POISON'],tms:[318,334,328],
+  tip:'Dark, Ghost or Bug coverage can help. Use durable teammates and review their known moves first.'},
+ {id:'blaine',label:'7 • Cinnabar — Blaine',name:'Blaine / Volcano Badge',focus:'Fire',minimum:46,
+  good:['WATER','GROUND','ROCK'],warn:['GRASS','BUG','ICE'],tms:[291,314,316,301],
+  tip:'Water, Ground and Rock attacks are strong choices. Heal burns and conserve key PP.'},
+ {id:'giovanni',label:'8 • Viridian — Giovanni',name:'Giovanni / Earth Badge',focus:'Ground',minimum:49,
+  good:['WATER','GRASS','ICE'],warn:['ELECTRIC','FIRE','POISON','ROCK'],tms:[291,301,307,297],
+  tip:'Ground is immune to Electric attacks; Water, Grass and Ice coverage are better starting points.'},
+ {id:'league',label:'9 • Indigo Plateau — Elite Four',name:'Elite Four / League Preparation',focus:'Ice, Fighting, Ghost and Dragon',minimum:53,
+  good:['ELECTRIC','PSYCHIC','DARK','ICE','FIGHTING','ROCK'],warn:[],tms:[301,312,317,318,319],
+  tip:'You face several different specialists. Balance coverage, healing items and PP across multiple battles.'},
+ {id:'champion',label:'10 • Indigo Plateau — Champion',name:'Champion / Balanced Team',focus:'Varied teams',minimum:58,
+  good:['WATER','ELECTRIC','ICE','FIGHTING','GROUND','DARK','GRASS','FIRE'],warn:[],
+  tms:[314,312,301,323,318],tip:'No single type beats a balanced rival. Bring varied attacking moves, backups and recovery supplies.'}
+];
+const gymCoachMoveKinds={};
+for(const [type,moves] of Object.entries({
+ WATER:['Water Gun','Water Pulse','Surf','Bubble','Bubble Beam','Hydro Pump','Crabhammer','Waterfall','Dive','Muddy Water'],
+ GRASS:['Vine Whip','Razor Leaf','Mega Drain','Giga Drain','Solar Beam','Bullet Seed','Absorb','Petal Dance','Magical Leaf'],
+ ELECTRIC:['Thunder Shock','Thunderbolt','Thunder','Spark','Shock Wave','Thunder Punch','Volt Tackle'],
+ GROUND:['Earthquake','Dig','Mud Shot','Mud-Slap','Magnitude','Bone Club','Bonemerang','Earth Power'],
+ FIRE:['Ember','Flamethrower','Fire Blast','Fire Punch','Flame Wheel','Heat Wave','Overheat'],
+ FLYING:['Gust','Wing Attack','Fly','Aerial Ace','Air Cutter','Sky Attack','Drill Peck'],
+ ICE:['Ice Beam','Blizzard','Aurora Beam','Powder Snow','Ice Punch','Ice Ball'],
+ PSYCHIC:['Confusion','Psybeam','Psychic','Extrasensory','Future Sight','Psycho Boost'],
+ DARK:['Bite','Crunch','Faint Attack','Thief','Pursuit','Knock Off'],
+ GHOST:['Shadow Ball','Shadow Punch','Lick','Night Shade'],
+ FIGHTING:['Karate Chop','Brick Break','Low Kick','Double Kick','Cross Chop','Mach Punch','Sky Uppercut','Revenge'],
+ BUG:['Silver Wind','Megahorn','Fury Cutter','Twineedle','Pin Missile','Signal Beam'],
+ ROCK:['Rock Tomb','Rock Slide','Rock Throw','Ancient Power']
+}))for(const move of moves)gymCoachMoveKinds[move.toLowerCase()]=type;
+let gymCoachSelection=null;
+const gymCoachLevel=m=>{try{return teamLevel(m)}catch(_){return 0}};
+function gymCoachMoveCoverage(mon,guide){
+ return mon.moves.map(id=>({name:moveNames[id]||'Unknown move',type:gymCoachMoveKinds[String(moveNames[id]||'').toLowerCase()]||''}))
+  .filter(move=>guide.good.includes(move.type));
+}
+function gymCoachScore(entry,guide){
+ const mon=entry.mon,level=gymCoachLevel(mon),types=(pcSpeciesMeta[mon.sp]||[]).slice(0,2);
+ const preferred=types.filter(type=>guide.good.includes(type)).length>0;
+ const caution=types.some(type=>guide.warn.includes(type));
+ const moves=gymCoachMoveCoverage(mon,guide);
+ return (preferred?22:0)+(moves.length?35+Math.min(2,moves.length)*4:0)-
+  (caution?22:0)+Math.min(level,guide.minimum+12)*1.15+
+  (level>=guide.minimum?12:0)+(entry.kind==='party'?3:0);
+}
+function gymCoachOwned(){
+ if(!loaded||!snapshotSafe||!monLocations?.groups?.length)throw Error('Open a compatible, verified Delta SVS.');
+ const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1),entries=[];
+ if(!sector)throw Error('Party save is missing.');
+ const count=work[sector.base+0x34];
+ if(count<1||count>6)throw Error('The current party has an invalid Pokémon count.');
+ for(let i=0;i<count;i++){
+  const bytes=getPartyFrom(groups[0],i),mon=decodeMon(bytes);
+  if(!mon)throw Error('Party slot '+(i+1)+' is unreadable.');
+  for(const group of groups.slice(1)){
+   if(monIdentity(decodeMon(getPartyFrom(group,i)))!==monIdentity(mon))throw Error('Saved party copies disagree. Capture a new SVS.');
+  }
+  entries.push({val:'P'+i,kind:'party',index:i,mon});
+ }
+ for(const entry of pcRosterSnapshot()){
+  if(entry.mon)entries.push({val:'B'+entry.index,kind:'pc',index:entry.index,mon:entry.mon});
+ }
+ return entries;
+}
+function gymCoachPick(entries,guide){
+ const required=entries.filter(x=>isProtected(x.mon));
+ if(required.length>1)throw Error('More than one original follower Pikachu found.');
+ const sorted=entries.filter(x=>!isProtected(x.mon)).sort((a,b)=>
+  gymCoachScore(b,guide)-gymCoachScore(a,guide)||gymCoachLevel(b.mon)-gymCoachLevel(a.mon)||a.index-b.index);
+ const selected=required.slice(),species=new Set(selected.map(x=>x.mon.sp));
+ for(const entry of sorted){if(selected.length>=6)break;if(species.has(entry.mon.sp))continue;selected.push(entry);species.add(entry.mon.sp);}
+ for(const entry of sorted){if(selected.length>=6)break;if(selected.some(x=>x.val===entry.val))continue;selected.push(entry);}
+ return selected;
+}
+
 const monIdentity=m=>m?m.pid+':'+m.ot+':'+m.sp:'';
 function teamRoster(){
  verifyLivePartyMirrors();
