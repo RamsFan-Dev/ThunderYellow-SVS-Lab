@@ -2624,6 +2624,37 @@ function applyPCEntries(entries,label){
  }catch(e){for(let j=patches.length-1;j>=0;j--)work.set(patches[j].old,patches[j].offset);throw e;}
  finally{monMode=prevMode;monSlot=prevSlot;boxNo=prevBox;}
 }
+let pcBulkPlan=null;
+function invalidatePCBulkPreview(){
+ pcBulkPlan=null;
+ if($('pcBulkPreview'))$('pcBulkPreview').replaceChildren();
+ if($('pcAddAll'))$('pcAddAll').disabled=true;
+}
+function buildPCBulkPlan(slots,available,level){
+ if(slots.length!==420||!Number.isInteger(level)||level<1||level>100)throw Error('Invalid PC slots or level.');
+ if(!available.missing.length)throw Error('You already have every supported species.');
+ if(available.missing.length>available.empty.length)throw Error('Storage is full: '+available.missing.length+' species need slots, only '+available.empty.length+' free.');
+ const preferred=new Map(),collision=new Map(),used=new Set();
+ for(const species of available.missing){
+  const index=nationalDexNo(species)-1;
+  if(index<0||index>=386)throw Error('Invalid National Dex slot for '+species);
+  if(!slots[index].mon&&u32(slots[index].bytes,0)===0){
+   preferred.set(species,index);used.add(index);
+  }else collision.set(species,{slot:index,occupant:slots[index].mon?.sp||null});
+ }
+ const fallback=available.empty.filter(x=>!used.has(x.index)&&u32(x.bytes,0)===0)
+  .sort((a,b)=>(a.index>=386?0:1)-(b.index>=386?0:1)||a.index-b.index);
+ if(fallback.length<collision.size)throw Error('Not enough verified empty fallback slots.');
+ let next=0;
+ const entries=available.missing.map(species=>({
+  species,slot:preferred.has(species)?preferred.get(species):fallback[next++].index,
+  exact:preferred.has(species),collision:collision.get(species)||null
+ }));
+ if(new Set(entries.map(x=>x.slot)).size!==entries.length||entries.some(x=>slots[x.slot].mon||u32(slots[x.slot].bytes,0)!==0))
+  throw Error('Unsafe or duplicate destination in plan.');
+ return {level,entries,exact:preferred.size,collisions:collision.size,count:entries.length,space:available.empty.length,
+  originals:slots.map(s=>s.bytes.slice()),party:available.party.map(b=>b.slice())};
+}
 function bulkAddPCSpecies(){
  try{
   const slots=pcRosterSnapshot(),available=pcBulkAvailability(slots);
