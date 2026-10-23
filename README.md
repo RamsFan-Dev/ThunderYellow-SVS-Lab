@@ -1,5 +1,12 @@
 # Pokemon: ThunderYellow Version (2026 Special Edition)
 
+## Official game website and downloads
+
+- **[Official game homepage](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/)**
+- **[Game update / cover art downloads](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/downloads/)**
+
+The downloads page offers the verified **ThunderYellow v1 → Test 125N preview IPS patch** (requires the exact v1 game ROM) and the project's original cover artwork. Test 125N is a gameplay-tested **preview**, not a certified final release. A patch against a clean legally obtained LeafGreen Rev 1 base ROM is **not yet published**. Do not distribute full commercial ROMs.
+
 **Community technical support and Delta save-state diagnostics**
 
 - **[Open the public technical support website](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/support/)**
