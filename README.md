@@ -26,6 +26,20 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.26 — Gym & League Team Coach
+
+Inside **Party & PC Pokémon Editor → Party Builder & Switcher**, choose one of **10 battle guides**: the eight Kanto gym leaders, Elite Four preparation, or the Champion. The default preview is Cerulean Gym / Misty.
+
+- **Owned Pokémon only:** read verified party and all 420 PC slots, without creating Pokémon, editing species/levels or touching the game save. Works as a *read-only* advisor with fewer than six party Pokémon. Six valid party Pokémon plus the unique follower Pikachu are still required for the existing Party Switcher to activate a recommendation.
+- **Personalized team suggestions:** rank up to six Pokémon by useful existing attack moves, species type suitability, advisory minimum levels and availability. Show exact source party slot or PC box and slot, plus warnings for each Pokémon below the preparation target. Keep original follower Pikachu in the recommendations and its required party position.
+- **10 battle checklists:** challenge tactics and five user-controlled preparation checkboxes per guide. The checkboxes are in-page coaching only; they do not award badges or mutate the SVS. They reset when importing a different save.
+- **Use real supplies:** show the TM suggestions already in the bag, identify unavailable TMs as optional future goals, display available Potions/Revives/berries and encourage checking owned Item PC supplies. TM compatibility **must** be verified in-game; a suggestion does not imply the Pokémon can learn it or that the TM is obtainable before a gym.
+- **Optional Team Builder handoff:** **Use suggested team in builder (preview only)** populates the existing six party selectors after validating source identities and follower position. The existing **Preview team exchange → Apply party to SVS** confirmation flow remains separate. Guidance itself is always read-only.
+- **No cheating required:** the coach never generates Pokémon or supplies, raises levels, gives badges or teaches moves. Save states generally cannot prove which Pokémon were captured naturally rather than generated earlier by an editor, so it refers to **already-owned Pokémon** instead of claiming verified catch provenance.
+- **Readiness estimates are guides, not guaranteed wins:** advisory levels and type hints are not validated boss-specific caps or full ThunderYellow damage/AI simulations. Boss compositions may differ in the modded ROM. Save normally in-game before battles.
+
+**Test status:** JavaScript syntax and focused recommendation-planner tests passed, including all ten guides, a locked original Pikachu, level/move-based rankings, no repeated roster location and early-game partial parties. Real Safari/Delta workflow testing of the guide, checklist and Team Builder handoff is still needed.
+
 ## SVS Lab v2.25 — Preview-first Pokémon collection and safe PC sorting
 
 The [SVS Lab editor](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/) now includes:
