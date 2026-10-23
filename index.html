@@ -2570,20 +2570,32 @@ function pcRosterSnapshot(){
 }
 function pcBulkAvailability(slots){
  const species=Object.keys(monNames).map(Number).filter(id=>speciesStats[id]&&speciesMeta[id]).sort((a,b)=>nationalDexNo(a)-nationalDexNo(b));
- const owned=new Set(slots.filter(x=>x.mon).map(x=>x.mon.sp));
+ const owned=new Set(slots.filter(s=>s.mon).map(s=>s.mon.sp));
  const group=monLocations.groups[0],sect=group?.sectors.get(1);
- const n=sect?work[sect.base+0x34]:0;
- for(let i=0;i<n&&i<6;i++){const m=decodeMon(getPartyFrom(group,i));if(m)owned.add(m.sp);}
- return {missing:species.filter(id=>!owned.has(id)),empty:slots.filter(x=>!x.mon),total:species.length};
+ if(!sect)throw Error('Missing saved party section.');
+ const count=work[sect.base+0x34],party=[];
+ if(count<1||count>6)throw Error('Saved party size is invalid.');
+ for(let i=0;i<count;i++){
+  const bytes=getPartyFrom(group,i),mon=decodeMon(bytes);
+  if(!mon)throw Error('Unreadable saved party slot '+(i+1)+'. Capture a fresh in-game save and SVS.');
+  owned.add(mon.sp);party.push(bytes);
+ }
+ return {missing:species.filter(id=>!owned.has(id)),empty:slots.filter(s=>!s.mon),total:species.length,party};
 }
 function renderPCBulkSummary(){
  const info=$('pcBulkSummary');if(!info)return;
  try{
-  const cap=pcBulkAvailability(pcRosterSnapshot());
-  info.textContent=cap.total+' supported species • '+cap.missing.length+' missing • '+cap.empty.length+' empty PC slots';
-  $('pcAddAll').disabled=cap.missing.length===0||cap.missing.length>cap.empty.length;
-  $('pcSortAll').disabled=$('pcViewOrder').value==='box';$('pcSortApply').disabled=!pcSortPlan||pcSortPlan.mode!==$('pcViewOrder').value||pcSortPlan.moves.length===0;
- }catch(e){info.textContent='Unavailable: '+e.message;$('pcAddAll').disabled=true;$('pcSortAll').disabled=true;$('pcSortApply').disabled=true;}
+  const cap=pcBulkAvailability(pcRosterSnapshot()),enough=cap.empty.length>=cap.missing.length;
+  info.textContent=cap.total+' supported species • '+cap.missing.length+' missing • '+cap.empty.length+' empty PC slots'+(enough?'':' • NOT ENOUGH SPACE');
+  $('pcBulkPreviewButton').disabled=cap.missing.length===0||!enough;
+  $('pcAddAll').disabled=!pcBulkPlan||pcBulkPlan.missingCount!==cap.missing.length;
+  $('pcSortAll').disabled=$('pcViewOrder').value==='box';
+  $('pcSortApply').disabled=!pcSortPlan||pcSortPlan.mode!==$('pcViewOrder').value||pcSortPlan.moves.length===0;
+ }catch(e){
+  info.textContent='Unavailable: '+e.message;
+  $('pcBulkPreviewButton').disabled=true;$('pcAddAll').disabled=true;
+  $('pcSortAll').disabled=true;$('pcSortApply').disabled=true;
+ }
 }
 function verifyPCWrites(entries){
  const groups=getFlashGroups();
