@@ -2655,6 +2655,37 @@ function buildPCBulkPlan(slots,available,level){
  return {level,entries,exact:preferred.size,collisions:collision.size,count:entries.length,space:available.empty.length,
   originals:slots.map(s=>s.bytes.slice()),party:available.party.map(b=>b.slice())};
 }
+function previewPCBulkAdd(){
+ invalidatePCBulkPreview();
+ try{
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save or discard pending edits first.');
+  const slots=pcRosterSnapshot(),available=pcBulkAvailability(slots);
+  const level=readMonNumber('pcBulkLevel',1,100,'Bulk Pokémon level');
+  const plan=buildPCBulkPlan(slots,available,level),root=$('pcBulkPreview');
+  const intro=document.createElement('p');intro.className='hint';
+  intro.textContent='READ-ONLY PREVIEW: '+plan.count+' Pokémon at level '+level+' • '+plan.exact+' exact Dex slots • '+plan.collisions+' occupied-number fallbacks • '+(plan.space-plan.count)+' slots remain. No existing Pokémon move.';
+  root.append(intro);
+  const frame=document.createElement('div');frame.className='showdown-preview';
+  const table=document.createElement('table'),head=document.createElement('tr');
+  for(const label of ['Pokédex / Pokémon','Destination Box and Slot','Placement']){
+   const cell=document.createElement('th');cell.textContent=label;head.append(cell);
+  }
+  const header=document.createElement('thead');header.append(head);table.append(header);
+  const body=document.createElement('tbody');
+  for(const entry of plan.entries){
+   const row=document.createElement('tr'),box=1+Math.floor(entry.slot/30),slot=1+entry.slot%30;
+   const occupant=entry.collision?.occupant;
+   const fields=['#'+String(nationalDexNo(entry.species)).padStart(3,'0')+' '+(monNames[entry.species]||'Species '+entry.species),
+    'Box '+box+' ('+boxNameFromSVS(box-1)+') / Slot '+slot,
+    entry.exact?'Matching numbered slot':'Fallback: requested Dex slot occupied'+(occupant?' by '+(monNames[occupant]||'Species '+occupant):'')];
+   for(const value of fields){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+   body.append(row);
+  }
+  table.append(body);frame.append(table);root.append(frame);
+  pcBulkPlan=plan;$('pcAddAll').disabled=false;
+  msg($('pcOperationsStatus'),'Preview ready. Review all '+plan.count+' slots, then explicitly confirm the additions. No save edits have been made.','good');
+ }catch(e){invalidatePCBulkPreview();msg($('pcOperationsStatus'),'Bulk preview blocked: '+e.message,'bad');}
+}
 function bulkAddPCSpecies(){
  try{
   const slots=pcRosterSnapshot(),available=pcBulkAvailability(slots);
