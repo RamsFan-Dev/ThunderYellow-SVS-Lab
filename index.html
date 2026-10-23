@@ -110,7 +110,7 @@
 #itemSelection{padding:5px 0 3px;min-height:25px}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.25</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.26</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -205,6 +205,16 @@
 </details>
 <details id="partySwitcher"><summary>⚡ Party Builder &amp; Switcher</summary>
 <p class="hint">Build a lineup from the current six party Pokémon and your PC boxes. Save multiple named plans on this device, then activate one to exchange members between party and PC. The original follower Pikachu stays in his current party slot.</p>
+<div class="callout" id="gymCoachPanel" style="margin:12px 0 16px">
+ <h3 style="font-size:17px;margin:0 0 6px">🏅 Gym &amp; League Team Coach — Use what you own</h3>
+ <p class="hint">Explore 10 battle guides built from Pokémon already in your party and PC. Review recommended levels, counters, moves and real bag resources. No generated Pokémon, automatic leveling, free TMs or save edits.</p>
+ <div class="grid"><div><label class="label" for="gymCoachChallenge">Choose the next challenge</label><select id="gymCoachChallenge" class="input"></select></div>
+ <div style="align-self:end"><button id="gymCoachRefresh" type="button" class="btn secondary">Analyze my Pokémon &amp; bag</button></div></div>
+ <div id="gymCoachStatus" class="status" role="status" aria-live="polite"></div>
+ <div id="gymCoachResults"></div>
+ <div class="row" style="margin:12px 0 0"><button id="gymCoachUse" class="btn secondary" type="button" disabled>Use suggested team in builder (preview only)</button></div>
+ <p class="hint">These are beginner-friendly advisory level goals, not verified gym level caps or guaranteed wins. Check actual moves and TM compatibility in-game; the coach cannot determine whether a stored Pokémon was caught naturally or added through an editor.</p>
+</div>
 <div class="grid" style="margin-bottom:12px"><div><label class="label" for="partyPlanName">Team name</label><input id="partyPlanName" class="input" maxlength="32" placeholder="e.g. Elite Four team"></div><div><label class="label" for="partyPresets">Saved teams on this device</label><select id="partyPresets" class="input"></select></div></div>
 <div class="row" style="margin-bottom:12px"><button id="partySavePlan" type="button" class="btn secondary">Save team plan</button><button id="partyLoadPlan" type="button" class="btn secondary">Load team plan</button><button id="partyDeletePlan" type="button" class="btn danger">Delete plan</button></div>
 <div id="partyPicker" class="party-picker"></div>
@@ -565,7 +575,7 @@ function renderLivePartyReport(){
  node.className='status good';
 }
 
-function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -1047,7 +1057,7 @@ function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
 function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
 
 function auditExportLiveParty(){
  const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1);
@@ -1743,7 +1753,210 @@ function applyShowdownPaste(){
 // Party Switcher — six existing Pokémon exchanged between party and PC without duplication.
 // Identity-based named templates are saved only in this browser, never silently in the game.
 let partyPlanPreview=null;
+// Read-only strategy guides. Level goals are advisory, not ROM-confirmed caps.
+const gymCoachGuides=[
+ {id:'brock',label:'1 • Pewter — Brock',name:'Brock / Boulder Badge',focus:'Rock / Ground',minimum:14,
+  good:['WATER','GRASS','FIGHTING'],warn:['FIRE','FLYING','ELECTRIC'],tms:[297,291,319,327],
+  tip:'Grass and Water attacks work well against Rock/Ground. Electric attacks cannot hit Ground types.'},
+ {id:'misty',label:'2 • Cerulean — Misty',name:'Misty / Cascade Badge',focus:'Water',minimum:21,
+  good:['ELECTRIC','GRASS'],warn:['FIRE','ROCK','GROUND'],tms:[297,324,312,307],
+  tip:'Check for an actual Grass or Electric move. A matching Pokémon type alone does not guarantee an effective attack.'},
+ {id:'surge',label:'3 • Vermilion — Lt. Surge',name:'Lt. Surge / Thunder Badge',focus:'Electric',minimum:24,
+  good:['GROUND'],warn:['WATER','FLYING'],tms:[316,314,327],
+  tip:'Ground attacks counter many Electric foes. Protect Water and Flying teammates from Electric damage.'},
+ {id:'erika',label:'4 • Celadon — Erika',name:'Erika / Rainbow Badge',focus:'Grass',minimum:30,
+  good:['FIRE','FLYING','ICE','PSYCHIC','BUG'],warn:['WATER','GROUND','ROCK'],tms:[328,323,301,317],
+  tip:'Use Fire, Flying, Ice or other coverage moves. Watch out for status effects and carry healing items.'},
+ {id:'koga',label:'5 • Fuchsia — Koga',name:'Koga / Soul Badge',focus:'Poison',minimum:41,
+  good:['PSYCHIC','GROUND'],warn:['GRASS','FIGHTING'],tms:[317,316,314],
+  tip:'Psychic and Ground offense helps, but prepare for poison and status conditions.'},
+ {id:'sabrina',label:'6 • Saffron — Sabrina',name:'Sabrina / Marsh Badge',focus:'Psychic',minimum:43,
+  good:['DARK','GHOST','BUG'],warn:['FIGHTING','POISON'],tms:[318,334,328],
+  tip:'Dark, Ghost or Bug coverage can help. Use durable teammates and review their known moves first.'},
+ {id:'blaine',label:'7 • Cinnabar — Blaine',name:'Blaine / Volcano Badge',focus:'Fire',minimum:46,
+  good:['WATER','GROUND','ROCK'],warn:['GRASS','BUG','ICE'],tms:[291,314,316,301],
+  tip:'Water, Ground and Rock attacks are strong choices. Heal burns and conserve key PP.'},
+ {id:'giovanni',label:'8 • Viridian — Giovanni',name:'Giovanni / Earth Badge',focus:'Ground',minimum:49,
+  good:['WATER','GRASS','ICE'],warn:['ELECTRIC','FIRE','POISON','ROCK'],tms:[291,301,307,297],
+  tip:'Ground is immune to Electric attacks; Water, Grass and Ice coverage are better starting points.'},
+ {id:'league',label:'9 • Indigo Plateau — Elite Four',name:'Elite Four / League Preparation',focus:'Ice, Fighting, Ghost and Dragon',minimum:53,
+  good:['ELECTRIC','PSYCHIC','DARK','ICE','FIGHTING','ROCK'],warn:[],tms:[301,312,317,318,319],
+  tip:'You face several different specialists. Balance coverage, healing items and PP across multiple battles.'},
+ {id:'champion',label:'10 • Indigo Plateau — Champion',name:'Champion / Balanced Team',focus:'Varied teams',minimum:58,
+  good:['WATER','ELECTRIC','ICE','FIGHTING','GROUND','DARK','GRASS','FIRE'],warn:[],
+  tms:[314,312,301,323,318],tip:'No single type beats a balanced rival. Bring varied attacking moves, backups and recovery supplies.'}
+];
+const gymCoachMoveKinds={};
+for(const [type,moves] of Object.entries({
+ WATER:['Water Gun','Water Pulse','Surf','Bubble','Bubble Beam','Hydro Pump','Crabhammer','Waterfall','Dive','Muddy Water'],
+ GRASS:['Vine Whip','Razor Leaf','Mega Drain','Giga Drain','Solar Beam','Bullet Seed','Absorb','Petal Dance','Magical Leaf'],
+ ELECTRIC:['Thunder Shock','Thunderbolt','Thunder','Spark','Shock Wave','Thunder Punch','Volt Tackle'],
+ GROUND:['Earthquake','Dig','Mud Shot','Mud-Slap','Magnitude','Bone Club','Bonemerang','Earth Power'],
+ FIRE:['Ember','Flamethrower','Fire Blast','Fire Punch','Flame Wheel','Heat Wave','Overheat'],
+ FLYING:['Gust','Wing Attack','Fly','Aerial Ace','Air Cutter','Sky Attack','Drill Peck'],
+ ICE:['Ice Beam','Blizzard','Aurora Beam','Powder Snow','Ice Punch','Ice Ball'],
+ PSYCHIC:['Confusion','Psybeam','Psychic','Extrasensory','Future Sight','Psycho Boost'],
+ DARK:['Bite','Crunch','Faint Attack','Thief','Pursuit','Knock Off'],
+ GHOST:['Shadow Ball','Shadow Punch','Lick'],
+ FIGHTING:['Karate Chop','Brick Break','Low Kick','Double Kick','Cross Chop','Mach Punch','Sky Uppercut','Revenge'],
+ BUG:['Silver Wind','Megahorn','Fury Cutter','Twineedle','Pin Missile','Signal Beam'],
+ ROCK:['Rock Tomb','Rock Slide','Rock Throw','Ancient Power']
+}))for(const move of moves)gymCoachMoveKinds[move.toLowerCase()]=type;
+let gymCoachSelection=null;
+const gymCoachLevel=m=>{try{return teamLevel(m)}catch(_){return 0}};
+function gymCoachMoveCoverage(mon,guide){
+ return mon.moves.map(id=>({name:moveNames[id]||'Unknown move',type:gymCoachMoveKinds[String(moveNames[id]||'').toLowerCase()]||''}))
+  .filter(move=>guide.good.includes(move.type));
+}
+function gymCoachScore(entry,guide){
+ const mon=entry.mon,level=gymCoachLevel(mon),types=(pcSpeciesMeta[mon.sp]||[]).slice(0,2);
+ const preferred=types.filter(type=>guide.good.includes(type)).length>0;
+ const caution=types.some(type=>guide.warn.includes(type));
+ const moves=gymCoachMoveCoverage(mon,guide);
+ return (preferred?22:0)+(moves.length?35+Math.min(2,moves.length)*4:0)-
+  (caution?22:0)+Math.min(level,guide.minimum+12)*1.15+
+  (level>=guide.minimum?12:0)+(entry.kind==='party'?3:0);
+}
+function gymCoachOwned(){
+ if(!loaded||!snapshotSafe||!monLocations?.groups?.length)throw Error('Open a compatible, verified Delta SVS.');
+ const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1),entries=[];
+ if(!sector)throw Error('Party save is missing.');
+ const count=work[sector.base+0x34];
+ if(count<1||count>6)throw Error('The current party has an invalid Pokémon count.');
+ for(let i=0;i<count;i++){
+  const bytes=getPartyFrom(groups[0],i),mon=decodeMon(bytes);
+  if(!mon)throw Error('Party slot '+(i+1)+' is unreadable.');
+  for(const group of groups.slice(1)){
+   if(monIdentity(decodeMon(getPartyFrom(group,i)))!==monIdentity(mon))throw Error('Saved party copies disagree. Capture a new SVS.');
+  }
+  entries.push({val:'P'+i,kind:'party',index:i,mon});
+ }
+ for(const entry of pcRosterSnapshot()){
+  if(entry.mon)entries.push({val:'B'+entry.index,kind:'pc',index:entry.index,mon:entry.mon});
+ }
+ return entries;
+}
+function gymCoachPick(entries,guide){
+ const required=entries.filter(x=>isProtected(x.mon));
+ if(required.length>1)throw Error('More than one original follower Pikachu found.');
+ const sorted=entries.filter(x=>!isProtected(x.mon)).sort((a,b)=>
+  gymCoachScore(b,guide)-gymCoachScore(a,guide)||gymCoachLevel(b.mon)-gymCoachLevel(a.mon)||a.index-b.index);
+ const selected=required.slice(),species=new Set(selected.map(x=>x.mon.sp));
+ for(const entry of sorted){if(selected.length>=6)break;if(species.has(entry.mon.sp))continue;selected.push(entry);species.add(entry.mon.sp);}
+ for(const entry of sorted){if(selected.length>=6)break;if(selected.some(x=>x.val===entry.val))continue;selected.push(entry);}
+ return selected;
+}
+
 const monIdentity=m=>m?m.pid+':'+m.ot+':'+m.sp:'';
+const gymCoachChecklistState={};
+function gymCoachText(parent,tag,content,cls=''){
+ const node=document.createElement(tag);node.textContent=content;if(cls)node.className=cls;parent.append(node);return node;
+}
+function renderGymCoach(){
+ const host=$('gymCoachResults'),menu=$('gymCoachChallenge'),apply=$('gymCoachUse');
+ if(!host||!menu)return;
+ host.replaceChildren();apply.disabled=true;gymCoachSelection=null;
+ if(!loaded||!snapshotSafe){msg($('gymCoachStatus'),'Open a verified SVS to see teams made from your Pokémon and bag.','warn');return;}
+ try{
+  const guide=gymCoachGuides.find(x=>x.id===menu.value)||gymCoachGuides[0];
+  const owned=gymCoachOwned(),team=gymCoachPick(owned,guide),under=team.filter(x=>gymCoachLevel(x.mon)<guide.minimum);
+  const cards=document.createElement('div');cards.className='grid';
+  const overview=document.createElement('div');overview.className='callout';
+  gymCoachText(overview,'h3',guide.name+' • Lv '+guide.minimum+'+ suggested');
+  gymCoachText(overview,'p','Typical challenge: '+guide.focus+'. '+guide.tip,'hint');
+  gymCoachText(overview,'p','Recommended: '+guide.good.join(', ')+' attack coverage. '+(guide.warn.length?'Use extra caution with '+guide.warn.join(', ')+' Pokémon.':'Bring several different move types.'),'hint');
+  gymCoachText(overview,'p',team.length+' / 6 owned Pokémon recommended; '+under.length+' below the suggested level. '+(under.length?'Train naturally before this battle, or adjust the plan.':'Levels meet this advisory target.'),under.length?'warn':'good');
+  cards.append(overview);
+  const roster=document.createElement('div');roster.className='callout';
+  gymCoachText(roster,'h3','Your available team — recommended lineup');
+  for(const entry of team){
+   const m=entry.mon,level=gymCoachLevel(m),loc=entry.kind==='party'?'Party slot '+(entry.index+1):'Box '+(1+Math.floor(entry.index/30))+' / Slot '+(1+entry.index%30);
+   const coverage=gymCoachMoveCoverage(m,guide);
+   const line=document.createElement('div');line.className='badge-entry';line.style.display='block';
+   gymCoachText(line,'strong',(monNames[m.sp]||'Species '+m.sp)+' • Lv '+level+' • '+pcSpeciesType(m.sp)+(isProtected(m)?' • follower ★':''));
+   gymCoachText(line,'div',loc+' · '+(level<guide.minimum?'Below Lv '+guide.minimum+' guidance: train '+(guide.minimum-level)+' level(s)':'Meets suggested level'),level<guide.minimum?'warn':'good');
+   gymCoachText(line,'div',coverage.length?'Helpful known move(s): '+coverage.map(x=>x.name).join(', '):'Check current moves for matchup coverage; type alone is not an attack.','hint');
+   roster.append(line);
+  }
+  if(!team.length)gymCoachText(roster,'p','No owned Pokémon could be verified. Capture Pokémon normally before building a plan.','warn');
+  cards.append(roster);host.append(cards);
+  const supplies=document.createElement('div');supplies.className='callout';supplies.style.marginTop='10px';
+  gymCoachText(supplies,'h3','Use your bag before looking for shortcuts');
+  if(copies.length){
+   const tms=getItems(work,copies[0],3),bag=getItems(work,copies[0],0),berries=getItems(work,copies[0],4);
+   const have=new Map(tms.map(x=>[x.id,x.qty]));
+   gymCoachText(supplies,'p','TM suggestions (check in-game compatibility before spending a TM):','hint');
+   for(const id of guide.tms){
+    const amount=have.get(id)||0;
+    gymCoachText(supplies,'div',(amount?'✓ In your bag ('+amount+'): ':'Not in bag — optional goal: ')+(named[id]||'TM #'+id),amount?'good':'hint');
+   }
+   const useful=new Set([13,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37]);
+   const stocked=bag.filter(x=>useful.has(x.id)&&x.qty>0).slice(0,8);
+   const status=berries.filter(x=>[133,134,135,136,137,138,139,140,141,142].includes(x.id)&&x.qty>0).slice(0,6);
+   gymCoachText(supplies,'p','Healing items on hand: '+(stocked.length?stocked.map(x=>name(x.id)+' ×'+x.qty).join(' • '):'None found in the bag'),stocked.length?'hint':'warn');
+   if(status.length)gymCoachText(supplies,'p','Useful berries in bag: '+status.map(x=>name(x.id)+' ×'+x.qty).join(' • '),'hint');
+  }else gymCoachText(supplies,'p','Bag data not verified in this snapshot. Check healing items and TMs in-game instead.','warn');
+  gymCoachText(supplies,'p','If supplies are low, check your Item PC for owned items to withdraw naturally. Missing TMs may not be obtainable before this challenge; do not create or inject them. The coach never adds supplies, levels, badges or Pokémon.','hint');
+  host.append(supplies);
+  const checks=document.createElement('div');checks.className='callout';checks.style.marginTop='10px';
+  gymCoachText(checks,'h3','Ready for battle? Your training checklist');
+  const tasks=[
+   'I reviewed the recommended Pokémon and know which need leveling.',
+   'I checked their actual moves, not just their Pokémon types.',
+   'I packed Potions, status cures or berries I already own.',
+   'I checked TM compatibility in the game before teaching a move.',
+   'I saved normally in-game before the Gym or League challenge.'
+  ];
+  const done=gymCoachChecklistState[guide.id]||(gymCoachChecklistState[guide.id]=new Set());
+  const progress=gymCoachText(checks,'p',done.size+' / '+tasks.length+' preparation checks completed','hint');
+  for(let i=0;i<tasks.length;i++){
+   const label=document.createElement('label');label.className='badge-entry';
+   const input=document.createElement('input');input.type='checkbox';input.checked=done.has(i);
+   input.onchange=()=>{if(input.checked)done.add(i);else done.delete(i);progress.textContent=done.size+' / '+tasks.length+' preparation checks completed';};
+   const span=document.createElement('span');span.textContent=tasks[i];label.append(input,span);checks.append(label);
+  }
+  gymCoachText(checks,'p','Checklists are a personal practice guide in this page only; they do not award badges or edit the save.','hint');
+  host.append(checks);
+  let usable=false;
+  if(team.length===6){
+   try{const roster=teamRoster();usable=team.some(x=>x.val===roster.anchor.val)&&roster.party.length===6}
+   catch(_){}
+  }
+  gymCoachSelection=usable?{guide:guide.id,team:team.map(x=>x.val)}:null;
+  apply.disabled=!usable;
+  msg($('gymCoachStatus'),(usable?'✓ Suggestions ready. You can copy this lineup into the Party Builder, review its switch preview, and choose whether to apply.':'✓ Read-only strategy ready. The Party Switcher requires six valid party Pokémon before it can load a suggested team.')+' This advisor cannot confirm provenance of individual Pokémon.','good');
+ }catch(e){msg($('gymCoachStatus'),'Gym guidance unavailable: '+e.message,'warn');}
+}
+function gymCoachUseSuggestedTeam(){
+ try{
+  if(!gymCoachSelection)throw Error('Choose and review a complete suggested team first.');
+  const guide=gymCoachGuides.find(x=>x.id===gymCoachSelection.guide),roster=teamRoster();
+  const values=gymCoachSelection.team;
+  if(values.length!==6||new Set(values).size!==6||!values.includes(roster.anchor.val)||values.some(x=>!roster.byLoc.has(x)))
+   throw Error('A suggested Pokémon changed or is no longer available. Analyze again.');
+  const others=values.filter(x=>x!==roster.anchor.val),chosen=[];
+  for(let i=0;i<6;i++){
+   const target=i===roster.anchor.index?roster.anchor.val:others.shift(),select=$('teamChoice'+i);
+   if(!select||(i!==roster.anchor.index&&![...select.options].some(option=>option.value===target)))
+    throw Error('Party Builder is not ready for slot '+(i+1)+'.');
+   chosen.push({select,target});
+  }
+  for(const {select,target} of chosen)select.value=target;
+  partyPreviewInvalid();
+  $('partyPlanName').value=('Guide: '+guide.name).slice(0,32);
+  msg($('partySwitcherStatus'),'✓ Suggested team selections loaded for '+guide.name+'. No SVS changes yet. Tap Preview team exchange and review it before you choose Apply.','good');
+  $('partyPicker').scrollIntoView?.({behavior:'smooth',block:'center'});
+ }catch(e){msg($('gymCoachStatus'),'Cannot load suggested team: '+e.message,'bad');}
+}
+function initializeGymCoach(){
+ const menu=$('gymCoachChallenge');menu.replaceChildren();
+ for(const guide of gymCoachGuides)menu.add(new Option(guide.label,guide.id));
+ menu.value='misty';
+ menu.onchange=renderGymCoach;
+ $('gymCoachRefresh').onclick=renderGymCoach;
+ $('gymCoachUse').onclick=gymCoachUseSuggestedTeam;
+}
+
 function teamRoster(){
  verifyLivePartyMirrors();
  if(!loaded||!monLocations?.groups?.length)throw Error('Open a verified SVS before editing teams.');
@@ -3053,7 +3266,7 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  
  $('saveMonDock').onclick=commitMon;$('saveMon').onclick=commitMon;$('cloneMon').onclick=()=>copyMoveMon(false);$('moveMon').onclick=()=>copyMoveMon(true);$('removeMon').onclick=deleteMon;
 }
-initializeMonUI();
+initializeMonUI();initializeGymCoach();
 
 })();
 </script><script>
