@@ -110,7 +110,7 @@
 #itemSelection{padding:5px 0 3px;min-height:25px}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.24</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.25</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -222,8 +222,8 @@
  <label class="tog" style="margin:8px 0 12px"><input id="pcEmptyPreviews" type="checkbox"> Show Pokédex-number placeholders in empty PC slots</label><div class="hint" style="margin-bottom:12px">Placeholders suggest missing Pokémon but do not create or replace them. Click an empty slot to fill it separately.</div><details id="pcBulkDetails"><summary>📦 Add one of every available in-game Pokémon to Bill's PC</summary>
  <p class="hint">Add only missing species from the full 386-Pokémon Gen 3 catalog (National Pokédex #1–386), preserving your party, starter Pikachu, and occupied PC slots. No duplicates of species you already own. Any empty slots are filled in National Dex order.</p>
  <div class="grid"><div><label class="label" for="pcBulkLevel">Level for newly added Pokémon (1–100)</label><input id="pcBulkLevel" class="input" type="number" min="1" max="100" value="5" inputmode="numeric"></div><div><label class="label">Capacity</label><div id="pcBulkSummary" class="callout">Import a verified SVS to calculate available slots.</div></div></div>
- <div class="row" style="margin:12px 0"><button class="btn primary" type="button" id="pcAddAll">Add all missing Pokémon to empty PC slots</button></div>
- <p class="hint">A backup is strongly recommended. This modifies the current editing session, not the source ROM. Export a new SVS and test in Delta before replacing any existing save.</p>
+ <div class="row" style="margin:12px 0"><button class="btn secondary" type="button" id="pcBulkPreviewButton">Preview missing Pokémon &amp; slots</button><button class="btn primary" type="button" id="pcAddAll" disabled>Confirm &amp; add Pokémon</button></div>
+ <div id="pcBulkPreview" class="status" role="status" aria-live="polite"></div><p class="hint">The preview is read-only. Exact Pokédex slots are reserved first; blocked numbered slots use spare storage without replacing occupants. Keep your backup SVS and SAV. Export a new SVS and test it in Delta.</p>
  </details>
  <div id="pcOperationsStatus" class="status" role="status" aria-live="polite"></div>
 </div>
