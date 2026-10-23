@@ -23,16 +23,16 @@ Describe your ROM test build (for example, Test 125N), Delta or other emulator v
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
-## SVS Lab v2.24 — Safe Bill's PC sorting, Pokémon storage and trainer funds
+## SVS Lab v2.25 — Preview-first Pokémon collection and safe PC sorting
 
 The [SVS Lab editor](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/) now includes:
 
-1. **Add all supported species:** Open a verified Delta `.svs`, select **PC boxes**, expand **Add one of every available in-game Pokémon**, choose a level, and confirm. The editor adds missing species from the **386-species Generation III Pokédex** into **empty** PC slots without replacing your party or existing Pokémon. It blocks the operation when storage is insufficient or live and saved storage are inconsistent.
+1. **Add all supported species:** Open a verified Delta `.svs`, select **PC boxes**, expand **Add one of every available in-game Pokémon**, and choose a level. Click **Preview missing Pokémon & slots** for a read-only list of all missing species and their proposed Box/Slot destinations, including collisions and safe fallbacks. Then click **Confirm & add Pokémon** and approve the confirmation. Empty numbered National Dex positions are prioritized, and no occupied Pokémon, duplicates, custom box names or party members are replaced.
 2. **Bill's PC management and sorting:** Select **PC boxes (14)** to edit boxed Pokémon without moving them into your party. Choose a non-destructive PC view sorted by **National Pokédex number, species name, Pokédex classification** (for example Seed or Mouse), **elemental type, level, or gender**. Search by name, type, classification or number. **Changing the view dropdown never moves any Pokémon.** To physically rearrange storage, select a view, tap **Preview physical PC sort**, review every proposed old/new Box and Slot, then tap **Confirm & apply physical sort**. The preview does not edit the save, and the physical operation can be undone before export. Optionally enable **Show Pokédex-number placeholders in empty PC slots** to preview suggested missing species without actually creating them. Existing Pokémon are never replaced by placeholders.
 3. **Gender:** Choose **Male**, **Female**, or the species-supported fixed/genderless option for a selected Pokémon; gender is derived from the Gen III personality ID and changes preserve the existing nature and shiny setting. The **original starter Pikachu is protected**.
 4. **Cash:** Change Pokédollars up to **999,999**, alongside the existing Casino Coins field. Wallet writes use the 32-bit FireRed encryption key and update verified FLASH/live RAM mirrors.
 
-**Important testing instructions:** Back up the original `.svs` **and** your normal in-game `.sav`. Export the edited state as a **new** file, import it into the **same exact ROM version** in Delta, and choose **Load State**. Loading **Continue** reads the separate in-game `.sav` and will not show SVS-only edits. These new functions have passed static JavaScript, Gen III record, source-layout and sample-save consistency checks, but are **not yet gameplay verified in Delta**. Try a single box edit and cash change before using the bulk operations.
+**Important testing instructions:** Back up the original `.svs` **and** your normal in-game `.sav`. Export the edited state as a **new** file, import it into the **same exact ROM version** in Delta, and choose **Load State**. Loading **Continue** reads the separate in-game `.sav` and will not show SVS-only edits. The user reported a successful PC sort with v2.24. The new v2.25 bulk-add flow has passed static and isolated planning tests, but **still needs in-game testing with Delta**. Try a single box edit and cash change before using the bulk operations.
 
 ## Existing SVS Lab
 
@@ -65,3 +65,12 @@ All current features are experimental for save editing: protect your original \`
 - Preview preserves the original source records and compares all 420 slots again before applying. A changed or unsafe snapshot forces another preview.
 - A physical sort retains all Pokémon records, including duplicates; National Pokédex sorting leaves gaps for unowned species and sends duplicate copies to available spare slots. Existing box names and the party are untouched.
 - Syntax and isolated sort-planner tests passed, and the previously uploaded `Perfect please review.svs` snapshot was inspected **read-only** (122 PC records / 116 distinct species; 14 valid FLASH sectors in each of two complete save groups). This is **not** a substitute for an actual Delta load-state gameplay test.
+
+### v2.25 — Add All preview-first safeguards
+
+- Choose a level, preview every missing species and destination, then explicitly confirm before any write.
+- First reserve vacant physical National Dex positions, then use spare slots 387–420 or remaining empty locations for collisions. Never overwrite an occupant.
+- Validate the active party and all 420 PC slots and preserve all duplicate Pokémon.
+- The preview becomes invalid after a new save is loaded, any edit is saved, or the requested level changes.
+- Immediately before applying, recompare 420 PC records and all saved party records, verify trainer identity, and validate each newly generated encrypted Pokémon record before writing.
+- JavaScript syntax and isolated planner tests pass. Delta gameplay testing of bulk creation is outstanding; keep original `.svs` and `.sav` backups.
