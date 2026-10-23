@@ -3,164 +3,26 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081321">
-<meta name="description" content="Locally apply the verified ThunderYellow v1 to Test 125N preview IPS patch and save an updated .gba for Delta. No ROM upload.">
-<title>Build Your ThunderYellow Test 125N Preview — Pokemon: ThunderYellow Version (2026 Special Edition)</title>
-<link rel="canonical" href="https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/patcher/">
+<title>First Public Release Pending — Pokemon: ThunderYellow Version (2026 Special Edition)</title>
+<meta name="description" content="The ThunderYellow game installer is not available because the first public release has not happened. Follow release readiness and download project cover artwork.">
+<link rel="canonical" href="https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/downloads/">
 <link rel="icon" href="../../icon.svg" type="image/svg+xml"><link rel="stylesheet" href="../site.css">
 </head>
-<body>
-<a class="skip" href="#main">Skip to content</a>
+<body><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><nav class="container nav" aria-label="Main navigation">
 <a class="logo" href="../">POKEMON: <span>THUNDERYELLOW</span><br><span class="small">2026 SPECIAL EDITION</span></a>
-<div class="links"><a href="../">Game</a><a href="../downloads/">Downloads</a><a aria-current="page" href="./">Patch installer</a><a href="../artwork/">Cover art</a><a href="../../support/">Support</a><a href="https://www.reddit.com/r/PokemonYellowThunder/">Reddit</a></div>
+<div class="links"><a href="../">Game</a><a href="../downloads/">Release status</a><a href="../artwork/">Cover art</a><a href="../../support/">Support</a><a href="https://www.reddit.com/r/PokemonYellowThunder/">Reddit</a></div>
 </nav></header>
 <main class="container" id="main">
-<section class="page-title">
-<div class="eyebrow">Browser-based installer · preview build</div>
-<h1>Make your updated <em>ThunderYellow game</em></h1>
-<p class="lead">Already have <strong>ThunderYellow 2026 v1</strong>? This tool applies the verified Test 125N update and gives you a new playable <code>.gba</code> file to save and import into Delta. Your ROM stays on your device.</p>
-<span class="pill">Test 125N · Experimental preview · Requires ThunderYellow v1</span>
+<section class="page-title"><div class="eyebrow">Correction · Unreleased game</div>
+<h1>The first public game installer is <em>not yet available</em></h1>
+<p class="lead"><strong>ThunderYellow v1 was an internal development build, not a public release.</strong> This page previously offered a Test 125N update that depended on having that unreleased build. The download workflow has been withdrawn until there is a genuine first public release package.</p>
+<div class="actions"><a class="btn btn-yellow" href="../downloads/">View first release status →</a><a class="btn btn-dark" href="../artwork/">Download cover art →</a></div>
 </section>
-<section class="section" aria-labelledby="start"><h2 id="start">Create the updated game</h2>
-<div class="grid two">
-<div class="panel">
-<div class="step">01 / SELECT YOUR EXISTING GAME</div>
-<h3>Choose the ThunderYellow v1 .gba</h3>
-<p>Use the original v1 release file from your own collection. Other builds and clean LeafGreen files will be rejected automatically.</p>
-<label class="file-label" for="romInput">Select ThunderYellow v1 ROM (.gba)</label>
-<input class="file-picker" type="file" id="romInput" accept=".gba,application/octet-stream" aria-describedby="fileHelp">
-<p class="small" id="fileHelp">Required size: 16,777,216 bytes · SHA-256 ending <code>...c37bae1a1</code>.</p>
-<p id="chosen" class="small" aria-live="polite">No file selected.</p>
-</div>
-<div class="panel">
-<div class="step">02 / PATCH AND DOWNLOAD</div>
-<h3>Generate Test 125N preview</h3>
-<p>The installer checks the input, downloads the 1,979-byte IPS update from this site, verifies the patch, applies it locally, and confirms the finished ROM checksum.</p>
-<button type="button" id="runPatch" class="btn btn-yellow" disabled>Create updated game (.gba) ↓</button>
-<p id="status" role="status" aria-live="polite" class="small">Select a .gba file to begin.</p>
-<progress id="progress" max="4" value="0" aria-label="Patching progress" hidden></progress>
-<div id="downloadResult" hidden>
-<p class="result-ok"><strong>Verified game file ready.</strong> Tap below to save it in Files before adding it to Delta.</p>
-<a id="downloadRom" class="btn btn-yellow" download="Pokemon-ThunderYellow-2026-Test125N-PREVIEW.gba">Save updated game ↓</a>
-</div>
-</div>
-</div>
-<div class="notice" style="margin-top:24px"><strong>For existing v1 players only.</strong> This is a local update installer, not a download of a Nintendo ROM. A new-player patch based on Pokémon LeafGreen USA Rev 1 has not been published or validated. Test 125N is a gameplay-tested preview, not a final bug-free release.</div>
-</section>
-<section class="section" aria-labelledby="how"><h2 id="how">After downloading</h2>
-<div class="grid"><article class="panel"><div class="step">BACK UP</div><h3>Keep your working files</h3><p>Do not delete or replace your v1 ROM. Make separate backups of your in-game <code>.sav</code> and Delta save states before switching versions.</p></article>
-<article class="panel"><div class="step">OPEN IN DELTA</div><h3>Import the new .gba</h3><p>Save the updated file to Files on iPhone, then import that new <code>.gba</code> into Delta as a separate game.</p></article>
-<article class="panel"><div class="step">PLAY &amp; REPORT</div><h3>Test the new build</h3><p>Use an appropriate normal in-game save when switching builds, not an old <code>.svs</code> snapshot. <a href="../../support/">Report reproducible issues here</a>.</p></article></div>
-</section>
-<section class="section" aria-labelledby="security"><h2 id="security">Privacy and verification</h2>
-<p class="section-intro">Your game file is processed entirely by JavaScript running in your browser. Only the tiny IPS patch is fetched from this same website; your selected <code>.gba</code> is not transmitted or stored on a server. SHA-256 checks reject unintended input or unexpected output.</p>
-<div class="panel"><div class="fact"><dt>Required v1</dt><dd class="mono">e9f1b8ff795c1d68f28b5c39bf9fba1a4f33c7bf4906fd43df4ccc1c37bae1a1</dd></div>
-<div class="fact"><dt>Patch SHA-256</dt><dd class="mono">62ab6deb23dcfe3494a62702071a8e6b91879931cbd50692da60d22e4203f99d</dd></div>
-<div class="fact"><dt>Updated Test 125N</dt><dd class="mono">49d0aac58665d8ce50e4d3bdc26670b66fd38b148821ae4c208fe352dc5cef1c</dd></div>
-<p><a href="../assets/ThunderYellow-v1-to-Test125N-PREVIEW.ips" download="ThunderYellow-v1-to-Test125N-PREVIEW.ips">Download the IPS patch manually</a> · <a href="../downloads/">All game and cover-art downloads</a></p></div>
-</section>
-</main><footer class="footer"><div class="container footer-flex"><div><strong>Pokemon: ThunderYellow Version (2026 Special Edition)</strong><p>Unofficial fan project, unaffiliated with Nintendo, Game Freak or The Pokémon Company. No complete ROM is hosted or uploaded here.</p></div><div><a href="../">Game home</a> · <a href="../downloads/">Downloads</a> · <a href="../../support/">Support</a></div></div></footer>
-<script>
-"use strict";
-(() => {
-  const expected = {
-    source: "e9f1b8ff795c1d68f28b5c39bf9fba1a4f33c7bf4906fd43df4ccc1c37bae1a1",
-    patch: "62ab6deb23dcfe3494a62702071a8e6b91879931cbd50692da60d22e4203f99d",
-    target: "49d0aac58665d8ce50e4d3bdc26670b66fd38b148821ae4c208fe352dc5cef1c"
-  };
-  const input = document.getElementById("romInput");
-  const button = document.getElementById("runPatch");
-  const status = document.getElementById("status");
-  const chosen = document.getElementById("chosen");
-  const progress = document.getElementById("progress");
-  const result = document.getElementById("downloadResult");
-  const output = document.getElementById("downloadRom");
-  let objectUrl = null;
-  async function sha256(bytes) {
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
-  }
-  function applyIPS(source, patch) {
-    if (patch.length < 8 || String.fromCharCode(...patch.subarray(0, 5)) !== "PATCH")
-      throw new Error("Patch is not a valid IPS file.");
-    const output = source.slice();
-    let i = 5;
-    let ended = false;
-    while (i + 3 <= patch.length) {
-      if (patch[i] === 69 && patch[i + 1] === 79 && patch[i + 2] === 70) {
-        i += 3; ended = true; break;
-      }
-      if (i + 5 > patch.length) throw new Error("Incomplete IPS record.");
-      const offset = patch[i] * 65536 + patch[i + 1] * 256 + patch[i + 2];
-      let size = patch[i + 3] * 256 + patch[i + 4];
-      i += 5;
-      if (size === 0) {
-        if (i + 3 > patch.length) throw new Error("Incomplete IPS RLE record.");
-        size = patch[i] * 256 + patch[i + 1];
-        const value = patch[i + 2];
-        i += 3;
-        if (offset + size > output.length) throw new Error("Patch exceeds ROM length.");
-        output.fill(value, offset, offset + size);
-      } else {
-        if (i + size > patch.length) throw new Error("Truncated IPS patch.");
-        if (offset + size > output.length) throw new Error("Patch exceeds ROM length.");
-        output.set(patch.subarray(i, i + size), offset);
-        i += size;
-      }
-    }
-    if (!ended || i !== patch.length) throw new Error("Unexpected end or trailing data in patch.");
-    return output;
-  }
-  function update(message, step) {
-    status.textContent = message;
-    progress.hidden = false;
-    progress.value = step;
-  }
-  function clearLink() {
-    result.hidden = true;
-    output.removeAttribute("href");
-    if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-  }
-  input.addEventListener("change", () => {
-    clearLink();
-    const file = input.files && input.files[0];
-    button.disabled = !file;
-    chosen.textContent = file ? file.name + " — " + file.size.toLocaleString() + " bytes" : "No file selected.";
-    status.textContent = file ? "Ready to verify your v1 file." : "Select a .gba file to begin.";
-    progress.hidden = true;
-  });
-  button.addEventListener("click", async () => {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    clearLink();
-    button.disabled = true;
-    try {
-      if (!crypto || !crypto.subtle) throw new Error("Use HTTPS in a current browser with SHA-256 support.");
-      if (file.size !== 16777216) throw new Error("Wrong ROM size: expected a 16 MiB ThunderYellow v1 .gba.");
-      update("1/4 — Verifying your existing ThunderYellow v1 file…", 1);
-      const rom = new Uint8Array(await file.arrayBuffer());
-      if ((await sha256(rom)) !== expected.source) throw new Error("This is not the exact ThunderYellow v1 ROM required by the update. No changes were made.");
-      update("2/4 — Downloading and verifying the official preview IPS patch…", 2);
-      const response = await fetch("../assets/ThunderYellow-v1-to-Test125N-PREVIEW.ips", {cache:"no-store"});
-      if (!response.ok) throw new Error("Could not load the update patch from the website.");
-      const patch = new Uint8Array(await response.arrayBuffer());
-      if ((await sha256(patch)) !== expected.patch) throw new Error("Patch checksum did not match; update cancelled.");
-      update("3/4 — Applying the patch locally…", 3);
-      const updated = applyIPS(rom, patch);
-      update("4/4 — Checking the finished game file…", 4);
-      if ((await sha256(updated)) !== expected.target) throw new Error("Finished game checksum did not match; download cancelled.");
-      objectUrl = URL.createObjectURL(new Blob([updated], {type:"application/octet-stream"}));
-      output.href = objectUrl;
-      result.hidden = false;
-      status.textContent = "Success — verified Test 125N preview game ready to save.";
-    } catch (error) {
-      status.textContent = "Unable to create update: " + (error && error.message ? error.message : String(error));
-      progress.hidden = true;
-    } finally {
-      button.disabled = !input.files || !input.files.length;
-    }
-  });
-  window.addEventListener("pagehide", clearLink);
-})();
-</script>
+<section class="section"><div class="grid two">
+<div class="panel"><div class="step">FIRST RELEASE</div><h3>In development</h3><p>The planned first release will be a verified patch for a specifically supported, user-provided base game. Once testing and packaging are complete, the release page will offer accurate instructions and verified files.</p></div>
+<div class="panel"><div class="step">ARTWORK</div><h3>Available now</h3><p>The project cover artwork is downloadable today. It is fan-made and is not an official Nintendo or ESRB release.</p><a href="../assets/ThunderYellow-2026-Original-Cover-Art.jpg" download="ThunderYellow-2026-Cover-Art.jpg">Download cover JPG ↓</a></div>
+</div></section>
+</main>
+<footer class="footer"><div class="container footer-flex"><div><strong>Pokemon: ThunderYellow Version (2026 Special Edition)</strong><p>Unofficial fan project; not affiliated with or endorsed by Nintendo, Game Freak, The Pokémon Company, or ESRB.</p></div><div><a href="../">Game home</a> · <a href="../downloads/">Release status</a> · <a href="../../support/">Support</a></div></div></footer>
 </body></html>
