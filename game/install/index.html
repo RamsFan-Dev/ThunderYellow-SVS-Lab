@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#081321">
 <title>ThunderYellow Game Installer — Pokemon: ThunderYellow Version (2026 Special Edition)</title>
-<meta name="description" content="Prepare for the first ThunderYellow release: verify your own Pokemon LeafGreen USA Rev 1 GBA game locally on iPhone or desktop. No ROM uploads.">
+<meta name="description" content="Prepare for the first ThunderYellow release: verify your own Pokemon LeafGreen USA Rev 1 GBA game locally on iPhone, Android or desktop. No ROM uploads.">
 <link rel="canonical" href="https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/install/">
 <link rel="icon" href="../../icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../site.css">
@@ -13,7 +13,7 @@
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><nav class="container nav" aria-label="Main navigation">
 <a class="logo" href="../">POKEMON: <span>THUNDERYELLOW</span><br><span class="small">2026 SPECIAL EDITION</span></a>
-<div class="links"><a href="../">Game</a><a href="../downloads/">Release status</a><a aria-current="page" href="./">Game installer</a><a href="../artwork/">Cover art</a><a href="../../support/">Support</a><a href="https://www.reddit.com/r/PokemonYellowThunder/">Reddit</a></div>
+<div class="links"><a href="../">Game</a><a href="../downloads/">Release status</a><a aria-current="page" href="./">Game installer</a><a href="../play/">iPhone &amp; Android</a><a href="../artwork/">Cover art</a><a href="../../support/">Support</a><a href="https://www.reddit.com/r/PokemonYellowThunder/">Reddit</a></div>
 </nav></header>
 <main class="container" id="main">
 <section class="page-title install-intro">
@@ -27,7 +27,7 @@
 <article class="panel install-panel">
 <div class="step">01 / YOUR OWN GAME</div>
 <h2 id="local-check">Check your LeafGreen ROM</h2>
-<p>Choose your <strong>Pokémon LeafGreen (USA), Rev 1 / 1.1</strong> <code>.gba</code> from Files. The checker verifies the 16 MiB file, GBA revision and known matching fingerprint directly in your browser.</p>
+<p>Choose your <strong>Pokémon LeafGreen (USA), Rev 1 / 1.1</strong> <code>.gba</code> from Files on iPhone or Downloads on Android. The checker verifies the 16 MiB file, GBA revision and known matching fingerprint directly in your browser.</p><p class="small">Need the original game? Read our <a href="../play/#source">authentic LeafGreen cartridge and personal-backup guide</a>. A used cartridge may not be the required revision.</p>
 <label class="file-label" for="baseFile">Select your LeafGreen Rev 1 file</label>
 <input class="file-picker" id="baseFile" type="file" accept=".gba,application/octet-stream" aria-describedby="privacy">
 <div class="actions"><button class="btn btn-yellow" type="button" id="verifyButton" disabled>Verify my game</button></div>
@@ -42,7 +42,7 @@
 <div class="actions"><button id="buildButton" class="btn btn-yellow" type="button" disabled hidden>Create ThunderYellow .gba ↓</button><a class="btn btn-dark" href="../downloads/">View release status →</a></div>
 <p id="buildStatus" role="status" aria-live="polite" class="small">Nothing will be downloaded until a real release is verified.</p>
 <progress id="buildProgress" max="4" value="0" hidden aria-label="Build progress"></progress>
-<div id="readyBlock" hidden><p class="result-ok">Game file verified. Save it to Files and import into Delta.</p><a id="saveGame" class="btn btn-yellow" download="Pokemon-ThunderYellow-2026.gba">Save complete game ↓</a></div>
+<div id="readyBlock" hidden><p class="result-ok">Game file verified. Save it, then import the .gba into Delta on iPhone or a GBA emulator on Android.</p><a id="saveGame" class="btn btn-yellow" download="Pokemon-ThunderYellow-2026.gba">Save complete game ↓</a></div>
 </article>
 </div>
 <div class="notice" id="privacy" style="margin-top:20px"><strong>No Nintendo ROM is hosted here.</strong> This installer never uploads or transmits your game file; it only reads it locally. When a game update is released, your browser will download a small patch and produce a complete ThunderYellow <code>.gba</code> for you to keep.</div>
@@ -66,11 +66,12 @@
 </div>
 </section>
 <section class="section" aria-labelledby="delta">
-<h2 id="delta">Playing on iPhone with Delta</h2>
+<h2 id="delta">Playing on iPhone or Android</h2>
 <div class="grid"><article class="panel"><div class="step">01 / SOURCE</div><h3>Keep your original safe</h3><p>Store your personally obtained compatible LeafGreen file in Files. Never overwrite the original.</p></article>
 <article class="panel"><div class="step">02 / INSTALL</div><h3>Make a new .gba</h3><p>After public release, select your file above and follow the installer. The newly built ROM will have a different filename.</p></article>
-<article class="panel"><div class="step">03 / PLAY</div><h3>Import into Delta</h3><p>Save the new game in Files and import it into Delta. Start a new game, or use a compatible normal in-game save where appropriate. Back up existing saves.</p></article></div>
+<article class="panel"><div class="step">03 / PLAY</div><h3>Import into your emulator</h3><p>On iPhone, open the completed .gba in <a href="https://apps.apple.com/us/app/delta-game-emulator/id1048524688" target="_blank" rel="noopener noreferrer">Delta</a>; on Android use <a href="https://play.google.com/store/apps/details?id=it.dbtecno.pizzaboygba" target="_blank" rel="noopener noreferrer">Pizza Boy A Basic</a> or another compatible GBA emulator. Start a new game and back up saves.</p></article></div>
 </section>
+<section class="section" aria-labelledby="source-help"><h2 id="source-help">Where to obtain a compatible LeafGreen base</h2><p class="section-intro">We cannot host Nintendo&#39;s LeafGreen ROM. You can locate a legitimate secondhand cartridge and back up your own copy with a suitable cartridge reader on a computer. Make sure the .gba file matches Rev 1 by using the checker above.</p><div class="actions"><a class="btn btn-dark" href="https://www.ebay.com/sch/i.html?_nkw=pokemon+leaf+green+version+authentic" target="_blank" rel="noopener noreferrer">Find authentic LeafGreen cartridges ↗</a><a class="btn btn-dark" href="https://www.epilogue.co/support/getting-started/what-is-gb-operator" target="_blank" rel="noopener noreferrer">GB Operator backup guide ↗</a><a class="btn btn-yellow" href="../play/">iPhone &amp; Android setup guide →</a></div><p class="small">A purchased cartridge may be a different revision or counterfeit; verify authenticity, local copying rules and the exact original SHA-1. These external links do not provide ROM downloads.</p></section>
 <section class="section"><div class="highlight"><div><div class="eyebrow">While we finish development</div><h3>Get the original cover artwork</h3><p>The first game release is pending, but the ThunderYellow cover art is already available.</p></div><a class="btn btn-yellow" href="../artwork/">View and download cover art →</a></div></section>
 </main>
 <footer class="footer"><div class="container footer-flex"><div><strong>Pokemon: ThunderYellow Version (2026 Special Edition)</strong><p>Unofficial fan project, not endorsed by Nintendo, Game Freak, The Pokémon Company, or ESRB. This site does not supply commercial game ROMs or link to unauthorized ROM downloads.</p></div><div><a href="../">Game</a> · <a href="../downloads/">Release status</a> · <a href="../../support/">Support</a></div></div></footer>
