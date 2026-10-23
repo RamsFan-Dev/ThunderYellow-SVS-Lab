@@ -5,9 +5,12 @@
 - **[Official game homepage](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/)**
 - **[First public release status](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/downloads/)**
 - **[LeafGreen Rev 1 compatibility check and first-release installer](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/install/)**
+- **[Play on iPhone & Android / find LeafGreen cartridge and backup](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/play/)**
 - **[Download project cover art](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/artwork/)**
 
 **Game release status: NOT YET RELEASED.** No version of Pokemon: ThunderYellow Version (2026 Special Edition) has been publicly released. Previous files labeled "v1" and "Test 125N" were internal development/test builds, not public releases. The prior public v1-to-Test 125N patch download and installer were mistakenly offered as though players already had a public v1; both have been withdrawn from the current published branch. The planned first public build is based on internal **Test 125N** (pending full regression verification). The new browser installer can verify a user-provided **Pokémon LeafGreen (USA, Rev 1 / 1.1)** file locally by size, GBA header and exact SHA-1 (`7862c67bdecbe21d1d69ce082ce34327e1c6ed5e`). It will generate a self-contained `.gba` on-device once the exact first-release patch has been created, tested and published. **No game patch is released at this time; the installer is intentionally locked from creating a ROM. Do not distribute full commercial ROMs.**
+
+**Emulators and original-game sourcing:** The site includes direct links to [Delta for iOS](https://apps.apple.com/us/app/delta-game-emulator/id1048524688), [Pizza Boy A Basic for Android](https://play.google.com/store/apps/details?id=it.dbtecno.pizzaboygba), a [search for authentic LeafGreen GBA cartridges](https://www.ebay.com/sch/i.html?_nkw=pokemon+leaf+green+version+authentic), and the [GB Operator cartridge-backup guide](https://www.epilogue.co/support/getting-started/what-is-gb-operator). The user must supply a lawfully sourced original compatible LeafGreen USA Rev 1 backup; a physical cartridge alone does not guarantee the right revision. There are **no commercial ROM downloads** linked, included or hosted.
 
 **Community technical support and Delta save-state diagnostics**
 
