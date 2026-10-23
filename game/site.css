@@ -18,3 +18,16 @@ button.btn:disabled{cursor:not-allowed;opacity:.55;filter:grayscale(.25)}
 .cover-preview{transform:none;width:100%;max-width:560px}
 .cover-preview img{max-width:100%;height:auto}
 @media(max-width:780px){.cover-gallery{grid-template-columns:1fr}.cover-preview{margin:auto;max-width:540px}}
+
+/* Release installer — crisp, finger-friendly controls on mobile */
+.install-intro{padding-bottom:12px}
+.install-intro .lead{max-width:900px}
+.install-panel{position:relative}
+.install-panel h2{font-size:clamp(1.4rem,2.5vw,1.9rem);letter-spacing:-.04em;line-height:1.25;margin:9px 0 12px}
+.install-panel .step{font-size:12px}
+.verify-status{padding:13px 14px;background:#0b192a;border:1px solid #344b67;border-radius:12px;color:#d6e3f3;min-height:52px;overflow-wrap:anywhere}
+#releasePill{margin:10px 0 0}
+#buildButton[hidden],#readyBlock[hidden],#buildProgress[hidden]{display:none!important}
+#buildProgress{display:block;max-width:100%;width:100%;height:12px;accent-color:var(--yellow);margin-top:14px}
+#readyBlock{margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
+@media(max-width:780px){.install-intro{padding-top:36px}.install-panel{padding:22px}.install-panel .actions .btn{width:100%}}
