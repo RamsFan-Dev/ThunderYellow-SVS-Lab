@@ -575,7 +575,7 @@ function renderLivePartyReport(){
  node.className='status good';
 }
 
-function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -1936,7 +1936,7 @@ function gymCoachUseSuggestedTeam(){
   const others=values.filter(x=>x!==roster.anchor.val),chosen=[];
   for(let i=0;i<6;i++){
    const target=i===roster.anchor.index?roster.anchor.val:others.shift(),select=$('teamChoice'+i);
-   if(!select||![...select.options].some(option=>option.value===target)&&i!==roster.anchor.index)
+   if(!select||(i!==roster.anchor.index&&![...select.options].some(option=>option.value===target)))
     throw Error('Party Builder is not ready for slot '+(i+1)+'.');
    chosen.push({select,target});
   }
@@ -3265,7 +3265,7 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  
  $('saveMonDock').onclick=commitMon;$('saveMon').onclick=commitMon;$('cloneMon').onclick=()=>copyMoveMon(false);$('moveMon').onclick=()=>copyMoveMon(true);$('removeMon').onclick=deleteMon;
 }
-initializeMonUI();
+initializeMonUI();initializeGymCoach();
 
 })();
 </script><script>
