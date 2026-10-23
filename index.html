@@ -1848,6 +1848,114 @@ function gymCoachPick(entries,guide){
 }
 
 const monIdentity=m=>m?m.pid+':'+m.ot+':'+m.sp:'';
+const gymCoachChecklistState={};
+function gymCoachText(parent,tag,content,cls=''){
+ const node=document.createElement(tag);node.textContent=content;if(cls)node.className=cls;parent.append(node);return node;
+}
+function renderGymCoach(){
+ const host=$('gymCoachResults'),menu=$('gymCoachChallenge'),apply=$('gymCoachUse');
+ if(!host||!menu)return;
+ host.replaceChildren();apply.disabled=true;gymCoachSelection=null;
+ if(!loaded||!snapshotSafe){msg($('gymCoachStatus'),'Open a verified SVS to see teams made from your Pokémon and bag.','warn');return;}
+ try{
+  const guide=gymCoachGuides.find(x=>x.id===menu.value)||gymCoachGuides[0];
+  const owned=gymCoachOwned(),team=gymCoachPick(owned,guide),under=team.filter(x=>gymCoachLevel(x.mon)<guide.minimum);
+  const cards=document.createElement('div');cards.className='grid';
+  const overview=document.createElement('div');overview.className='callout';
+  gymCoachText(overview,'h3',guide.name+' • Lv '+guide.minimum+'+ suggested');
+  gymCoachText(overview,'p','Typical challenge: '+guide.focus+'. '+guide.tip,'hint');
+  gymCoachText(overview,'p','Recommended: '+guide.good.join(', ')+' attack coverage. '+(guide.warn.length?'Use extra caution with '+guide.warn.join(', ')+' Pokémon.':'Bring several different move types.'),'hint');
+  gymCoachText(overview,'p',team.length+' / 6 owned Pokémon recommended; '+under.length+' below the suggested level. '+(under.length?'Train naturally before this battle, or adjust the plan.':'Levels meet this advisory target.'),under.length?'warn':'good');
+  cards.append(overview);
+  const roster=document.createElement('div');roster.className='callout';
+  gymCoachText(roster,'h3','Your available team — recommended lineup');
+  for(const entry of team){
+   const m=entry.mon,level=gymCoachLevel(m),loc=entry.kind==='party'?'Party slot '+(entry.index+1):'Box '+(1+Math.floor(entry.index/30))+' / Slot '+(1+entry.index%30);
+   const coverage=gymCoachMoveCoverage(m,guide);
+   const line=document.createElement('div');line.className='badge-entry';line.style.display='block';
+   gymCoachText(line,'strong',(monNames[m.sp]||'Species '+m.sp)+' • Lv '+level+' • '+pcSpeciesType(m.sp)+(isProtected(m)?' • follower ★':''));
+   gymCoachText(line,'div',loc+' · '+(level<guide.minimum?'Below Lv '+guide.minimum+' guidance: train '+(guide.minimum-level)+' level(s)':'Meets suggested level'),level<guide.minimum?'warn':'good');
+   gymCoachText(line,'div',coverage.length?'Helpful known move(s): '+coverage.map(x=>x.name).join(', '):'Check current moves for matchup coverage; type alone is not an attack.','hint');
+   roster.append(line);
+  }
+  if(!team.length)gymCoachText(roster,'p','No owned Pokémon could be verified. Capture Pokémon normally before building a plan.','warn');
+  cards.append(roster);host.append(cards);
+  const supplies=document.createElement('div');supplies.className='callout';supplies.style.marginTop='10px';
+  gymCoachText(supplies,'h3','Use your bag before looking for shortcuts');
+  if(copies.length){
+   const tms=getItems(work,copies[0],3),bag=getItems(work,copies[0],0),berries=getItems(work,copies[0],4);
+   const have=new Map(tms.map(x=>[x.id,x.qty]));
+   gymCoachText(supplies,'p','TM suggestions (check in-game compatibility before spending a TM):','hint');
+   for(const id of guide.tms){
+    const amount=have.get(id)||0;
+    gymCoachText(supplies,'div',(amount?'✓ In your bag ('+amount+'): ':'Not in bag — optional goal: ')+(named[id]||'TM #'+id),amount?'good':'hint');
+   }
+   const useful=new Set([13,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37]);
+   const stocked=bag.filter(x=>useful.has(x.id)&&x.qty>0).slice(0,8);
+   const status=berries.filter(x=>[133,134,135,136,137,138,139,140,141,142].includes(x.id)&&x.qty>0).slice(0,6);
+   gymCoachText(supplies,'p','Healing items on hand: '+(stocked.length?stocked.map(x=>name(x.id)+' ×'+x.qty).join(' • '):'None found in the bag'),stocked.length?'hint':'warn');
+   if(status.length)gymCoachText(supplies,'p','Useful berries in bag: '+status.map(x=>name(x.id)+' ×'+x.qty).join(' • '),'hint');
+  }else gymCoachText(supplies,'p','Bag data not verified in this snapshot. Check healing items and TMs in-game instead.','warn');
+  gymCoachText(supplies,'p','Only Pokémon and items ALREADY in this SVS are considered. The coach never adds supplies, levels, badges or Pokémon.','hint');
+  host.append(supplies);
+  const checks=document.createElement('div');checks.className='callout';checks.style.marginTop='10px';
+  gymCoachText(checks,'h3','Ready for battle? Your training checklist');
+  const tasks=[
+   'I reviewed the recommended Pokémon and know which need leveling.',
+   'I checked their actual moves, not just their Pokémon types.',
+   'I packed Potions, status cures or berries I already own.',
+   'I checked TM compatibility in the game before teaching a move.',
+   'I saved normally in-game before the Gym or League challenge.'
+  ];
+  const done=gymCoachChecklistState[guide.id]||(gymCoachChecklistState[guide.id]=new Set());
+  for(let i=0;i<tasks.length;i++){
+   const label=document.createElement('label');label.className='badge-entry';
+   const input=document.createElement('input');input.type='checkbox';input.checked=done.has(i);
+   input.onchange=()=>{if(input.checked)done.add(i);else done.delete(i);};
+   const span=document.createElement('span');span.textContent=tasks[i];label.append(input,span);checks.append(label);
+  }
+  gymCoachText(checks,'p','Checklists are a personal practice guide in this page only; they do not award badges or edit the save.','hint');
+  host.append(checks);
+  let usable=false;
+  if(team.length===6){
+   try{const roster=teamRoster();usable=team.some(x=>x.val===roster.anchor.val)&&roster.party.length===6}
+   catch(_){}
+  }
+  gymCoachSelection=usable?{guide:guide.id,team:team.map(x=>x.val)}:null;
+  apply.disabled=!usable;
+  msg($('gymCoachStatus'),(usable?'✓ Suggestions ready. You can copy this lineup into the Party Builder, review its switch preview, and choose whether to apply.':'✓ Read-only strategy ready. The Party Switcher requires six valid party Pokémon before it can load a suggested team.')+' This advisor cannot confirm provenance of individual Pokémon.','good');
+ }catch(e){msg($('gymCoachStatus'),'Gym guidance unavailable: '+e.message,'warn');}
+}
+function gymCoachUseSuggestedTeam(){
+ try{
+  if(!gymCoachSelection)throw Error('Choose and review a complete suggested team first.');
+  const guide=gymCoachGuides.find(x=>x.id===gymCoachSelection.guide),roster=teamRoster();
+  const values=gymCoachSelection.team;
+  if(values.length!==6||new Set(values).size!==6||!values.includes(roster.anchor.val)||values.some(x=>!roster.byLoc.has(x)))
+   throw Error('A suggested Pokémon changed or is no longer available. Analyze again.');
+  const others=values.filter(x=>x!==roster.anchor.val),chosen=[];
+  for(let i=0;i<6;i++){
+   const target=i===roster.anchor.index?roster.anchor.val:others.shift(),select=$('teamChoice'+i);
+   if(!select||![...select.options].some(option=>option.value===target)&&i!==roster.anchor.index)
+    throw Error('Party Builder is not ready for slot '+(i+1)+'.');
+   chosen.push({select,target});
+  }
+  for(const {select,target} of chosen)select.value=target;
+  partyPreviewInvalid();
+  $('partyPlanName').value=('Guide: '+guide.name).slice(0,32);
+  msg($('partySwitcherStatus'),'✓ Suggested team selections loaded for '+guide.name+'. No SVS changes yet. Tap Preview team exchange and review it before you choose Apply.','good');
+  $('partyPicker').scrollIntoView?.({behavior:'smooth',block:'center'});
+ }catch(e){msg($('gymCoachStatus'),'Cannot load suggested team: '+e.message,'bad');}
+}
+function initializeGymCoach(){
+ const menu=$('gymCoachChallenge');menu.replaceChildren();
+ for(const guide of gymCoachGuides)menu.add(new Option(guide.label,guide.id));
+ menu.value='misty';
+ menu.onchange=renderGymCoach;
+ $('gymCoachRefresh').onclick=renderGymCoach;
+ $('gymCoachUse').onclick=gymCoachUseSuggestedTeam;
+}
+
 function teamRoster(){
  verifyLivePartyMirrors();
  if(!loaded||!monLocations?.groups?.length)throw Error('Open a verified SVS before editing teams.');
