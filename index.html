@@ -108,9 +108,29 @@
 .item-search-option small{font-size:11px;color:#b7c8de;text-align:right;white-space:nowrap}
 .item-search-empty{padding:13px;color:#b7c8de;font-size:13px}
 #itemSelection{padding:5px 0 3px;min-height:25px}
+</style><style>
+/* Touch-friendly six-column sprite grid inspired by traditional PC boxes. */
+.mon-roster.sprite-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.mon-tile{position:relative}
+.mon-tile.sprite-tile{padding:5px 3px;align-items:center;justify-content:flex-start;min-height:93px;gap:1px;text-align:center;border-radius:9px}
+.mon-tile.sprite-tile .pokemon-art{height:48px;width:48px;max-width:100%;object-fit:contain;image-rendering:pixelated}
+.mon-tile .pokemon-art{height:52px;width:52px;max-width:100%;object-fit:contain;image-rendering:pixelated}
+.mon-tile.sprite-tile .pokemon-art-frame{height:54px;display:flex;align-items:center;justify-content:center}
+.mon-tile .pokemon-art-frame{min-height:52px;display:flex;align-items:center;justify-content:center}
+.mon-tile.sprite-tile strong{font-size:10px;line-height:1.14;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mon-tile.sprite-tile small{font-size:9px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mon-tile.shiny-tile{border-color:#d8a941;box-shadow:inset 0 0 0 1px #a17f30}
+.mon-tile .shiny-icon,.mon-tile .mon-item-icon,.mon-tile .protected-icon{position:absolute;z-index:2;font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px #000)}
+.mon-tile .shiny-icon{left:3px;top:3px}.mon-tile .mon-item-icon{right:3px;bottom:3px;font-size:12px}
+.mon-tile .protected-icon{right:3px;top:3px;font-size:12px}
+.mon-tile.shuffle-source{outline:3px solid #ffdc77;outline-offset:-3px;background:#5a4927}
+.mon-tile.shuffle-target{outline:2px dashed #7de3a3;outline-offset:-3px}
+.mon-roster.sprite-grid .mon-empty-marker{display:block;font-size:19px;color:#6e829f;line-height:44px}
+@media(max-width:650px){.mon-roster.sprite-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.mon-tile.sprite-tile{min-height:77px;padding:3px 1px}.mon-tile.sprite-tile .pokemon-art{width:40px;height:40px}.mon-tile.sprite-tile .pokemon-art-frame{height:42px;min-height:42px}.mon-tile.sprite-tile strong{font-size:9px}.mon-tile.sprite-tile small{font-size:8px}}
+@media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.27</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.28</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -237,7 +257,13 @@
  </details>
  <div id="pcOperationsStatus" class="status" role="status" aria-live="polite"></div>
 </div>
-<div id="monRoster" class="mon-roster"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
+<div id="monVisualControls" class="row" style="margin:13px 0 4px">
+ <label class="tog" style="margin:0"><input id="spriteGridToggle" type="checkbox" checked> Show Pokémon sprite grid</label>
+ <button id="pcShuffleToggle" type="button" class="btn secondary">⇄ Rearrange PC Pokémon</button>
+ <button id="pcShuffleCancel" type="button" class="btn ghost hidden">Cancel selection</button>
+</div>
+<div id="pcShuffleStatus" class="status" role="status" aria-live="polite"></div>
+<div id="monRoster" class="mon-roster sprite-grid"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
 <div id="newMonPane" class="callout hidden" style="margin-top:16px">
  <h3 style="font-size:16px;margin:0 0 8px">Add Pokémon to this empty slot</h3>
  <div class="grid"><div><label class="label" for="newSpecies">Type Pokémon name</label><input id="newSpecies" class="input" type="text" placeholder="e.g. Char, Pika, Eevee" autocomplete="off" spellcheck="false"></div>
