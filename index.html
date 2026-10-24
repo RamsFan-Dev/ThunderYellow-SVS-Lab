@@ -90,8 +90,8 @@
 #trainerNamesSection .input{font-size:17px;letter-spacing:.02em}
 #trainerNamesSection #trainerNamesStatus{overflow-wrap:anywhere}
 </style><style>
-#workspace.unsafe-state > :not(#unsafeStateNotice):not(#pokemonCleanupPanel){display:none!important}
-#workspace.unsafe-state.unsafe-bag-ready > :is(#walletBagPanel,#unsavedExportPanel,#snapshotInspectionPanel){display:block!important}
+#workspace.unsafe-state:not(.unsafe-bag-ready) > :not(#unsafeStateNotice):not(#pokemonCleanupPanel){display:none!important}
+#workspace.unsafe-state.unsafe-bag-ready > :not(#unsafeStateNotice):not(#pokemonCleanupPanel):not(#walletBagPanel):not(#unsavedExportPanel):not(#snapshotInspectionPanel){display:none!important}
 #workspace.unsafe-state.unsafe-bag-ready #pcItemsDetails,
 #workspace.unsafe-state.unsafe-bag-ready #selectedPCBar{display:none!important}
 #unsafeStateNotice{background:#352127;border:2px solid #ef9494;border-radius:15px;color:#ffe5e5;padding:20px;box-shadow:0 10px 30px #0005}
