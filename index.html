@@ -1186,6 +1186,88 @@ function repairPlanBadEggPC(groups,operations,report){
  report.push({heading:candidates.length+' verified Bad Egg(s) in Bill’s PC',
   body:'Removes only occupied PC entries explicitly flagged isBadEgg in every saved FLASH copy and every detected live PC mirror. Normal Eggs (isEgg alone) and unflagged Pokémon remain untouched. PC box names and positions are not changed.'});
 }
+function repairPreviewBuild(){
+ repairInvalidate();
+ try{
+  if(!loaded||!work||!original)throw Error('Import a Delta/VBA .svs snapshot first.');
+  if(monDirty||badgeDirty||nameDirty||recoveryDraftPending)throw Error('Save/discard pending edits or recovered team drafts first.');
+  const groups=getFlashGroups();
+  if(!groups.length)throw Error('No complete, checksum-valid cartridge save group detected; repair is unsafe.');
+  const before=work.slice(),ops=[],report=[];
+  repairPlanPartyTail(groups,ops,report);
+  repairPlanBadEggPC(groups,ops,report);
+  if(!ops.length)throw Error('No sufficiently verified corrupted final party Pokémon or flagged PC Bad Egg was found. No changes made. If the Bad Egg is mid-party or the saves disagree, do not force its removal.');
+  const output=work.slice(),allowed=new Set();
+  for(const item of ops){
+   if(item.offset<0||item.offset+item.bytes.length>output.length)throw Error('Proposed repair is outside SVS memory.');
+   for(let j=0;j<item.bytes.length;j++){
+    const idx=item.offset+j;
+    if(allowed.has(idx)&&output[idx]!==item.bytes[j])throw Error('Repair operations conflict at '+hex(idx));
+    allowed.add(idx);output[idx]=item.bytes[j];
+   }
+  }
+  const changed=new Set([...allowed].filter(i=>output[i]!==work[i]));
+  if(!changed.size)throw Error('This snapshot already has the proposed repair; no modifications needed.');
+  // Fix only FLASH sector checksums corresponding to modified Pokémon records.
+  for(const s of flashSectors){
+   if(![...changed].some(i=>i>=s.base&&i<s.base+s.size))continue;
+   const sum=checksum(output,s.base,s.size);
+   if(u16(output,s.checksumOffset)!==sum){
+    w16(output,s.checksumOffset,sum);
+    changed.add(s.checksumOffset);changed.add(s.checksumOffset+1);
+   }
+  }
+  const verifySectors=findSectors(output);
+  if(verifySectors.length!==flashSectors.length)throw Error('FLASH verification failed after repair. No file created.');
+  for(const sector of flashSectors){
+   if(!verifySectors.some(x=>x.base===sector.base&&x.id===sector.id))throw Error('A saved FLASH section changed unexpectedly.');
+  }
+  // The repaired state MUST pass the same identity gate as SVS Lab's regular editors.
+  const prevWork=work,prevSectors=flashSectors;let verified;
+  try{
+   work=output;flashSectors=verifySectors;
+   verified=verifySnapshotIdentity();
+   if(!verified.ok)throw Error('Repaired live-party identity still fails: '+verified.reason);
+   if(!activePartyRAMMirrors().length||!activeGameplayPartyLocations().length)
+    throw Error('Repaired party mirrors are not synchronized.');
+  }finally{work=prevWork;flashSectors=prevSectors;}
+  const view=$('repairPreview');view.replaceChildren();
+  const lead=document.createElement('p');lead.textContent='READ-ONLY PREVIEW — '+report.length+' targeted repair(s), '+changed.size+
+   ' raw bytes adjusted (including FLASH checksums). No save data has been changed in this browser session.';view.append(lead);
+  for(const item of report){
+   const block=document.createElement('div');block.className='callout';
+   const title=document.createElement('strong');title.textContent=item.heading;block.append(title);
+   const p=document.createElement('p');p.className='hint';p.textContent=item.body;block.append(p);
+   view.append(block);
+  }
+  const safety=document.createElement('p');safety.className='hint';
+  safety.textContent='Original .svs remains unchanged; all other records are copied from your upload. A corrupted live battle cannot always be safely resumed—test only on a backed-up game and check whether you are in the overworld.';view.append(safety);
+  repairPlan={input:before,output,report,changedBytes:changed.size};
+  $('repairDownload').disabled=false;
+  msg($('repairStatus'),'✓ Structural repair preview verified against active trainer and party. Choose Download repaired SVS if you accept these exact changes.','good');
+ }catch(e){repairInvalidate();msg($('repairStatus'),'Repair not offered: '+e.message,'warn');}
+}
+async function repairDownloadSVS(){
+ const plan=repairPlan;
+ try{
+  if(!plan)throw Error('Preview a supported repair first.');
+  if(!repairBytesEqual(work,plan.input))throw Error('Loaded snapshot changed since preview; diagnose again.');
+  if(!confirm('Export a separately named, experimental repaired SVS?\n\n'+plan.report.map(x=>x.heading).join('\n')+
+    '\n\nThe original uploaded file will remain unchanged. Back up your current .sav and .svs before loading this in Delta.'))return;
+  $('repairDownload').disabled=true;
+  const zipped=await gzipTransform(plan.output,'zip'),roundtrip=await gzipTransform(zipped,'unzip');
+  if(!repairBytesEqual(roundtrip,plan.output))throw Error('Gzip round-trip verification failed; nothing downloaded.');
+  const base=filename.replace(/\.(svs|sgm|gz)$/i,'');
+  const outname=base+'-BadEgg-Repaired-TEST.svs';
+  const blob=new Blob([zipped],{type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  msg($('repairStatus'),'✓ Downloaded '+outname+' ('+plan.changedBytes+' modified raw bytes). Load through Delta → Load State using the same exact ROM. Verify party, PC and follower behavior before saving normally.','good');
+ }catch(e){msg($('repairStatus'),'Repaired SVS download blocked: '+e.message,'bad');}
+ finally{$('repairDownload').disabled=!repairPlan;}
+}
+
 function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
  if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
