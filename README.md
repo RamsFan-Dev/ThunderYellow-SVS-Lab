@@ -37,6 +37,18 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.31 — Gym Coach Build & Swap Team
+
+The Gym & League Team Coach now has a prominent **⚡ Build & Swap Suggested Team** button directly under challenge analysis. Select a Gym, Elite Four or Champion challenge and tap **Analyze my Pokémon & bag**. The Coach recommends six members using **only the Pokémon you already own**, then its new button displays an exact six-party-slot lineup and PC destinations for approval. **A single confirmation** builds and swaps the whole team in the open SVS; **Cancel** does not edit anything. Use **Export edited SVS** and **Delta → Load State** to apply the result in the emulator.
+
+- Supports a verified party of **1–6 members**, rather than requiring an already-full party. For a short party, fills remaining slots by withdrawing existing Pokémon from Bill's PC; their old PC slots are either used for displaced party Pokémon or emptied. A complete six-member team requires at least six valid owned Pokémon including original follower Pikachu.
+- Preserves original follower Pikachu's **personality ID, original trainer ID, species, full 100-byte party record and exact original party position**. Never creates extra Pokémon or modifies their level, nature, shiny state, moves, items or IV/EV values. Boxed Pokémon receive normal reconstructed party-battle stats when activated.
+- For a full party, switches the selected coach members with the Pokémon in PC; all outgoing Pokémon return to PC slots vacated by incoming members. The original PC box names and untouched slots stay intact.
+- Checks live party, current FLASH party, backup FLASH party Pokémon identities, PC slot bytes across both FLASH copies and verified PC RAM mirrors, and each current count before making changes. Updates all six full party slots in one transaction; updates cartridge, SaveBlock1 RAM and gameplay party counts when expanding, writes only the vacated PC slots, refreshes FLASH checksums and verifies every written party and PC record. Rolls back all changed bytes if validation fails. The operation is recorded for **Undo** before export.
+- The existing **Customize in Party Builder** option remains for users with a full six-member party who prefer to adjust individual dropdowns. The direct coach action also works on a smaller party, avoiding the manual builder's full-party requirement.
+- Scores, matchup advice and recommended level goals are advisory and do not guarantee victory; under-leveled recommended members trigger a warning in the confirmation. This is not auto-leveling or a way to grant items or moves.
+
+**Testing:** JavaScript syntax and isolated complete transaction tests passed for building from a 3-member party (3→6) and swapping an existing 6-member party (6→6), preserving original follower Pikachu and all written FLASH copies, with one explicit confirmation and one Undo record. Actual iPhone Safari/Delta gameplay verification remains outstanding. Keep the original ROM, SAV and SVS backups.
 ## SVS Lab v2.30 — Party↔PC transfers: repair historical backup validation
 
 Fixes a regression in the v2.29 party/PC drag and tap transfer path. The previous transfer safety check compared the entire 100-byte party record byte-for-byte in all FLASH save generations; **older, checksum-valid cartridge backups naturally carry different cached party battle statistics**, even when the six Pokémon identities match the currently running game. This incorrectly prevented both party→PC and PC→party transactions while PC→PC shuffling still worked.
