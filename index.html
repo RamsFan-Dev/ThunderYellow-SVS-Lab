@@ -2200,6 +2200,147 @@ function renderGymCoach(){
    ' The advisor does not create Pokémon, add levels or teach moves.','good');
  }catch(e){msg($('gymCoachStatus'),'Gym guidance unavailable: '+e.message,'warn');}
 }
+// One-step Coach action: choose only existing party/PC Pokémon, show the exact
+// six-slot plan for approval, then apply atomically across FLASH and verified RAM.
+// Unlike the manual Party Builder, this can expand a verified 1–5 member party.
+function gymCoachBuildSwapPlan(){
+ const selection=gymCoachSelection;
+ if(!selection||!loaded||!snapshotSafe)throw Error('Analyze your Pokémon and choose a complete suggested team first.');
+ if(monDirty||badgeDirty||nameDirty||recoveryDraftPending)
+  throw Error('Save or discard pending Pokémon, badge, trainer-name or recovery edits first.');
+ if($('gymCoachChallenge').value!==selection.guide)
+  throw Error('The Gym challenge changed. Analyze the team again.');
+ const guide=gymCoachGuides.find(g=>g.id===selection.guide);
+ if(!guide)throw Error('Unknown Gym or League challenge.');
+ const live=verifyLivePartyMirrors(),groups=live.groups,count=live.count;
+ if(count<1||count>6)throw Error('Current party count is out of range.');
+ if(!monLocations?.pcRAM?.length)throw Error('Live Bill’s PC storage is not verified. Make an in-game save and a new SVS first.');
+ const all=gymCoachOwned(),byLocation=new Map(all.map(e=>[e.val,e])),seen=new Set(),selected=[];
+ if(selection.team.length!==6||selection.identities?.length!==6)throw Error('A complete six-Pokémon recommendation is required.');
+ for(let i=0;i<6;i++){
+  const key=selection.team[i],entry=byLocation.get(key);
+  if(!entry||seen.has(key)||monIdentity(entry.mon)!==selection.identities[i])
+   throw Error('A recommended Pokémon moved or changed. Tap Analyze my Pokémon & bag again.');
+  seen.add(key);selected.push(entry);
+ }
+ const party=all.filter(e=>e.kind==='party').sort((a,b)=>a.index-b.index);
+ if(party.length!==count||party.some((e,i)=>e.index!==i))throw Error('The current party is incomplete or inconsistent.');
+ const followers=party.filter(e=>isProtected(e.mon)),pcFollowers=all.filter(e=>e.kind==='pc'&&isProtected(e.mon));
+ if(followers.length!==1||pcFollowers.length)throw Error('Exactly one protected follower Pikachu must be in the party, not Bill’s PC.');
+ const follower=followers[0];
+ if(!selected.some(e=>e.val===follower.val))throw Error('The original follower Pikachu must be included in the team.');
+ const rest=selected.filter(e=>e.val!==follower.val),desired=[];
+ for(let i=0;i<6;i++)desired.push(i===follower.index?follower:rest.shift());
+ if(desired.some(e=>!e)||rest.length)throw Error('Could not assign the complete six-Pokémon team.');
+ const selectedParty=new Set(desired.filter(e=>e.kind==='party').map(e=>e.val));
+ const incoming=desired.filter(e=>e.kind==='pc'),displaced=party.filter(e=>!selectedParty.has(e.val));
+ if(incoming.length-displaced.length!==6-count)throw Error('Incoming and outgoing Pokémon counts do not match.');
+ const flash=groups[0],activeParty=party.map(e=>getPartyFrom(flash,e.index));
+ for(const e of party){
+  const current=activeParty[e.index],mon=decodeMon(current);
+  if(!mon||monIdentity(mon)!==monIdentity(e.mon))throw Error('Party Pokémon changed before the exchange.');
+  for(const base of live.mirrors){
+   if(!repairBytesEqual(work.subarray(base+100*e.index,base+100*(e.index+1)),current))
+    throw Error('Live party battle data differs from the current saved Pokémon in slot '+(e.index+1)+'. Make a normal in-game save and fresh SVS.');
+  }
+ }
+ for(const g of groups){
+  const section=g.sectors.get(1);
+  if(!section||u32(work,section.base+0x34)!==count)throw Error('Cartridge save party counts disagree.');
+  for(const e of party){
+   const other=decodeMon(getPartyFrom(g,e.index));
+   if(!other||monIdentity(other)!==monIdentity(e.mon))
+    throw Error('Cartridge save backup identifies a different Pokémon in party slot '+(e.index+1)+'.');
+  }
+ }
+ for(const base of live.saveMirrors)if(u32(work,base-4)!==count)throw Error('Saved-party RAM count differs.');
+ for(const base of live.gameplayMirrors)if(work[base-0x25b]!==count)throw Error('Live gameplay party count differs.');
+ const pcs=pcRosterSnapshot(),boxWrites=[];
+ for(let i=0;i<incoming.length;i++){
+  const target=incoming[i],record=pcs[target.index];
+  if(!record?.mon||monIdentity(record.mon)!==monIdentity(target.mon))throw Error('A recommended PC Pokémon changed.');
+  for(const g of groups)if(!repairBytesEqual(getPCFrom(g,target.index),record.bytes))
+   throw Error('Cartridge-save PC copies disagree for Box '+(1+Math.floor(target.index/30))+', Slot '+(1+target.index%30)+'.');
+  boxWrites.push({slot:target.index,bytes:displaced[i]?activeParty[displaced[i].index].slice(0,80):new Uint8Array(80),
+   outgoing:displaced[i]||null,incoming:target});
+ }
+ const full=desired.map(entry=>entry.kind==='party'?activeParty[entry.index].slice():partyRecordFromPC({...entry,bytes:pcs[entry.index].bytes}));
+ if(!repairBytesEqual(full[follower.index],activeParty[follower.index]))
+  throw Error('Original Pikachu would move or change. Exchange canceled.');
+ if(full.some(bytes=>bytes.length!==100||!decodeMon(bytes)))throw Error('Cannot build valid six-member party records.');
+ const under=desired.filter(e=>gymCoachLevel(e.mon)<guide.minimum);
+ return {selection,guide,live,groups,count,party,desired,full,boxWrites,follower,under,incoming,displaced};
+}
+function gymCoachBuildSwapPreview(plan){
+ const lines=['GYM TEAM — '+plan.guide.name,'',...plan.desired.map((e,i)=>{
+  const place=e.kind==='party'?'existing Party '+(e.index+1):'from Box '+(1+Math.floor(e.index/30))+', Slot '+(1+e.index%30);
+  return 'Party '+(i+1)+': '+(monNames[e.mon.sp]||'Species '+e.mon.sp)+
+   ' (Lv '+gymCoachLevel(e.mon)+', '+place+')'+(isProtected(e.mon)?' — Pikachu LOCKED':'');
+ })];
+ lines.push('','Incoming from PC: '+plan.incoming.length+'   |   Returning to PC: '+plan.displaced.length);
+ for(const change of plan.boxWrites){
+  lines.push('Box '+(1+Math.floor(change.slot/30))+' / Slot '+(1+change.slot%30)+
+   ': '+(change.outgoing?(monNames[change.outgoing.mon.sp]||'Pokémon')+' returned from Party '+(change.outgoing.index+1):'becomes empty'));
+ }
+ lines.push('','Party size: '+plan.count+' → 6. Follower Pikachu remains in Party '+(plan.follower.index+1)+'.');
+ if(plan.under.length)lines.push('⚠ '+plan.under.length+' recommended Pokémon are BELOW advisory Lv '+plan.guide.minimum+'. They will NOT be leveled automatically.');
+ lines.push('','No levels, moves, items, money, or Pokémon are generated. A new edited SVS must be exported afterward.',
+  '','Confirm BUILD & SWAP for this exact team?');
+ return lines.join('\n');
+}
+function gymCoachBuildAndSwap(){
+ const changes=[];
+ try{
+  const plan=gymCoachBuildSwapPlan();
+  if(plan.count===6&&plan.desired.every((e,i)=>e.kind==='party'&&e.index===i)){
+   msg($('gymCoachSwapStatus'),'✓ These six Pokémon are already in your exact recommended party positions; nothing needs swapping.','good');return;
+  }
+  if(!confirm(gymCoachBuildSwapPreview(plan))){
+   msg($('gymCoachSwapStatus'),'Team exchange canceled. Your SVS was not changed.','warn');return;
+  }
+  const countBytes=Uint8Array.of(6,0,0,0);
+  // Avoid per-slot re-identification during a multi-slot shuffle: validate the
+  // entire transaction BEFORE writing, then write all destinations atomically.
+  for(const g of plan.groups){
+   const section=g.sectors.get(1);
+   for(let i=0;i<6;i++)patch(section.base+0x38+100*i,plan.full[i],changes);
+   if(plan.count!==6)patch(section.base+0x34,countBytes,changes);
+  }
+  for(const base of plan.live.mirrors)for(let i=0;i<6;i++)patch(base+100*i,plan.full[i],changes);
+  if(plan.count!==6){
+   for(const base of plan.live.saveMirrors)patch(base-4,countBytes,changes);
+   for(const base of plan.live.gameplayMirrors)patch(base-0x25b,Uint8Array.of(6),changes);
+  }
+  for(const assignment of plan.boxWrites)writeShowdownSlot('box',assignment.slot,assignment.bytes,changes);
+  refreshChecksums(changes);
+  for(let i=0;i<6;i++){
+   const expected=plan.full[i];
+   for(const g of plan.groups)if(!repairBytesEqual(getPartyFrom(g,i),expected))
+    throw Error('Party slot '+(i+1)+' could not be verified in all FLASH copies.');
+   for(const base of plan.live.mirrors)if(!repairBytesEqual(work.subarray(base+i*100,base+(i+1)*100),expected))
+    throw Error('Party slot '+(i+1)+' could not be verified in live RAM.');
+  }
+  for(const assignment of plan.boxWrites){
+   for(const g of plan.groups)if(!repairBytesEqual(getPCFrom(g,assignment.slot),assignment.bytes))
+    throw Error('PC slot '+(assignment.slot+1)+' could not be verified in all FLASH copies.');
+   for(const base of monLocations.pcRAM)if(!repairBytesEqual(work.subarray(base+80*assignment.slot,base+80*(assignment.slot+1)),assignment.bytes))
+    throw Error('PC slot '+(assignment.slot+1)+' could not be verified in live RAM.');
+  }
+  const original=decodeMon(plan.full[plan.follower.index]);
+  if(!original||monIdentity(original)!==monIdentity(plan.follower.mon))throw Error('Pikachu follower identity was not preserved.');
+  const status=verifySnapshotIdentity();
+  if(!status.ok)throw Error('Post-build trainer and live party verification failed: '+status.reason);
+  if(!snapshot('Gym Coach: '+plan.guide.name+' — built six-member suggested team',changes))throw Error('No changes were needed.');
+  monLocations=locateMons();partyPreviewInvalid();pcShuffleSource=null;sync();
+  $('partyPlanName').value=('Guide: '+plan.guide.name).slice(0,32);
+  msg($('gymCoachSwapStatus'),'✓ Built and swapped '+plan.guide.name+' team. Party '+plan.count+' → 6; '+plan.incoming.length+
+   ' PC Pokémon joined; '+plan.displaced.length+' returned to Bill’s PC. Pikachu protected. Download a NEW edited SVS and Load State in Delta. Undo is available.','good');
+ }catch(e){
+  for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);
+  if(changes.length)monLocations=locateMons();
+  msg($('gymCoachSwapStatus'),'Gym team build blocked: '+e.message,'bad');
+ }
+}
 function gymCoachUseSuggestedTeam(){
  try{
   if(!gymCoachSelection)throw Error('Choose and review a complete suggested team first.');
