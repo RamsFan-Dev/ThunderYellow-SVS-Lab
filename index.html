@@ -259,12 +259,12 @@
 </div>
 <div id="monVisualControls" class="row" style="margin:13px 0 4px">
  <label class="tog" style="margin:0"><input id="spriteGridToggle" type="checkbox" checked> Show Pokémon sprite grid</label>
- <button id="pcShuffleToggle" type="button" class="btn secondary">⇄ Rearrange PC Pokémon</button>
+ <button id="pcShuffleToggle" type="button" class="btn secondary">⇄ Rearrange Party & PC</button>
  <button id="pcShuffleCancel" type="button" class="btn ghost hidden">Cancel selection</button>
 </div>
 <div id="pcShuffleStatus" class="status" role="status" aria-live="polite"></div>
 <div id="partySpritePeek" class="hidden" style="margin-top:12px">
- <div class="hint">Your party — tap a Pokémon to view it. Use Party Builder to change party members; follower Pikachu remains protected.</div>
+ <div class="hint">Your party — in Rearrange mode, drag or tap a Pokémon here to transfer or swap with Bill's PC. Follower Pikachu remains protected.</div>
  <div id="partySpritePeekTiles" class="party-mini-strip"></div>
 </div>
 <div id="monRoster" class="mon-roster sprite-grid"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
@@ -292,7 +292,7 @@
 </details>
 <details id="monStats"><summary>Current party battle stats</summary><div class="grid3" id="partyStatRows"></div><div class="hint">Changing level or species recalculates party stats and matching EXP, keeping the current HP percentage. Battle stats remain editable when level and species are unchanged.</div></details>
 <div id="monSaveStatus" role="status" class="callout" style="margin-top:15px">No pending edits.</div><button class="btn primary wide" id="saveMon" style="margin-top:12px">💾 Save Pokémon changes</button></div>
-<div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. The party cannot be reordered, emptied or expanded in this version; doing so could interfere with the follower system.</div></div>
+<div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. Use Rearrange Party & PC above to move or swap party and PC Pokémon safely. The original follower Pikachu stays in the same party slot.</div></div>
 <div id="monMsg" class="status"></div>
 </div><div class="callout warn" style="margin-top:15px">Experimental build: validates Gen 3 record and flash-section checksums, but has not been tested loading an edited Pokémon state in Delta. Keep your original SVS and check your edited copy in-game before overwriting anything.</div></section>
 <section class="panel"><div class="feature">05 • Gym badges</div><h2>Kanto badges</h2><p>All eight badge flags appear below, including unearned badges. Tap a badge to mark earned or not earned, then choose <strong>Save badges</strong>.</p><div id="badgeUnavailable" class="callout warn hidden"></div><div id="badgeGrid" class="badge-grid"></div><div id="badgeStatus" class="status"></div><button id="saveBadges" class="btn primary wide" style="margin-top:12px">💾 Save badges</button></section>
@@ -3082,14 +3082,13 @@ let pcShuffleEnabled=false,pcShuffleSource=null,pcShuffleBusy=false;
 function updatePCShuffleControls(){
  const mode=$('pcShuffleToggle'),cancel=$('pcShuffleCancel'),status=$('pcShuffleStatus');
  if(!mode||!status)return;
- mode.textContent=pcShuffleEnabled?'✓ Rearrange PC: ON':'⇄ Rearrange PC Pokémon';
+ mode.textContent=pcShuffleEnabled?'✓ Rearrange Party & PC: ON':'⇄ Rearrange Party & PC';
  mode.classList.toggle('primary',pcShuffleEnabled);
  cancel.classList.toggle('hidden',!pcShuffleSource);
  if(!pcShuffleEnabled){status.textContent='';return;}
  status.textContent=pcShuffleSource?
- 'Selected '+pcShuffleSource.label+' from Box '+(1+Math.floor(pcShuffleSource.slot/30))+
- ', Slot '+(1+pcShuffleSource.slot%30)+'. Switch boxes if needed, then tap an occupied or empty PC slot to SWAP or MOVE. Confirm before anything changes.':
- 'Tap a Pokémon in Bill’s PC to pick it up, then tap a destination slot. Works across all 14 boxes. Tap the same slot to cancel. No save changes until confirmed.';
+  'Selected '+pcShuffleSource.label+' from '+(pcShuffleSource.kind==='party'?'Party Slot '+(1+pcShuffleSource.slot):'Box '+(1+Math.floor(pcShuffleSource.slot/30))+', Slot '+(1+pcShuffleSource.slot%30))+'. Tap a party or PC slot to MOVE or SWAP; switch boxes if needed. Confirm before anything changes.':
+  'Tap a Pokémon in the party row or Bill’s PC, then tap a destination in either area. Drag and drop also works when supported. Pikachu is locked. No changes until confirmation.';
 }
 function clearPCShuffleSelection(){pcShuffleSource=null;updatePCShuffleControls();}
 function togglePCShuffle(){
@@ -3113,12 +3112,12 @@ function pcShuffleChoose(slot,mon){
  if(!pcShuffleSource){
   if(!mon){msg($('pcShuffleStatus'),'Select an occupied Pokémon first, then choose its destination.','warn');return true;}
   if(isProtected(mon)){msg($('pcShuffleStatus'),'The protected follower Pikachu cannot be rearranged from PC storage.','bad');return true;}
-  pcShuffleSource={slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  pcShuffleSource={kind:'pc',slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
   updatePCShuffleControls();renderPokemon();return true;
  }
  const source=pcShuffleSource;
- if(source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
- try{pcShuffleExecute(source,slot);}
+ if(source.kind!=='party'&&source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
+ try{if(source.kind==='party')partyPCTransferExecute(source,{kind:'pc',slot});else pcShuffleExecute(source,slot);}
  catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
  return true;
 }
@@ -3520,7 +3519,7 @@ function renderPokemon(){if(!loaded)return;
    if(mon){
     button.draggable=true;
     button.addEventListener('dragstart',event=>{
-     pcShuffleSource={slot:idx,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+     pcShuffleSource={kind:'pc',slot:idx,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
      updatePCShuffleControls();
      event.dataTransfer?.setData('text/plain',String(idx));
      if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
