@@ -124,6 +124,7 @@
 .mon-tile .shiny-icon{left:3px;top:3px}.mon-tile .mon-item-icon{right:3px;bottom:3px;font-size:12px}
 .mon-tile .protected-icon{right:3px;top:3px;font-size:12px}
 .mon-tile.shuffle-source{outline:3px solid #ffdc77;outline-offset:-3px;background:#5a4927}
+.mon-tile.shuffle-touch-target{touch-action:none;user-select:none;-webkit-user-select:none}
 .mon-tile.shuffle-target{outline:2px dashed #7de3a3;outline-offset:-3px}
 .mon-roster.sprite-grid .mon-empty-marker{display:block;font-size:19px;color:#6e829f;line-height:44px}
 @media(max-width:650px){.mon-roster.sprite-grid,.party-mini-strip{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.mon-tile.sprite-tile{min-height:77px;padding:3px 1px}.mon-tile.sprite-tile .pokemon-art{width:40px;height:40px}.mon-tile.sprite-tile .pokemon-art-frame{height:42px;min-height:42px}.mon-tile.sprite-tile strong{font-size:9px}.mon-tile.sprite-tile small{font-size:8px}}
@@ -3073,6 +3074,7 @@ function renderPartySpritePeek(){
   tile.classList.toggle('shuffle-source',pcShuffleEnabled&&pcShuffleSource?.kind==='party'&&pcShuffleSource.slot===i);
   tile.dataset.dropKind='party';tile.dataset.dropSlot=String(i);
   tile.onclick=()=>{
+   if(Date.now()<pcShuffleIgnoreClickUntil)return;
    if(pcShuffleEnabled&&pcShuffleChooseParty(i,mon))return;
    if(!confirmMonDiscard())return;
    pcShuffleEnabled=false;clearPCShuffleSelection();monMode='party';monSlot=i;
@@ -3126,6 +3128,45 @@ function togglePCShuffle(){
 function pcShuffleEntryLabel(slot,mon){
  return (mon?(monNames[mon.sp]||'Species '+mon.sp)+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty')+
   ' (Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30)+')';
+}
+// iOS browsers do not consistently fire HTML5 drag/drop on buttons.
+// Pointer-based touch drags use an explicit pickup after movement; plain taps still work.
+let pcShuffleIgnoreClickUntil=0;
+function setupShuffleTouchDrag(tile,kind,slot,mon){
+ if(!pcShuffleEnabled)return;
+ tile.classList.add('shuffle-touch-target');
+ let start=null,dragging=false;
+ tile.addEventListener('pointerdown',event=>{
+  if(event.pointerType==='mouse'||!mon||isProtected(mon)||!pcShuffleEnabled)return;
+  start={x:event.clientX,y:event.clientY,id:event.pointerId};dragging=false;
+ });
+ tile.addEventListener('pointermove',event=>{
+  if(!start||event.pointerId!==start.id)return;
+  if(!dragging&&Math.hypot(event.clientX-start.x,event.clientY-start.y)>14)dragging=true;
+  if(dragging){event.preventDefault();tile.classList.add('shuffle-source');}
+ });
+ tile.addEventListener('pointercancel',()=>{start=null;dragging=false;tile.classList.remove('shuffle-source');});
+ tile.addEventListener('pointerup',event=>{
+  if(!start||event.pointerId!==start.id)return;
+  const moved=dragging;start=null;dragging=false;tile.classList.remove('shuffle-source');
+  if(!moved)return;event.preventDefault();
+  pcShuffleIgnoreClickUntil=Date.now()+700;
+  const hit=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-drop-kind][data-drop-slot]');
+  if(!hit||!pcShuffleEnabled)return;
+  const targetKind=hit.dataset.dropKind,targetSlot=Number(hit.dataset.dropSlot);
+  if(!Number.isInteger(targetSlot)||!['party','pc'].includes(targetKind))return;
+  if(targetKind===kind&&targetSlot===slot)return;
+  pcShuffleSource={kind,slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  updatePCShuffleControls();
+  if(targetKind==='party'){
+   const sec=monLocations?.groups?.[0]?.sectors?.get(1),count=sec?work[sec.base+0x34]:0;
+   const targetMon=targetSlot<count?decodeMon(getPartyFrom(monLocations.groups[0],targetSlot)):null;
+   pcShuffleChooseParty(targetSlot,targetMon);
+  }else{
+   const targetMon=decodeMon(getPCFrom(monLocations.groups[0],targetSlot));
+   pcShuffleChoose(targetSlot,targetMon);
+  }
+ });
 }
 function pcShuffleChooseParty(slot,mon){
  if(!pcShuffleEnabled||pcShuffleBusy)return false;
@@ -3690,6 +3731,7 @@ function renderPokemon(){if(!loaded)return;
   addPokemonArt(button,mon);
   button.append(title,extra);
   button.onclick=()=>{
+   if(Date.now()<pcShuffleIgnoreClickUntil)return;
    if(pcShuffleEnabled&&inPC&&pcShuffleChoose(idx,mon))return;
    if(pcShuffleEnabled&&!inPC&&pcShuffleChooseParty(idx,mon))return;
    if(!confirmMonDiscard())return;
