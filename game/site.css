@@ -32,50 +32,11 @@ button.btn:disabled{cursor:not-allowed;opacity:.55;filter:grayscale(.25)}
 #readyBlock{margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
 @media(max-width:780px){.install-intro{padding-top:36px}.install-panel{padding:22px}.install-panel .actions .btn{width:100%}}
 
-/* Official game-site page-view counter; no fabricated or client-only totals */
-.traffic-counter{
- display:inline-flex;align-items:center;gap:12px;padding:11px 16px;
- border:1px solid #5b5137;border-radius:14px;background:linear-gradient(125deg,#18283a,#172131);
- color:var(--text);max-width:100%;box-shadow:0 5px 20px #0002
+/* Discreet, noninteractive footer tally. The SVG image increments remotely. */
+.site-visits-small{
+  display:flex;align-items:center;justify-content:flex-end;
+  margin-top:12px;padding-top:11px;border-top:1px solid #30445e55;
+  min-height:31px;font-size:11px;color:var(--muted)
 }
-.traffic-counter .traffic-bolt{font-size:24px;line-height:1;color:var(--yellow)}
-.traffic-counter .traffic-number{display:block;font-size:clamp(1.25rem,2vw,1.7rem);font-weight:800;color:var(--yellow);line-height:1.2;font-variant-numeric:tabular-nums}
-.traffic-counter .traffic-label{display:block;font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.traffic-counter .traffic-explain{display:block;font-size:.7rem;color:var(--muted);max-width:29rem;line-height:1.45;margin-top:5px}
-.traffic-counter--hero{margin-top:20px}
-.traffic-counter--footer{padding:7px 12px;border-radius:12px;gap:9px}
-.traffic-counter--footer .traffic-bolt{font-size:18px}
-.traffic-counter--footer .traffic-number{font-size:1.08rem}
-.traffic-counter--footer .traffic-label{font-size:.66rem}
-@media(max-width:480px){.traffic-counter--hero{width:100%;justify-content:flex-start}}
-
-/* High-visibility site view counter directly below game navigation */
-.site-views-nav{border:1px solid #ab954a66!important;border-radius:999px;padding:5px 10px!important;background:#40391c44;color:var(--yellow)!important;white-space:nowrap}
-.visitor-top-band{border-top:1px solid #725c2677;border-bottom:1px solid #a78b3f99;background:linear-gradient(110deg,#2b291e,#1d2f43 50%,#2c2815);scroll-margin-top:8px}
-.visitor-top-content{display:flex;align-items:center;gap:15px;padding:16px 0}
-.visitor-top-icon{font-size:29px;line-height:1;color:var(--yellow);flex-shrink:0}
-.visitor-top-text{flex:1;min-width:0}
-.visitor-top-text strong{display:block;font-size:clamp(16px,2.2vw,21px);color:#fff2b5;letter-spacing:-.015em;line-height:1.35}
-.visitor-top-text>span{display:block;font-size:12px;line-height:1.5;color:var(--muted)}
-.visitor-top-total{display:flex;flex-direction:column;align-items:center;min-width:144px;padding:7px 16px;border:1px solid #e0b54588;background:#131e2c;border-radius:12px;box-shadow:inset 0 0 24px #fff1a50b}
-.visitor-top-total strong{color:var(--yellow);font-size:clamp(23px,3vw,36px);line-height:1.2;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
-.visitor-top-total span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
-@media(max-width:630px){.visitor-top-content{gap:10px;flex-wrap:wrap}.visitor-top-icon{font-size:24px}.visitor-top-text{min-width:calc(100% - 44px)}.visitor-top-total{width:100%;margin-top:2px}.visitor-top-total strong{font-size:29px}}
-
-/* Verified visible badge counter: image-based so Safari doesn't need cross-origin JS. */
-.visitor-top-band{display:block;width:100%;scroll-margin-top:12px}
-.visitor-banner-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
-.visitor-banner-copy{min-width:0}
-.visitor-banner-title,.visitor-banner-subtitle{display:block}
-.visitor-banner-title{font-weight:850;font-size:18px;line-height:1.35;color:#fff2b5}
-.visitor-banner-subtitle{font-size:12px;line-height:1.55;color:var(--muted);margin-top:3px}
-.visitor-banner-data{display:block;min-width:0;max-width:100%}
-.visitor-live-badge{display:block;width:auto;max-width:100%;height:auto;min-height:29px;object-fit:contain}
-.visitor-offline:not([hidden]){display:block;color:#fff2b5;font-size:12px}
-.visitor-footer-badge{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
-@media(max-width:640px){
-  .visitor-banner-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
-  .visitor-banner-title{font-size:17px!important}
-  .visitor-banner-data{width:100%}
-  .visitor-live-badge{width:auto;max-width:100%;height:auto}
-}
+.site-visits-small img{display:block;width:auto;max-width:100%;height:18px;opacity:.74}
+.site-visits-small span:not([hidden]){font-size:11px;color:var(--muted)}
