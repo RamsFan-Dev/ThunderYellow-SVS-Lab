@@ -108,9 +108,29 @@
 .item-search-option small{font-size:11px;color:#b7c8de;text-align:right;white-space:nowrap}
 .item-search-empty{padding:13px;color:#b7c8de;font-size:13px}
 #itemSelection{padding:5px 0 3px;min-height:25px}
+</style><style>
+/* Touch-friendly six-column sprite grid inspired by traditional PC boxes. */
+.mon-roster.sprite-grid,.party-mini-strip{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.party-mini-strip{display:grid;margin-top:6px}
+.mon-tile{position:relative}
+.mon-tile.sprite-tile{padding:5px 3px;align-items:center;justify-content:flex-start;min-height:93px;gap:1px;text-align:center;border-radius:9px}
+.mon-tile.sprite-tile .pokemon-art{height:48px;width:48px;max-width:100%;object-fit:contain;image-rendering:pixelated}
+.mon-tile .pokemon-art{height:52px;width:52px;max-width:100%;object-fit:contain;image-rendering:pixelated}
+.mon-tile.sprite-tile .pokemon-art-frame{height:54px;display:flex;align-items:center;justify-content:center}
+.mon-tile .pokemon-art-frame{min-height:52px;display:flex;align-items:center;justify-content:center}
+.mon-tile.sprite-tile strong{font-size:10px;line-height:1.14;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mon-tile.sprite-tile small{font-size:9px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mon-tile.shiny-tile{border-color:#d8a941;box-shadow:inset 0 0 0 1px #a17f30}
+.mon-tile .shiny-icon,.mon-tile .mon-item-icon,.mon-tile .protected-icon{position:absolute;z-index:2;font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px #000)}
+.mon-tile .shiny-icon{left:3px;top:3px}.mon-tile .mon-item-icon{right:3px;bottom:3px;font-size:12px}
+.mon-tile .protected-icon{right:3px;top:3px;font-size:12px}
+.mon-tile.shuffle-source{outline:3px solid #ffdc77;outline-offset:-3px;background:#5a4927}
+.mon-tile.shuffle-target{outline:2px dashed #7de3a3;outline-offset:-3px}
+.mon-roster.sprite-grid .mon-empty-marker{display:block;font-size:19px;color:#6e829f;line-height:44px}
+@media(max-width:650px){.mon-roster.sprite-grid,.party-mini-strip{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.mon-tile.sprite-tile{min-height:77px;padding:3px 1px}.mon-tile.sprite-tile .pokemon-art{width:40px;height:40px}.mon-tile.sprite-tile .pokemon-art-frame{height:42px;min-height:42px}.mon-tile.sprite-tile strong{font-size:9px}.mon-tile.sprite-tile small{font-size:8px}}
+@media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.27</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.28</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -237,7 +257,17 @@
  </details>
  <div id="pcOperationsStatus" class="status" role="status" aria-live="polite"></div>
 </div>
-<div id="monRoster" class="mon-roster"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
+<div id="monVisualControls" class="row" style="margin:13px 0 4px">
+ <label class="tog" style="margin:0"><input id="spriteGridToggle" type="checkbox" checked> Show Pokémon sprite grid</label>
+ <button id="pcShuffleToggle" type="button" class="btn secondary">⇄ Rearrange PC Pokémon</button>
+ <button id="pcShuffleCancel" type="button" class="btn ghost hidden">Cancel selection</button>
+</div>
+<div id="pcShuffleStatus" class="status" role="status" aria-live="polite"></div>
+<div id="partySpritePeek" class="hidden" style="margin-top:12px">
+ <div class="hint">Your party — tap a Pokémon to view it. Use Party Builder to change party members; follower Pikachu remains protected.</div>
+ <div id="partySpritePeekTiles" class="party-mini-strip"></div>
+</div>
+<div id="monRoster" class="mon-roster sprite-grid"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
 <div id="newMonPane" class="callout hidden" style="margin-top:16px">
  <h3 style="font-size:16px;margin:0 0 8px">Add Pokémon to this empty slot</h3>
  <div class="grid"><div><label class="label" for="newSpecies">Type Pokémon name</label><input id="newSpecies" class="input" type="text" placeholder="e.g. Char, Pika, Eevee" autocomplete="off" spellcheck="false"></div>
@@ -582,7 +612,7 @@ function renderLivePartyReport(){
  node.className='status good';
 }
 
-function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();repairInvalidate();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();repairInvalidate();pcShuffleSource=null;copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -1287,7 +1317,7 @@ function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
 function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();repairInvalidate();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('repairStatus'),'SVS opened read-only. Use Diagnose & preview repair to check whether a Bad Egg or corrupted final party slot can be safely removed.','warn');msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();msg($('repairStatus'),'Open the repair assistant to check for verified Bad Eggs or corrupted party records; no edits will be made automatically.','good');hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();pcShuffleEnabled=false;pcShuffleSource=null;repairInvalidate();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('repairStatus'),'SVS opened read-only. Use Diagnose & preview repair to check whether a Bad Egg or corrupted final party slot can be safely removed.','warn');msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();msg($('repairStatus'),'Open the repair assistant to check for verified Bad Eggs or corrupted party records; no edits will be made automatically.','good');hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
 
 function auditExportLiveParty(){
  const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1);
@@ -2991,6 +3021,147 @@ function pcSorter(a,b,mode){
 }
 
 function nationalDexNo(internalId){return internalId<=251?internalId:internalId>=277&&internalId<=411?internalId-25:internalId;}
+// A compact sprite grid with true Gen III shiny PID/OT calculations.
+// Images are decorative; names and shiny labels remain when artwork is unavailable.
+function pokemonArt(mon){
+ const number=nationalDexNo(mon.sp);
+ if(number<1||number>386)return null;
+ const shiny=shinyStatus(mon.pid,mon.ot);
+ return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-iii/firered-leafgreen/'+
+  (shiny?'shiny/':'')+number+'.png';
+}
+function addPokemonArt(tile,mon){
+ const art=document.createElement('span');art.className='pokemon-art-frame';
+ if(mon){
+  const src=pokemonArt(mon);
+  const fallback=document.createElement('span');fallback.textContent='◈';fallback.style.fontSize='25px';fallback.className='mon-empty-marker';
+  if(src){
+   const img=document.createElement('img');img.className='pokemon-art';img.alt='';img.loading='lazy';img.decoding='async';img.src=src;
+   img.onerror=()=>{img.remove();art.append(fallback)};
+   art.append(img);
+  }else art.append(fallback);
+  if(shinyStatus(mon.pid,mon.ot)){
+   const star=document.createElement('span');star.className='shiny-icon';star.textContent='✨';star.title='Shiny (verified from saved PID and Trainer ID)';tile.append(star);
+   tile.classList.add('shiny-tile');
+  }
+  if(mon.held){const item=document.createElement('span');item.className='mon-item-icon';item.textContent='🎒';item.title='Held item';tile.append(item);}
+  if(isProtected(mon)){const lock=document.createElement('span');lock.className='protected-icon';lock.textContent='🔒';lock.title='Original follower Pikachu — protected';tile.append(lock);}
+ }else{
+  const empty=document.createElement('span');empty.className='mon-empty-marker';empty.textContent='＋';art.append(empty);
+ }
+ tile.append(art);
+}
+function renderPartySpritePeek(){
+ const wrapper=$('partySpritePeek'),target=$('partySpritePeekTiles');
+ if(!wrapper||!target)return;
+ wrapper.classList.toggle('hidden',monMode!=='box'||!loaded||!snapshotSafe);
+ target.replaceChildren();
+ if(monMode!=='box'||!loaded||!snapshotSafe)return;
+ const group=monLocations?.groups?.[0],sec=group?.sectors?.get(1);
+ if(!sec)return;
+ const count=Math.min(6,work[sec.base+0x34]);
+ for(let i=0;i<6;i++){
+  const mon=i<count?decodeMon(getPartyFrom(group,i)):null;
+  const tile=document.createElement('button');tile.type='button';tile.className='mon-tile sprite-tile';
+  const name=mon?(monNames[mon.sp]||'Pokémon'):'Empty';
+  tile.title='Party '+(i+1)+': '+name+(mon&&shinyStatus(mon.pid,mon.ot)?' — SHINY ✨':'');
+  tile.setAttribute('aria-label',tile.title);
+  addPokemonArt(tile,mon);
+  const label=document.createElement('strong');label.textContent=name;
+  const level=document.createElement('small');level.textContent=mon?'Lv '+pcLevel(mon):'Slot '+(i+1);
+  tile.append(label,level);
+  tile.onclick=()=>{
+   if(!confirmMonDiscard())return;
+   pcShuffleEnabled=false;clearPCShuffleSelection();monMode='party';monSlot=i;
+   invalidateShowdownExport();renderPokemon();
+  };
+  target.append(tile);
+ }
+}
+let pcShuffleEnabled=false,pcShuffleSource=null,pcShuffleBusy=false;
+function updatePCShuffleControls(){
+ const mode=$('pcShuffleToggle'),cancel=$('pcShuffleCancel'),status=$('pcShuffleStatus');
+ if(!mode||!status)return;
+ mode.textContent=pcShuffleEnabled?'✓ Rearrange PC: ON':'⇄ Rearrange PC Pokémon';
+ mode.classList.toggle('primary',pcShuffleEnabled);
+ cancel.classList.toggle('hidden',!pcShuffleSource);
+ if(!pcShuffleEnabled){status.textContent='';return;}
+ status.textContent=pcShuffleSource?
+ 'Selected '+pcShuffleSource.label+' from Box '+(1+Math.floor(pcShuffleSource.slot/30))+
+ ', Slot '+(1+pcShuffleSource.slot%30)+'. Switch boxes if needed, then tap an occupied or empty PC slot to SWAP or MOVE. Confirm before anything changes.':
+ 'Tap a Pokémon in Bill’s PC to pick it up, then tap a destination slot. Works across all 14 boxes. Tap the same slot to cancel. No save changes until confirmed.';
+}
+function clearPCShuffleSelection(){pcShuffleSource=null;updatePCShuffleControls();}
+function togglePCShuffle(){
+ if(!loaded||!snapshotSafe){msg($('pcOperationsStatus'),'Load a verified SVS before rearranging PC slots.','warn');return;}
+ if(!confirmMonDiscard())return;
+ pcShuffleEnabled=!pcShuffleEnabled;pcShuffleSource=null;
+ if(pcShuffleEnabled){
+  monMode='box';
+  $('pcViewOrder').value='box';confirmedPCView='box';$('pcDexFilter').value='';
+  invalidatePCSortPreview();
+ }
+ updatePCShuffleControls();renderPokemon();
+}
+function pcShuffleEntryLabel(slot,mon){
+ return (mon?(monNames[mon.sp]||'Species '+mon.sp)+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty')+
+  ' (Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30)+')';
+}
+function pcShuffleChoose(slot,mon){
+ if(!pcShuffleEnabled||pcShuffleBusy)return false;
+ if(!confirmMonDiscard())return true;
+ if(!pcShuffleSource){
+  if(!mon){msg($('pcShuffleStatus'),'Select an occupied Pokémon first, then choose its destination.','warn');return true;}
+  if(isProtected(mon)){msg($('pcShuffleStatus'),'The protected follower Pikachu cannot be rearranged from PC storage.','bad');return true;}
+  pcShuffleSource={slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  updatePCShuffleControls();renderPokemon();return true;
+ }
+ const source=pcShuffleSource;
+ if(source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
+ try{pcShuffleExecute(source,slot);}
+ catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
+ return true;
+}
+function pcShuffleExecute(source,to){
+ if(pcShuffleBusy)throw Error('Finish the previous operation first.');
+ if(monDirty||badgeDirty||nameDirty)throw Error('Save Pokémon, badges and trainer-name edits before rearranging.');
+ if(!snapshotSafe||!loaded)throw Error('A verified save is required.');
+ if(!Number.isInteger(to)||to<0||to>=420||source.slot<0||source.slot>=420)throw Error('Invalid PC slot.');
+ if(!monLocations?.pcRAM?.length)throw Error('A live PC storage mirror was not verified; make an in-game save and a fresh SVS.');
+ const originals=pcRosterSnapshot(),a=originals[source.slot],b=originals[to];
+ if(!a.mon||monIdentity(a.mon)!==source.identity)throw Error('Source Pokémon changed; choose it again.');
+ if(b.mon&&isProtected(b.mon))throw Error('The original follower Pikachu cannot be moved.');
+ const flash=getFlashGroups();
+ for(const g of flash)for(const slot of [source.slot,to]){
+  const expect=originals[slot].bytes,actual=getPCFrom(g,slot);
+  if(!actual||!actual.every((v,i)=>v===expect[i]))throw Error('FLASH save copies disagree at Box '+(1+Math.floor(slot/30))+'. No changes made.');
+ }
+ if(a.bytes.every((v,i)=>v===b.bytes[i]))throw Error('Source and destination already contain identical records.');
+ const before=verifySnapshotIdentity();if(!before.ok)throw Error(before.reason);
+ const action=b.mon?'Swap with '+pcShuffleEntryLabel(to,b.mon):'Move to empty '+pcShuffleEntryLabel(to,null);
+ if(!confirm(action+'?\n\nFROM: '+pcShuffleEntryLabel(source.slot,a.mon)+
+   '\nTO: '+pcShuffleEntryLabel(to,b.mon)+
+   '\n\nParty and starter Pikachu remain unchanged. This swaps complete Pokémon records across FLASH and live PC memory. Undo is available before export.'))return;
+ const changes=[],former={mode:monMode,slot:monSlot,box:boxNo};
+ pcShuffleBusy=true;
+ try{
+  monMode='box';monSlot=source.slot;applySlot(b.bytes,changes);
+  monSlot=to;applySlot(a.bytes,changes);
+  refreshChecksums(changes);
+  verifyPCWrites([{slot:source.slot,bytes:b.bytes},{slot:to,bytes:a.bytes}]);
+  const verification=verifySnapshotIdentity();
+  if(!verification.ok)throw Error('Trainer and party verification failed: '+verification.reason);
+  if(!snapshot('PC '+(b.mon?'swap':'move')+': '+pcShuffleEntryLabel(source.slot,a.mon)+' → '+pcShuffleEntryLabel(to,b.mon),changes))
+   throw Error('No physical changes were made.');
+  pcShuffleSource=null;monMode='box';boxNo=Math.floor(to/30);monSlot=to;
+  sync();
+  msg($('pcShuffleStatus'),'✓ '+(b.mon?'Swapped':'Moved')+' Pokémon. All saved FLASH copies and live PC slots verified. Export a NEW SVS and test in Delta. Undo is available.','good');
+ }catch(e){
+  for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);
+  monMode=former.mode;monSlot=former.slot;boxNo=former.box;
+  throw e;
+ }finally{pcShuffleBusy=false;}
+}
 function pcRosterSnapshot(){
  if(!loaded||!snapshotSafe||!monLocations?.groups?.length)throw Error('Open a verified Delta SVS before managing Bill’s PC.');
  const group=monLocations.groups[0],slots=[];
@@ -3296,7 +3467,8 @@ function renderPokemon(){if(!loaded)return;
  const currentBox=Math.floor(monSlot/30);
  $('monTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===monMode));
  $('boxSelector').classList.toggle('hidden',monMode!=='box');if(monMode==='box')updatePCBoxLabels();$('boxSelect').value=boxNo;
- const roster=$('monRoster');roster.replaceChildren();
+ const roster=$('monRoster');roster.replaceChildren();roster.classList.toggle('sprite-grid',$('spriteGridToggle').checked);renderPartySpritePeek();
+ $('pcShuffleToggle').classList.toggle('hidden',monMode!=='box'&&!pcShuffleEnabled);updatePCShuffleControls();
  const inPC=monMode==='box',sortMode=inPC?$('pcViewOrder').value:'box',sortedView=inPC&&sortMode!=='box';
  const filter=inPC?$('pcDexFilter').value.trim().toLowerCase():'';const group=monLocations.groups[0];
  let indices=monMode==='party'?Array.from({length:6},(_,i)=>i):sortedView?Array.from({length:420},(_,i)=>i).filter(i=>decodeMon(getPCFrom(group,i))):Array.from({length:30},(_,i)=>boxNo*30+i);
@@ -3319,15 +3491,48 @@ function renderPokemon(){if(!loaded)return;
  for(const idx of indices){
   const bytes=monMode==='party'?(monLocations.gameplayParty.length?work.slice(monLocations.gameplayParty[0]+idx*100,monLocations.gameplayParty[0]+idx*100+100):getPartyFrom(group,idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(group,idx));
   const mon=bytes&&decodeMon(bytes),empty=bytes&&u32(bytes,0)===0,suggested=previews.get(idx);
-  const button=document.createElement('button');button.type='button';button.className='mon-tile'+(idx===monSlot?' chosen':'');
+  const button=document.createElement('button');button.type='button';
+  const compact=$('spriteGridToggle').checked,shiny=mon&&shinyStatus(mon.pid,mon.ot);
+  button.className='mon-tile'+(compact?' sprite-tile':'')+(idx===monSlot?' chosen':'')+
+   (pcShuffleSource?.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
   if(!mon&&suggested!==undefined)button.style.borderStyle='dashed';
   const title=document.createElement('strong'),extra=document.createElement('small');
   const label=mon?(monNames[mon.sp]||'Species '+mon.sp):suggested!==undefined?'#'+String(nationalDexNo(suggested)).padStart(3,'0')+' '+monNames[suggested]+' (placeholder)':empty?'Empty':'Unreadable';
-  title.textContent=monMode==='party'?(idx+1)+'. '+label:sortedView?'#'+String(nationalDexNo(mon.sp)).padStart(3,'0')+' '+label:(idx%30+1)+'. '+label;
-  extra.textContent=(mon?(mon.name||'')+' · '+pcSpeciesType(mon.sp)+' · '+pcSpeciesClass(mon.sp)+' Pokémon · Lv '+pcLevel(mon)+(isProtected(mon)?' · Starter ★':''):suggested!==undefined?'Empty slot — preview only':'')+
-   (inPC?' · Box '+(1+Math.floor(idx/30))+' / Slot '+(1+idx%30):'');
+  const shortName=mon?(monNames[mon.sp]||'Pokémon'):suggested!==undefined?'#'+nationalDexNo(suggested):empty?'Empty':'Invalid';
+  title.textContent=compact?shortName:monMode==='party'?(idx+1)+'. '+label:sortedView?'#'+String(nationalDexNo(mon.sp)).padStart(3,'0')+' '+label:(idx%30+1)+'. '+label;
+  extra.textContent=compact?(mon?'Lv '+pcLevel(mon)+(shiny?' ✨':''):(suggested!==undefined?'Placeholder':inPC?'Slot '+(idx%30+1):'Slot '+(idx+1))):
+   (mon?(mon.name||'')+' · '+pcSpeciesType(mon.sp)+' · '+pcSpeciesClass(mon.sp)+' Pokémon · Lv '+pcLevel(mon)+(shiny?' · ✨ Shiny':'')+(isProtected(mon)?' · Starter ★':''):suggested!==undefined?'Empty slot — preview only':'')+
+    (inPC?' · Box '+(1+Math.floor(idx/30))+' / Slot '+(1+idx%30):'');
+  button.title=(inPC?'Box '+(1+Math.floor(idx/30))+' Slot '+(idx%30+1):'Party '+(idx+1))+
+   ': '+label+(mon?' · Lv '+pcLevel(mon)+(shiny?' · SHINY ✨':'')+(mon.held?' · Holds item':''):'')+
+   (inPC&&pcShuffleEnabled?' · Tap to rearrange':'');
+  button.setAttribute('aria-label',button.title);
+  addPokemonArt(button,mon);
   button.append(title,extra);
-  button.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;if(inPC)boxNo=Math.floor(idx/30);invalidateShowdownExport();$('newSpecies').value=suggested===undefined?'':monNames[suggested];updateSpeciesHints();renderPokemon()};
+  button.onclick=()=>{
+   if(inPC&&pcShuffleChoose(idx,mon))return;
+   if(!confirmMonDiscard())return;
+   monSlot=idx;if(inPC)boxNo=Math.floor(idx/30);
+   invalidateShowdownExport();$('newSpecies').value=suggested===undefined?'':monNames[suggested];
+   updateSpeciesHints();renderPokemon();
+  };
+  if(inPC&&pcShuffleEnabled){
+   if(mon){
+    button.draggable=true;
+    button.addEventListener('dragstart',event=>{
+     pcShuffleSource={slot:idx,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+     updatePCShuffleControls();
+     event.dataTransfer?.setData('text/plain',String(idx));
+     if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
+    });
+   }
+   button.addEventListener('dragover',event=>{if(!pcShuffleSource)return;event.preventDefault();button.classList.add('shuffle-target');});
+   button.addEventListener('dragleave',()=>button.classList.remove('shuffle-target'));
+   button.addEventListener('drop',event=>{
+    event.preventDefault();button.classList.remove('shuffle-target');
+    if(pcShuffleSource)pcShuffleChoose(idx,mon);
+   });
+  }
   roster.append(button);
  }
  if(!indices.length){const notice=document.createElement('div');notice.className='hint';notice.textContent='No PC Pokémon match the current filter.';roster.append(notice);}
@@ -3474,13 +3679,17 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  $('pcViewOrder').onchange=()=>{
   const previous=confirmedPCView,selected=$('pcViewOrder').value;
   if(!confirmMonDiscard()){$('pcViewOrder').value=previous;return;}
+  if(pcShuffleEnabled&&selected!=='box'){pcShuffleEnabled=false;pcShuffleSource=null;updatePCShuffleControls();}
   confirmedPCView=selected;invalidatePCSortPreview();renderPokemon();
   msg($('pcOperationsStatus'),selected==='box'?'Viewing original Box/Slot positions. No Pokémon were moved.':'Viewing '+$('pcViewOrder').selectedOptions[0].textContent+' (display only). No Pokémon were moved.','good');
  };
  $('pcDexFilter').oninput=()=>{if(monDirty){msg($('pcOperationsStatus'),'Save or discard Pokémon edits before filtering the PC.','warn');return;}if(monMode==='box')renderPokemon()};
+ $('spriteGridToggle').onchange=()=>renderPokemon();
+ $('pcShuffleToggle').onclick=togglePCShuffle;
+ $('pcShuffleCancel').onclick=()=>{clearPCShuffleSelection();renderPokemon();};
  $('pcBulkPreviewButton').onclick=previewPCBulkAdd;$('pcAddAll').onclick=bulkAddPCSpecies;$('pcBulkLevel').oninput=invalidatePCBulkPreview;$('pcSortAll').onclick=previewPCSort;$('pcSortApply').onclick=applyPCSort;
  $('pcEmptyPreviews').onchange=()=>{if(!confirmMonDiscard()){$('pcEmptyPreviews').checked=!$('pcEmptyPreviews').checked;return;}renderPokemon()};
- $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
+ $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;if(b.dataset.mode==='party'){pcShuffleEnabled=false;pcShuffleSource=null;}monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
  const handleMonEdit=e=>{
   enforceLegalStat(e);
   if(e.target.id==='species'){abilityOptions(true);const m=decodeMon(getSlotBytes());updateMonGenderUI(m,true);previewLevel();}
