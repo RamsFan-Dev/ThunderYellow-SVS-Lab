@@ -37,6 +37,19 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.32 — Unsaved live RAM inventory: warning, not automatic lock
+
+When an SVS has not been saved in-game, its FLASH cartridge history may not match the running party or trainer. Previously the entire editor (and SVS export) was locked and may show only an old inventory. The new **warning-based RAM inventory mode** identifies a uniquely corroborated live SaveBlock1 bag from EWRAM, independent of the stale FLASH bag. It only offers editing if the live inventory is confidently located.
+
+- **Verified unsaved bag:** The scanner requires at least two encrypted, quantity-1 Key Item anchors (from the latest valid cartridge copy when available) and validates the complete 42 Items, 30 Key Items, 13 Balls, 58 TMs/HMs and 43 Berries layouts, including encryption key, no gaps/duplicates, plausible quantities, and coins. Ambiguous or missing matches fail closed.
+- **User controls:** Show warning instead of hiding the entire editor. Enable bag item quantity editing and casino coin editing against the active RAM bag. Cash remains unavailable until its separate full-width encryption key is confirmed; Pokémon, party, trainer, badge, Item PC and advanced hex edits remain protected if their live identity is not verified.
+- **Quick button:** **+15 Poké Balls & +15 Great Balls** increments the current quantities by 15, creating stacks when absent; runs as one Undoable transaction, verifies the live bag again, and leaves unrecognized sectors untouched.
+- **Export:** A new `-Live-Bag-UNSAVED-TEST.svs` is allowed with a prominent warning. Export checks that every modified byte lies strictly in the detected live RAM inventory pocket or coin address, confirms the inventory still uniquely decodes with the same RAM key, and verifies gzip round-trip. Unsaved mode never rewrites historical FLASH Pokémon or inventory sectors.
+- **Safeguards preserved:** Other controls remain locked when their relevant trainer/party record cannot be identified. A warning is not permission to copy stale FLASH Pokémon into the current game. Undo and verified normal saved-state editing still work.
+
+### Confirmed against an uploaded real unsaved SVS
+
+The uploaded `Great ball.svs` has two complete historical cartridge saves (counters 125 and 124), but an independently identified live bag at uncompressed snapshot offset `0x2DE27`, using RAM bag XOR key `0x54F4`. The live bag has neither Poké Balls nor Great Balls. Counter 124 has a historical 15 Great Ball stack; counter 125 has no balls. The unique live RAM detector finds exactly that one RAM bag and rejects tampered Key Item anchors. A manually prepared separate experimental SVS with 15 of each was checksum-verified against all 29 FLASH sectors. Live Delta/Safari verification remains outstanding. The original upload was not modified.
 ## SVS Lab v2.31 — Gym Coach Build & Swap Team
 
 The Gym & League Team Coach now has a prominent **⚡ Build & Swap Suggested Team** button directly under challenge analysis. Select a Gym, Elite Four or Champion challenge and tap **Analyze my Pokémon & bag**. The Coach recommends six members using **only the Pokémon you already own**, then its new button displays an exact six-party-slot lineup and PC destinations for approval. **A single confirmation** builds and swaps the whole team in the open SVS; **Cancel** does not edit anything. Use **Export edited SVS** and **Delta → Load State** to apply the result in the emulator.
