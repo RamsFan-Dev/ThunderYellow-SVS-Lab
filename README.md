@@ -37,6 +37,14 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.34 — SAV validation and unsaved-write safeguards
+
+Preserves the compact v2.33 SAV panel, 64/128 KiB inputs, trainer/party preview, Gym Coach and unsaved inventory features. SAV checks now require an independent complete bank with aligned sectors, unique IDs, matching counters and valid checksums; fragments from different banks cannot be combined. Save-counter selection handles wraparound. An older asynchronous upload error cannot overwrite the latest result, and the steps button resets on a new selection. The guide calls out old-state/preview restoration and checking follower Pikachu before making a new state.
+
+RAM-only writes are now constrained to verified bag/coin ranges when applied, supplementing the export audit. Original uploads and ROM/follower routines are untouched.
+
+Validation: `node tests/sav-import.test.cjs` passes syntax, bank corruption/size checks, non-mutating inspection, async race/reset behavior, live bag detection, +15 of each ball, byte boundaries and Undo. A Playwright mobile smoke test is included (`node tests/browser-smoke.cjs`, requires Playwright and Chromium), but browser installation failed here; mobile visual checks and Delta gameplay remain untested.
+
 ## SVS Lab v2.33 — Small SAV → SVS conversion panel under main import
 
 A smaller, permanently visible panel appears directly under the primary **Open your Delta save state** file selector. It accepts a local **64 KB or 128 KB cartridge `.sav`**, with touch file picker or desktop drag-and-drop. Its independent validator detects properly checksum-verified FireRed/LeafGreen 4 KB FLASH sectors, assembles the newest complete 14-sector generation, confirms a trainer save and 1–6 valid decoded party Pokémon, and reports the party size and trainer. Invalid, truncated, unsaved and mislabeled `.svs` inputs display a specific warning. Nothing in the original .sav is written.

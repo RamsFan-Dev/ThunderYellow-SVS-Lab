@@ -141,7 +141,7 @@
 .sav-steps li{margin-bottom:8px;line-height:1.45}.sav-steps ol{padding-left:19px;margin:11px 0}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.33</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.34</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -159,7 +159,7 @@
   <ol>
    <li><strong>Back up</strong> your current game save and save states before importing anything.</li>
    <li>In Delta’s game library, <strong>long-press the matching ThunderYellow ROM</strong>, choose <strong>Manage Save File → Import Save File</strong>, and select your validated .sav. This replaces the game’s existing cartridge save.</li>
-   <li>Launch that same ROM, choose <strong>Continue</strong> on its title screen, and check your trainer, party and inventory.</li>
+   <li>Launch that same ROM, choose <strong>Continue</strong> on its title screen, and check your trainer, party, inventory and follower Pikachu. Do not resume an old save state or preview state; it can restore old progress. Let startup recovery finish, then save in-game.</li>
    <li>In the overworld, tap <strong>Delta Menu → Save State → +</strong> to capture an actual running emulator snapshot.</li>
    <li>Back in Delta's library, long-press the game → <strong>View Save States</strong>. Long-press your new state and choose <strong>Export</strong>, then upload that .svs in the main box above.</li>
   </ol>
@@ -354,7 +354,7 @@ const name=id=>named[id]||'Unknown item (#'+id+')';
 function msg(el,text,type=''){el.className='status callout '+type;el.textContent=text}
 function note(text){log.unshift(new Date().toLocaleTimeString()+' • '+text);$('history').textContent=log.join('\n')}
 function snapshot(label,patches){if(!patches.length)return false;undoStack.push({label,patches});$('undo').disabled=false;note(label+' — '+patches.length+' byte region(s)');return true}
-function patch(offset,bytes,patches){if(!snapshotSafe&&!unsavedInventory)throw Error('Live save storage was not verified. Do not patch unidentifiable game memory.');if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
+function patch(offset,bytes,patches){if(!snapshotSafe&&!unsavedInventory)throw Error('Live save storage was not verified. Do not patch unidentifiable game memory.');if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');if(!snapshotSafe&&unsavedInventory){const a=unsavedInventory.start,b=a+offsets[4]+pockets[4][1]*4,coin=a-0x7c,end=offset+bytes.length;if(!((offset>=a&&end<=b)||(offset>=coin&&end<=coin+2)))throw Error('Unsaved mode only permits writes inside the verified live bag or coin balance.');}let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
 function patch16(offset,val,patches){patch(offset,Uint8Array.of(val&255,(val>>>8)&255),patches)}
 // FireRed/LeafGreen flash sections: checksums must be updated whenever flash-backed copies change.
 const sectionLengths=[0xF24,0xF80,0xF80,0xF80,0xEE8,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0x7D0];
@@ -377,20 +377,32 @@ function ascii(d,start,len){return String.fromCharCode(...d.slice(start,start+le
 // Cartridge SRAM and emulator save states are different formats.
 // Accept only complete, checksum-valid FRLG .sav data; produce genuine .svs
 // through Delta's running emulator (a .sav cannot encode CPU and RAM state).
+// Read cartridge banks independently; never combine fragments from two banks.
+// This inspector has no access to work/original and cannot modify an open SVS.
+function inspectCartridgeSave(bytes){
+ if(![0x10000,0x20000].includes(bytes.length))throw Error('Expected a 64 or 128 KiB raw Gen III cartridge SAV. Truncated, wrapped or emulator-state files are not supported; export a raw save from your emulator.');
+ const banks=[];
+ for(let bank=0;(bank+1)*14*0x1000<=bytes.length;bank++){
+  const sectors=new Map();let counter=null,valid=true;
+  for(let slot=0;slot<14;slot++){
+   const base=(bank*14+slot)*0x1000,id=u16(bytes,base+0xff4),count=u32(bytes,base+0xffc);
+   if(id>13||sectors.has(id)||u32(bytes,base+0xff8)!==0x08012025||
+      checksum(bytes,base,sectionLengths[id])!==u16(bytes,base+0xff6)||
+      (counter!==null&&counter!==count)){valid=false;break;}
+   counter=count;sectors.set(id,base);
+  }
+  if(valid&&sectors.size===14)banks.push({bank:bank+1,counter,sectors});
+ }
+ if(!banks.length)throw Error('No complete checksum-valid FireRed/LeafGreen-format save bank was found. This may be a damaged save or a different game format. No conversion or repair was attempted.');
+ return {banks};
+}
 function inspectGen3SAV(data){
  if(!(data instanceof Uint8Array)||![65536,131072].includes(data.length))
   throw Error('Expected a 64 KB or 128 KB GBA FLASH .sav (65,536 or 131,072 bytes), not an .svs or renamed file.');
- const found=findSectors(data),generations=new Map();
- for(const sector of found){
-  const counter=u32(data,sector.base+0xffc);
-  if(!generations.has(counter))generations.set(counter,new Map());
-  const group=generations.get(counter);
-  if(group.has(sector.id))throw Error('Ambiguous duplicate FLASH section '+sector.id+' in one save generation.');
-  group.set(sector.id,sector);
- }
- const complete=[...generations.entries()].filter(([,parts])=>parts.size===14);
- if(!complete.length)throw Error('No complete set of 14 checksum-valid FireRed/LeafGreen save sectors was found. This .sav might be unsupported, damaged or not yet saved in-game.');
- complete.sort((a,b)=>b[0]-a[0]);
+ const checked=inspectCartridgeSave(data);
+ const complete=checked.banks.map(bank=>[bank.counter,new Map([...bank.sectors].map(([id,base])=>[id,{id,base}]))]);
+ // Serial-number order handles the 32-bit save counter wrapping to zero.
+ complete.sort((a,b)=>{const distance=(a[0]-b[0])>>>0;return distance===0?0:distance<0x80000000?-1:1;});
  const [counter,parts]=complete[0];
  const trainer=parts.get(0),party=parts.get(1);
  if(!trainer||!party)throw Error('Trainer or party save sector missing.');
@@ -402,13 +414,13 @@ function inspectGen3SAV(data){
  }
  const trainerName=gameNameFromBytes(data.subarray(trainer.base,trainer.base+8));
  const trainerID=u32(data,trainer.base+10);
- return {count,counter,trainerName,trainerID,validSectors:found.length,generations:complete.length};
+ return {count,counter,trainerName,trainerID,validSectors:checked.banks.length*14,generations:complete.length};
 }
 let savConversionRequest=0;
 async function validateSavConversionFile(file){
  const request=++savConversionRequest;
  const panel=$('savConvertStatus'),actions=$('savConvertActions');
- actions.classList.add('hidden');$('savConvertSteps').classList.add('hidden');
+ actions.classList.add('hidden');$('savConvertSteps').classList.add('hidden');$('savConvertStepsButton').textContent='Show SAV → SVS steps for Delta';
  if(!file){msg(panel,'Choose a .sav file to check its format.');return;}
  try{
   if(!/\.sav$/i.test(file.name))throw Error('Choose a .sav cartridge-save file, not a .svs save state.');
@@ -416,9 +428,9 @@ async function validateSavConversionFile(file){
   const data=new Uint8Array(await file.arrayBuffer()),info=inspectGen3SAV(data);
   if(request!==savConversionRequest)return;
   msg(panel,'✓ Valid '+(data.length/1024)+' KB Gen III SAV • Trainer: '+(info.trainerName||'(unnamed)')+
-   ' • Party: '+info.count+' Pokémon • '+info.generations+' complete save generation(s). Use the Delta conversion steps below to create a real SVS.','good');
+   ' • Party: '+info.count+' Pokémon • '+info.generations+' complete save generation(s). Structure checked; exact ROM compatibility is not verified. Use the Delta steps to create a real SVS.','good');
   actions.classList.remove('hidden');
- }catch(e){msg(panel,'⚠ SAV validation: '+e.message,'warn');}
+ }catch(e){if(request===savConversionRequest)msg(panel,'⚠ SAV validation: '+e.message,'warn');}
 }
 $('savConvertFile').addEventListener('change',()=>validateSavConversionFile($('savConvertFile').files[0]));
 $('savConvertStepsButton').onclick=()=>{$('savConvertSteps').classList.toggle('hidden');$('savConvertStepsButton').textContent=
