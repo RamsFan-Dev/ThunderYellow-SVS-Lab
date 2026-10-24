@@ -1470,7 +1470,49 @@ function auditExportLiveParty(){
  }
  return {count,gameplayCount:work[gameplay[0]-0x25b],ramCopies:inSave.length,flashGroups:groups.length};
 }
-async function exportSVS(){if(!loaded)return;if(!undoStack.length){msg($('exportMsg'),'No edits have been applied. Preview and APPLY your Pokémon import (or Save Names) before downloading an edited SVS.','bad');return;}if(recoveryDraftPending){msg($('exportMsg'),'Recovered Pokémon builds have NOT been applied to this SVS. Preview and apply Complete Party Repair first, or discard the recovered draft. Export blocked to prevent another unchanged file.','bad');return;}if(snapshotSafe){const latest=verifySnapshotIdentity();if(!latest.ok){msg($('exportMsg'),'Export blocked: '+latest.reason+'. The active game and saved party disagree; no unsafe file will be downloaded.','bad');return;}}if(!snapshotSafe){msg($('exportMsg'),'Unsafe game state. Export blocked until the live trainer and Pokémon party match the stored save.','bad');return;}if(nameDirty){msg($('exportMsg'),'Save your player and rival name edits first.','bad');alert('You have unsaved trainer name edits. Tap Save Names before exporting.');return;}if(badgeDirty){alert('Save your badge changes before exporting.');return;}if(monDirty){msg($('exportMsg'),'Save Pokémon changes before exporting.','bad');alert('You have unsaved Pokémon edits. Tap Save Pokémon before exporting.');return;}let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const exportAudit=auditExportLiveParty();const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes • '+work[getFlashGroups()[0].sectors.get(1).base+0x34]+' party Pokémon verified in live gameplay AND saved data ('+exportAudit.ramCopies+' active save mirrors). In Delta import it as a Save State, then Menu → Load State. Do not use the game’s Continue menu to load an SVS.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
+async function exportSVS(){
+ if(!loaded)return;
+ const ramOnly=!snapshotSafe&&!!unsavedInventory;
+ if(!undoStack.length){msg($('exportMsg'),'No edits have been applied. Set a bag quantity or use +15 Poké Balls & +15 Great Balls before exporting.','bad');return;}
+ if(recoveryDraftPending){msg($('exportMsg'),'Unapplied recovered Pokémon builds must be applied to a verified save or discarded first.','bad');return;}
+ if(!snapshotSafe&&!ramOnly){msg($('exportMsg'),'The live game data is not identified. No edit can be safely exported from this state.','bad');return;}
+ if(nameDirty||badgeDirty||monDirty){msg($('exportMsg'),'Save or discard unfinished trainer, Pokémon and badge edits before export.','bad');return;}
+ const button=$('export');button.disabled=true;button.textContent='Verifying…';
+ try{
+  let audit=null;
+  if(snapshotSafe){
+   const identity=verifySnapshotIdentity();if(!identity.ok)throw Error('Active trainer verification: '+identity.reason);
+   audit=auditExportLiveParty();
+  }else{
+   const again=detectUnsavedLiveBag();
+   if(!again||again.start!==unsavedInventory.start||again.key!==unsavedInventory.key)
+    throw Error('The live RAM bag moved or became ambiguous. Reload the original save state.');
+   const a=unsavedInventory.start,b=a+offsets[4]+pockets[4][1]*4,coin=a-0x7c;
+   let edits=0;
+   for(let i=0;i<work.length;i++){
+    if(work[i]===original[i])continue;
+    edits++;
+    if(!((i>=a&&i<b)||(i>=coin&&i<coin+2)))
+     throw Error('A change outside the verified live RAM bag or coin balance was detected at '+hex(i)+'. Export refused.');
+   }
+   if(!edits)throw Error('No RAM bag edits found.');
+  }
+  const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');
+  if(test.length!==work.length||!test.every((v,i)=>v===work[i]))throw Error('Export verification failed: gzip round-trip differs.');
+  const base=filename.replace(/\.(svs|sgm|gz)$/i,''),outname=base+
+   (ramOnly?'-Live-Bag-UNSAVED-TEST.svs':'-TY-Edited.svs');
+  const blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob);
+  const link=document.createElement('a');link.href=url;link.download=outname;
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  if(ramOnly)msg($('exportMsg'),'✓ Downloaded '+outname+'. ⚠ UNSAVED GAME: only positively identified live RAM bag/coin bytes were changed. Earlier FLASH Pokémon and inventories remain untouched. Load in Delta via Load State, inspect the bag, then save in-game if correct. Keep the original .svs.','warn');
+  else msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+
+   ' bytes • '+audit.count+' party Pokémon verified in live gameplay and saved data ('+audit.ramCopies+
+   ' active save mirrors). In Delta import it as a Save State, then Menu → Load State.','good');
+ }catch(e){msg($('exportMsg'),'Export blocked: '+e.message,'bad');}
+ finally{button.disabled=false;button.textContent='⬇ Download edited .svs';}
+}
+
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 // The search catalog is read-only until the user explicitly taps an item.
 const searchableItems=Object.entries(named)
