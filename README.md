@@ -14,14 +14,14 @@
 
 ## ThunderYellow visitor counter
 
-The public `/game/` site includes a shared page-view counter on its homepage and subpages, powered by the free, no-account [CounterAPI.com](https://counterapi.com/) service. Source: `game/visitors.js` and `game/site.css`. Every production game-page load updates the same counter; local previews do not.
+The public game site uses a no-JavaScript [Hits Counter](https://hitscounter.dev/) SVG badge, now visible just below the homepage navigation. All `/game/` pages use the *same exact URL identifier* (`https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/`) so every game page counts toward one total. The service's badge shows **today and total hits**. This image-based solution replaces the earlier CounterAPI request, which did not return a count on iOS Safari.
 
-- **Measures page views, not unique people**. Reloads, repeat visits, and browsing multiple pages can increase the count.
-- **Starts when deployed**, not when this site was first created; it cannot recover past GitHub Pages traffic.
-- No cookies or personally identifying information are collected by our own script, but the third-party counter provider may process visitors' IP/browser details for abuse prevention and visit de-duplication according to its published privacy terms.
-- The live number shows **—** instead of a fabricated zero when the counter cannot be reached. Ad blockers and network conditions can undercount; artificial calls and bots can overcount.
-- All six public game pages share namespace `ramsfan-dev.github.io`, action `pageview`, and key `thunderyellow-game-site`. Changing these identifiers resets the displayed count.
-- We intentionally do not count visits to the SVS Lab root editor as ThunderYellow game-site traffic.
+- Counts **page hits, not unique people**. Reloading and navigating between game pages can increment the count; caches, bots or ad blockers can cause discrepancies.
+- Only begins counting from the new SVG badge deployment. We cannot claim to have recovered historical or earlier CounterAPI totals.
+- Counts can be viewed in the [Hits Counter history page](https://hitscounter.dev/history?url=https%3A%2F%2Framsfan-dev.github.io%2FThunderYellow-SVS-Lab%2Fgame%2F).
+- The badge is loaded by the visitor's browser from a third-party host; the provider may receive normal web request information. No custom visitor identity, cookies, or form data is sent by the site code.
+- Counter failure hides the broken badge and shows **"View total temporarily unavailable"**, not a fictional count.
+- The SVS Lab root editor is separate and intentionally excluded.
 
 **Community technical support and Delta save-state diagnostics**
 
