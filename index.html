@@ -110,7 +110,7 @@
 #itemSelection{padding:5px 0 3px;min-height:25px}
 </style><style>
 /* Touch-friendly six-column sprite grid inspired by traditional PC boxes. */
-.mon-roster.sprite-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.mon-roster.sprite-grid,.party-mini-strip{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.party-mini-strip{display:grid;margin-top:6px}
 .mon-tile{position:relative}
 .mon-tile.sprite-tile{padding:5px 3px;align-items:center;justify-content:flex-start;min-height:93px;gap:1px;text-align:center;border-radius:9px}
 .mon-tile.sprite-tile .pokemon-art{height:48px;width:48px;max-width:100%;object-fit:contain;image-rendering:pixelated}
@@ -126,7 +126,7 @@
 .mon-tile.shuffle-source{outline:3px solid #ffdc77;outline-offset:-3px;background:#5a4927}
 .mon-tile.shuffle-target{outline:2px dashed #7de3a3;outline-offset:-3px}
 .mon-roster.sprite-grid .mon-empty-marker{display:block;font-size:19px;color:#6e829f;line-height:44px}
-@media(max-width:650px){.mon-roster.sprite-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.mon-tile.sprite-tile{min-height:77px;padding:3px 1px}.mon-tile.sprite-tile .pokemon-art{width:40px;height:40px}.mon-tile.sprite-tile .pokemon-art-frame{height:42px;min-height:42px}.mon-tile.sprite-tile strong{font-size:9px}.mon-tile.sprite-tile small{font-size:8px}}
+@media(max-width:650px){.mon-roster.sprite-grid,.party-mini-strip{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.mon-tile.sprite-tile{min-height:77px;padding:3px 1px}.mon-tile.sprite-tile .pokemon-art{width:40px;height:40px}.mon-tile.sprite-tile .pokemon-art-frame{height:42px;min-height:42px}.mon-tile.sprite-tile strong{font-size:9px}.mon-tile.sprite-tile small{font-size:8px}}
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
@@ -263,6 +263,10 @@
  <button id="pcShuffleCancel" type="button" class="btn ghost hidden">Cancel selection</button>
 </div>
 <div id="pcShuffleStatus" class="status" role="status" aria-live="polite"></div>
+<div id="partySpritePeek" class="hidden" style="margin-top:12px">
+ <div class="hint">Your party — tap a Pokémon to view it. Use Party Builder to change party members; follower Pikachu remains protected.</div>
+ <div id="partySpritePeekTiles" class="party-mini-strip"></div>
+</div>
 <div id="monRoster" class="mon-roster sprite-grid"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
 <div id="newMonPane" class="callout hidden" style="margin-top:16px">
  <h3 style="font-size:16px;margin:0 0 8px">Add Pokémon to this empty slot</h3>
@@ -3047,6 +3051,33 @@ function addPokemonArt(tile,mon){
  }
  tile.append(art);
 }
+function renderPartySpritePeek(){
+ const wrapper=$('partySpritePeek'),target=$('partySpritePeekTiles');
+ if(!wrapper||!target)return;
+ wrapper.classList.toggle('hidden',monMode!=='box'||!loaded||!snapshotSafe);
+ target.replaceChildren();
+ if(monMode!=='box'||!loaded||!snapshotSafe)return;
+ const group=monLocations?.groups?.[0],sec=group?.sectors?.get(1);
+ if(!sec)return;
+ const count=Math.min(6,work[sec.base+0x34]);
+ for(let i=0;i<6;i++){
+  const mon=i<count?decodeMon(getPartyFrom(group,i)):null;
+  const tile=document.createElement('button');tile.type='button';tile.className='mon-tile sprite-tile';
+  const name=mon?(monNames[mon.sp]||'Pokémon'):'Empty';
+  tile.title='Party '+(i+1)+': '+name+(mon&&shinyStatus(mon.pid,mon.ot)?' — SHINY ✨':'');
+  tile.setAttribute('aria-label',tile.title);
+  addPokemonArt(tile,mon);
+  const label=document.createElement('strong');label.textContent=name;
+  const level=document.createElement('small');level.textContent=mon?'Lv '+pcLevel(mon):'Slot '+(i+1);
+  tile.append(label,level);
+  tile.onclick=()=>{
+   if(!confirmMonDiscard())return;
+   pcShuffleEnabled=false;clearPCShuffleSelection();monMode='party';monSlot=i;
+   invalidateShowdownExport();renderPokemon();
+  };
+  target.append(tile);
+ }
+}
 let pcShuffleEnabled=false,pcShuffleSource=null,pcShuffleBusy=false;
 function updatePCShuffleControls(){
  const mode=$('pcShuffleToggle'),cancel=$('pcShuffleCancel'),status=$('pcShuffleStatus');
@@ -3436,7 +3467,7 @@ function renderPokemon(){if(!loaded)return;
  const currentBox=Math.floor(monSlot/30);
  $('monTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===monMode));
  $('boxSelector').classList.toggle('hidden',monMode!=='box');if(monMode==='box')updatePCBoxLabels();$('boxSelect').value=boxNo;
- const roster=$('monRoster');roster.replaceChildren();roster.classList.toggle('sprite-grid',$('spriteGridToggle').checked);
+ const roster=$('monRoster');roster.replaceChildren();roster.classList.toggle('sprite-grid',$('spriteGridToggle').checked);renderPartySpritePeek();
  $('pcShuffleToggle').classList.toggle('hidden',monMode!=='box'&&!pcShuffleEnabled);updatePCShuffleControls();
  const inPC=monMode==='box',sortMode=inPC?$('pcViewOrder').value:'box',sortedView=inPC&&sortMode!=='box';
  const filter=inPC?$('pcDexFilter').value.trim().toLowerCase():'';const group=monLocations.groups[0];
