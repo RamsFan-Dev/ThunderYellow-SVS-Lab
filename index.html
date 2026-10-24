@@ -404,7 +404,9 @@ function inspectGen3SAV(data){
  const trainerID=u32(data,trainer.base+10);
  return {count,counter,trainerName,trainerID,validSectors:found.length,generations:complete.length};
 }
+let savConversionRequest=0;
 async function validateSavConversionFile(file){
+ const request=++savConversionRequest;
  const panel=$('savConvertStatus'),actions=$('savConvertActions');
  actions.classList.add('hidden');$('savConvertSteps').classList.add('hidden');
  if(!file){msg(panel,'Choose a .sav file to check its format.');return;}
@@ -412,7 +414,7 @@ async function validateSavConversionFile(file){
   if(!/\.sav$/i.test(file.name))throw Error('Choose a .sav cartridge-save file, not a .svs save state.');
   if(file.size!==65536&&file.size!==131072)throw Error('Expected 64 KB or 128 KB. Selected file is '+fmt(file.size)+' bytes.');
   const data=new Uint8Array(await file.arrayBuffer()),info=inspectGen3SAV(data);
-  if($('savConvertFile').files?.[0]!==file)return;
+  if(request!==savConversionRequest)return;
   msg(panel,'✓ Valid '+(data.length/1024)+' KB Gen III SAV • Trainer: '+(info.trainerName||'(unnamed)')+
    ' • Party: '+info.count+' Pokémon • '+info.generations+' complete save generation(s). Use the Delta conversion steps below to create a real SVS.','good');
   actions.classList.remove('hidden');
@@ -422,6 +424,7 @@ $('savConvertFile').addEventListener('change',()=>validateSavConversionFile($('s
 $('savConvertStepsButton').onclick=()=>{$('savConvertSteps').classList.toggle('hidden');$('savConvertStepsButton').textContent=
  $('savConvertSteps').classList.contains('hidden')?'Show SAV → SVS steps for Delta':'Hide conversion steps';};
 $('savConvertClear').onclick=()=>{
+ savConversionRequest++;
  $('savConvertFile').value='';$('savConvertActions').classList.add('hidden');
  $('savConvertSteps').classList.add('hidden');$('savConvertStepsButton').textContent='Show SAV → SVS steps for Delta';
  msg($('savConvertStatus'),'Choose a .sav file to check its format.');
