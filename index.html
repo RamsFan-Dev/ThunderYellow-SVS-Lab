@@ -3017,6 +3017,120 @@ function pcSorter(a,b,mode){
 }
 
 function nationalDexNo(internalId){return internalId<=251?internalId:internalId>=277&&internalId<=411?internalId-25:internalId;}
+// A compact sprite grid with true Gen III shiny PID/OT calculations.
+// Images are decorative; names and shiny labels remain when artwork is unavailable.
+function pokemonArt(mon){
+ const number=nationalDexNo(mon.sp);
+ if(number<1||number>386)return null;
+ const shiny=shinyStatus(mon.pid,mon.ot);
+ return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-iii/firered-leafgreen/'+
+  (shiny?'shiny/':'')+number+'.png';
+}
+function addPokemonArt(tile,mon){
+ const art=document.createElement('span');art.className='pokemon-art-frame';
+ if(mon){
+  const src=pokemonArt(mon);
+  const fallback=document.createElement('span');fallback.textContent='◈';fallback.style.fontSize='25px';fallback.className='mon-empty-marker';
+  if(src){
+   const img=document.createElement('img');img.className='pokemon-art';img.alt='';img.loading='lazy';img.decoding='async';img.src=src;
+   img.onerror=()=>{img.remove();art.append(fallback)};
+   art.append(img);
+  }else art.append(fallback);
+  if(shinyStatus(mon.pid,mon.ot)){
+   const star=document.createElement('span');star.className='shiny-icon';star.textContent='✨';star.title='Shiny (verified from saved PID and Trainer ID)';tile.append(star);
+   tile.classList.add('shiny-tile');
+  }
+  if(mon.held){const item=document.createElement('span');item.className='mon-item-icon';item.textContent='🎒';item.title='Held item';tile.append(item);}
+  if(isProtected(mon)){const lock=document.createElement('span');lock.className='protected-icon';lock.textContent='🔒';lock.title='Original follower Pikachu — protected';tile.append(lock);}
+ }else{
+  const empty=document.createElement('span');empty.className='mon-empty-marker';empty.textContent='＋';art.append(empty);
+ }
+ tile.append(art);
+}
+let pcShuffleEnabled=false,pcShuffleSource=null,pcShuffleBusy=false;
+function updatePCShuffleControls(){
+ const mode=$('pcShuffleToggle'),cancel=$('pcShuffleCancel'),status=$('pcShuffleStatus');
+ if(!mode||!status)return;
+ mode.textContent=pcShuffleEnabled?'✓ Rearrange PC: ON':'⇄ Rearrange PC Pokémon';
+ mode.classList.toggle('primary',pcShuffleEnabled);
+ cancel.classList.toggle('hidden',!pcShuffleSource);
+ if(!pcShuffleEnabled){status.textContent='';return;}
+ status.textContent=pcShuffleSource?
+ 'Selected '+pcShuffleSource.label+' from Box '+(1+Math.floor(pcShuffleSource.slot/30))+
+ ', Slot '+(1+pcShuffleSource.slot%30)+'. Switch boxes if needed, then tap an occupied or empty PC slot to SWAP or MOVE. Confirm before anything changes.':
+ 'Tap a Pokémon in Bill’s PC to pick it up, then tap a destination slot. Works across all 14 boxes. Tap the same slot to cancel. No save changes until confirmed.';
+}
+function clearPCShuffleSelection(){pcShuffleSource=null;updatePCShuffleControls();}
+function togglePCShuffle(){
+ if(!loaded||!snapshotSafe){msg($('pcOperationsStatus'),'Load a verified SVS before rearranging PC slots.','warn');return;}
+ if(!confirmMonDiscard())return;
+ pcShuffleEnabled=!pcShuffleEnabled;pcShuffleSource=null;
+ if(pcShuffleEnabled){
+  monMode='box';
+  $('pcViewOrder').value='box';confirmedPCView='box';$('pcDexFilter').value='';
+  invalidatePCSortPreview();
+ }
+ updatePCShuffleControls();renderPokemon();
+}
+function pcShuffleEntryLabel(slot,mon){
+ return (mon?(monNames[mon.sp]||'Species '+mon.sp)+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty')+
+  ' (Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30)+')';
+}
+function pcShuffleChoose(slot,mon){
+ if(!pcShuffleEnabled||pcShuffleBusy)return false;
+ if(!confirmMonDiscard())return true;
+ if(!pcShuffleSource){
+  if(!mon){msg($('pcShuffleStatus'),'Select an occupied Pokémon first, then choose its destination.','warn');return true;}
+  if(isProtected(mon)){msg($('pcShuffleStatus'),'The protected follower Pikachu cannot be rearranged from PC storage.','bad');return true;}
+  pcShuffleSource={slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  updatePCShuffleControls();renderPokemon();return true;
+ }
+ const source=pcShuffleSource;
+ if(source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
+ try{pcShuffleExecute(source,slot);}
+ catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
+ return true;
+}
+function pcShuffleExecute(source,to){
+ if(pcShuffleBusy)throw Error('Finish the previous operation first.');
+ if(monDirty||badgeDirty||nameDirty)throw Error('Save Pokémon, badges and trainer-name edits before rearranging.');
+ if(!snapshotSafe||!loaded)throw Error('A verified save is required.');
+ if(!Number.isInteger(to)||to<0||to>=420||source.slot<0||source.slot>=420)throw Error('Invalid PC slot.');
+ if(!monLocations?.pcRAM?.length)throw Error('A live PC storage mirror was not verified; make an in-game save and a fresh SVS.');
+ const originals=pcRosterSnapshot(),a=originals[source.slot],b=originals[to];
+ if(!a.mon||monIdentity(a.mon)!==source.identity)throw Error('Source Pokémon changed; choose it again.');
+ if(b.mon&&isProtected(b.mon))throw Error('The original follower Pikachu cannot be moved.');
+ const flash=getFlashGroups();
+ for(const g of flash)for(const slot of [source.slot,to]){
+  const expect=originals[slot].bytes,actual=getPCFrom(g,slot);
+  if(!actual||!actual.every((v,i)=>v===expect[i]))throw Error('FLASH save copies disagree at Box '+(1+Math.floor(slot/30))+'. No changes made.');
+ }
+ if(a.bytes.every((v,i)=>v===b.bytes[i]))throw Error('Source and destination already contain identical records.');
+ const before=verifySnapshotIdentity();if(!before.ok)throw Error(before.reason);
+ const action=b.mon?'Swap with '+pcShuffleEntryLabel(to,b.mon):'Move to empty '+pcShuffleEntryLabel(to,null);
+ if(!confirm(action+'?\n\nFROM: '+pcShuffleEntryLabel(source.slot,a.mon)+
+   '\nTO: '+pcShuffleEntryLabel(to,b.mon)+
+   '\n\nParty and starter Pikachu remain unchanged. This swaps complete Pokémon records across FLASH and live PC memory. Undo is available before export.'))return;
+ const changes=[],former={mode:monMode,slot:monSlot,box:boxNo};
+ pcShuffleBusy=true;
+ try{
+  monMode='box';monSlot=source.slot;applySlot(b.bytes,changes);
+  monSlot=to;applySlot(a.bytes,changes);
+  refreshChecksums(changes);
+  verifyPCWrites([{slot:source.slot,bytes:b.bytes},{slot:to,bytes:a.bytes}]);
+  const verification=verifySnapshotIdentity();
+  if(!verification.ok)throw Error('Trainer and party verification failed: '+verification.reason);
+  if(!snapshot('PC '+(b.mon?'swap':'move')+': '+pcShuffleEntryLabel(source.slot,a.mon)+' → '+pcShuffleEntryLabel(to,b.mon),changes))
+   throw Error('No physical changes were made.');
+  pcShuffleSource=null;monMode='box';boxNo=Math.floor(to/30);monSlot=to;
+  sync();
+  msg($('pcShuffleStatus'),'✓ '+(b.mon?'Swapped':'Moved')+' Pokémon. All saved FLASH copies and live PC slots verified. Export a NEW SVS and test in Delta. Undo is available.','good');
+ }catch(e){
+  for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);
+  monMode=former.mode;monSlot=former.slot;boxNo=former.box;
+  throw e;
+ }finally{pcShuffleBusy=false;}
+}
 function pcRosterSnapshot(){
  if(!loaded||!snapshotSafe||!monLocations?.groups?.length)throw Error('Open a verified Delta SVS before managing Bill’s PC.');
  const group=monLocations.groups[0],slots=[];
