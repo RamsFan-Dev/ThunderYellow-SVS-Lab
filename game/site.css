@@ -31,3 +31,20 @@ button.btn:disabled{cursor:not-allowed;opacity:.55;filter:grayscale(.25)}
 #buildProgress{display:block;max-width:100%;width:100%;height:12px;accent-color:var(--yellow);margin-top:14px}
 #readyBlock{margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
 @media(max-width:780px){.install-intro{padding-top:36px}.install-panel{padding:22px}.install-panel .actions .btn{width:100%}}
+
+/* Official game-site page-view counter; no fabricated or client-only totals */
+.traffic-counter{
+ display:inline-flex;align-items:center;gap:12px;padding:11px 16px;
+ border:1px solid #5b5137;border-radius:14px;background:linear-gradient(125deg,#18283a,#172131);
+ color:var(--text);max-width:100%;box-shadow:0 5px 20px #0002
+}
+.traffic-counter .traffic-bolt{font-size:24px;line-height:1;color:var(--yellow)}
+.traffic-counter .traffic-number{display:block;font-size:clamp(1.25rem,2vw,1.7rem);font-weight:800;color:var(--yellow);line-height:1.2;font-variant-numeric:tabular-nums}
+.traffic-counter .traffic-label{display:block;font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.traffic-counter .traffic-explain{display:block;font-size:.7rem;color:var(--muted);max-width:29rem;line-height:1.45;margin-top:5px}
+.traffic-counter--hero{margin-top:20px}
+.traffic-counter--footer{padding:7px 12px;border-radius:12px;gap:9px}
+.traffic-counter--footer .traffic-bolt{font-size:18px}
+.traffic-counter--footer .traffic-number{font-size:1.08rem}
+.traffic-counter--footer .traffic-label{font-size:.66rem}
+@media(max-width:480px){.traffic-counter--hero{width:100%;justify-content:flex-start}}
