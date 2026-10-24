@@ -37,6 +37,17 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.30 — Party↔PC transfers: repair historical backup validation
+
+Fixes a regression in the v2.29 party/PC drag and tap transfer path. The previous transfer safety check compared the entire 100-byte party record byte-for-byte in all FLASH save generations; **older, checksum-valid cartridge backups naturally carry different cached party battle statistics**, even when the six Pokémon identities match the currently running game. This incorrectly prevented both party→PC and PC→party transactions while PC→PC shuffling still worked.
+
+- Check **verified Pokémon identity** (personality PID, original trainer ID and species) across historical FLASH groups rather than exact battle-stat cache bytes. Continue to require complete matching active FLASH and every live RAM party record, and matching PC slot bytes across all FLASH/PC RAM copies. Different historical Pokémon identities still block writes.
+- Keep transactional changes, original follower Pikachu identity/position protection, active trainer validation, party count updates, checksum refresh, complete post-write verification and Undo unchanged.
+- Preserve the specific transfer error message after rerendering the sprite grid; previously the generic rearrange-mode text immediately erased it, making a blocked action appear to do nothing.
+- Show actionable full-party instructions directly in the rearrange control: with **6/6 Pokémon**, tap **an occupied PC/party slot to SWAP**, rather than an empty target. Depositing to an empty PC slot is not offered if compacting the party would move original follower Pikachu from his protected slot. With fewer than six party Pokémon, the next contiguous empty party slot can accept a withdrawal.
+- Keep tap-a-Pokémon then tap-a-destination and iPhone Pointer Events dragging. No ROM or original SAV/SVS is changed by the application.
+
+**Regression validation:** An inspected, previously provided six-member SVS has the **same party Pokémon identities across active and backup FLASH copies** but legitimate differences of 2–9 bytes in five of the six 100-byte party entries; the v2.29 whole-record comparison rejects that file. Targeted v2.30 tests verify both occupied party ↔ occupied PC swap directions with harmless historical backup differences, reject backups containing different Pokémon identities, and explain an impossible deposit with locked Pikachu in the final party slot. Gameplay and iOS Safari tests still require user confirmation.
 ## SVS Lab v2.29 — Drag, drop and tap between Party and Bill's PC
 
 **Rearrange Party & PC** now works across both areas, not just within PC boxes. While viewing Bill's PC, the **Your party** sprite strip above the boxes is a compatible source **and** destination. Tap a Pokémon in either area and then tap a destination, or drag between them. On iPhone, Pointer Events support touch dragging even when native HTML drag/drop on buttons is unavailable; tap-to-select/tap-to-place is the reliable fallback.

@@ -131,7 +131,7 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.29</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.30</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -3109,9 +3109,15 @@ function updatePCShuffleControls(){
  mode.classList.toggle('primary',pcShuffleEnabled);
  cancel.classList.toggle('hidden',!pcShuffleSource);
  if(!pcShuffleEnabled){status.textContent='';return;}
+ const sec=monLocations?.groups?.[0]?.sectors?.get(1);
+ const count=sec?work[sec.base+0x34]:0;
+ const primary='Tap a Pokémon in the party row or Bill’s PC, then tap a destination in either area. Drag and drop also works when supported. Pikachu is locked.';
+ const fullHint=count===6?' Your party is FULL (6/6): select an OCCUPIED destination to SWAP, not an empty slot.':
+  ' With fewer than six Pokémon, you can also withdraw into the next empty party slot.';
  status.textContent=pcShuffleSource?
-  'Selected '+pcShuffleSource.label+' from '+(pcShuffleSource.kind==='party'?'Party Slot '+(1+pcShuffleSource.slot):'Box '+(1+Math.floor(pcShuffleSource.slot/30))+', Slot '+(1+pcShuffleSource.slot%30))+'. Tap a party or PC slot to MOVE or SWAP; switch boxes if needed. Confirm before anything changes.':
-  'Tap a Pokémon in the party row or Bill’s PC, then tap a destination in either area. Drag and drop also works when supported. Pikachu is locked. No changes until confirmation.';
+  'Selected '+pcShuffleSource.label+' from '+(pcShuffleSource.kind==='party'?'Party Slot '+(1+pcShuffleSource.slot):'Box '+(1+Math.floor(pcShuffleSource.slot/30))+', Slot '+(1+pcShuffleSource.slot%30))+'. Choose a destination in Party or PC. Nothing changes without confirmation.'+
+   (count===6?' Your party is full: tap an OCCUPIED slot to swap.':''):
+  primary+fullHint;
 }
 function clearPCShuffleSelection(){pcShuffleSource=null;updatePCShuffleControls();}
 function togglePCShuffle(){
@@ -3188,7 +3194,7 @@ function pcShuffleChooseParty(slot,mon){
   return true;
  }
  try{partyPCTransferExecute(from,{kind:'party',slot});}
- catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Party transfer blocked: '+e.message,'bad');renderPokemon();}
+ catch(e){pcShuffleSource=null;renderPokemon();msg($('pcShuffleStatus'),'Party transfer blocked: '+e.message,'bad');}
  return true;
 }
 function pcShuffleChoose(slot,mon){
@@ -3203,7 +3209,7 @@ function pcShuffleChoose(slot,mon){
  const source=pcShuffleSource;
  if(source.kind!=='party'&&source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
  try{if(source.kind==='party')partyPCTransferExecute(source,{kind:'pc',slot});else pcShuffleExecute(source,slot);}
- catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
+ catch(e){pcShuffleSource=null;renderPokemon();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');}
  return true;
 }
 // Transfers are distinct from PC-PC shuffles: full party records have 100 bytes,
@@ -3228,8 +3234,15 @@ function partyPCTransferPlan(source,destination){
  for(let i=0;i<count;i++){
   const saved=getPartyFrom(groups[0],i),mon=decodeMon(saved);
   if(!mon)throw Error('Unreadable party member at slot '+(i+1)+'.');
-  for(const g of groups.slice(1))if(!repairBytesEqual(getPartyFrom(g,i),saved))
-   throw Error('Saved party FLASH copies disagree at slot '+(i+1)+'.');
+  // Previous cartridge-save generations may legitimately differ in current HP,
+  // status, experience or party battle-stat cache. Compare verified Pokémon identity
+  // (PID, original trainer and species), not every 100-byte party record.
+  // Edits still mirror the active party record to all protected FLASH/RAM copies.
+  for(const g of groups.slice(1)){
+   const other=decodeMon(getPartyFrom(g,i));
+   if(!other||monIdentity(other)!==monIdentity(mon))
+    throw Error('Cartridge-save backups identify different Pokémon in party slot '+(i+1)+'. No changes were made.');
+  }
   for(const base of live.mirrors){
    if(!repairBytesEqual(work.subarray(base+100*i,base+100*(i+1)),saved))
     throw Error('The live party differs from the saved party at slot '+(i+1)+'.');
@@ -3255,9 +3268,9 @@ function partyPCTransferPlan(source,destination){
  const action=partyMember&&target.mon?'swap':partyMember&&!target.mon?'deposit':!partyMember&&target.mon?'withdraw':'invalid';
  if(action==='invalid')throw Error('Select an occupied source Pokémon.');
  if(action==='deposit'&&(count<=1||partySlot<=followerSlot))
-  throw Error('Cannot remove this member: the party must retain at least one Pokémon and follower Pikachu must stay in the same slot.');
+  throw Error('Cannot DEPOSIT into an empty PC slot: Pikachu is locked in party position '+(followerSlot+1)+', and removing this Pokémon would shift him. Choose an OCCUPIED PC slot to SWAP instead (party and PC members will exchange).');
  if(action==='withdraw'&&(count>=6||partySlot!==count))
-  throw Error('You can only add a Pokémon in the next empty party slot.');
+  throw Error(count>=6?'Your party already contains six Pokémon. Choose an OCCUPIED party slot other than Pikachu to SWAP with the selected boxed Pokémon.':'Choose the next contiguous empty party slot '+(count+1)+' to withdraw from Bill’s PC.');
  const partyAfter=party.map(x=>x.bytes.slice());
  if(action==='swap')partyAfter[partySlot]=partyRecordFromPC(target);
  if(action==='deposit'){partyAfter.splice(partySlot,1);}
