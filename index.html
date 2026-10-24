@@ -3109,9 +3109,15 @@ function updatePCShuffleControls(){
  mode.classList.toggle('primary',pcShuffleEnabled);
  cancel.classList.toggle('hidden',!pcShuffleSource);
  if(!pcShuffleEnabled){status.textContent='';return;}
+ const sec=monLocations?.groups?.[0]?.sectors?.get(1);
+ const count=sec?work[sec.base+0x34]:0;
+ const primary='Tap a Pokémon in the party row or Bill’s PC, then tap a destination in either area. Drag and drop also works when supported. Pikachu is locked.';
+ const fullHint=count===6?' Your party is FULL (6/6): select an OCCUPIED destination to SWAP, not an empty slot.':
+  ' With fewer than six Pokémon, you can also withdraw into the next empty party slot.';
  status.textContent=pcShuffleSource?
-  'Selected '+pcShuffleSource.label+' from '+(pcShuffleSource.kind==='party'?'Party Slot '+(1+pcShuffleSource.slot):'Box '+(1+Math.floor(pcShuffleSource.slot/30))+', Slot '+(1+pcShuffleSource.slot%30))+'. Tap a party or PC slot to MOVE or SWAP; switch boxes if needed. Confirm before anything changes.':
-  'Tap a Pokémon in the party row or Bill’s PC, then tap a destination in either area. Drag and drop also works when supported. Pikachu is locked. No changes until confirmation.';
+  'Selected '+pcShuffleSource.label+' from '+(pcShuffleSource.kind==='party'?'Party Slot '+(1+pcShuffleSource.slot):'Box '+(1+Math.floor(pcShuffleSource.slot/30))+', Slot '+(1+pcShuffleSource.slot%30))+'. Choose a destination in Party or PC. Nothing changes without confirmation.'+
+   (count===6?' Your party is full: tap an OCCUPIED slot to swap.':''):
+  primary+fullHint;
 }
 function clearPCShuffleSelection(){pcShuffleSource=null;updatePCShuffleControls();}
 function togglePCShuffle(){
