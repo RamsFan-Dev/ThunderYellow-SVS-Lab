@@ -1152,6 +1152,40 @@ function repairPlanPartyTail(groups,operations,report){
   ' cartridge save copies, '+saveBases.length+' saved-party mirror(s) and '+gameBases.length+' gameplay-party mirror(s).'});
 }
 
+function repairPlanBadEggPC(groups,operations,report){
+ const candidates=[];
+ for(let slot=0;slot<420;slot++){
+  const ref=repairReadPC(work,groups[0],slot);
+  if(!(ref[19]&1)||!u32(ref,0))continue; // isBadEgg, NOT merely isEgg
+  if(!groups.every(g=>repairBytesEqual(repairReadPC(work,g,slot),ref)))continue;
+  candidates.push({slot,ref});
+ }
+ if(!candidates.length)return;
+ // Never touch PC FLASH without its corroborating live PC buffer.
+ // locateMons() only returns a base when multiple validated PC Pokémon match.
+ const mirrors=locateMons().pcRAM;
+ if(!mirrors.length)return;
+ for(const candidate of candidates){
+  if(mirrors.some(base=>!repairBytesEqual(work.subarray(base+candidate.slot*80,base+(candidate.slot+1)*80),candidate.ref)))return;
+ }
+ for(const candidate of candidates){
+  const entry=candidate.slot,bytes=new Uint8Array(80);
+  for(const g of groups){
+   let start=4+entry*80,pos=0;
+   while(pos<80){
+    const logical=start+pos,section=g.sectors.get(5+Math.floor(logical/3968));
+    const len=Math.min(80-pos,3968-logical%3968);
+    if(!section)throw Error('Incomplete PC sector for Box '+(1+Math.floor(entry/30)));
+    operations.push({offset:section.base+logical%3968,bytes:bytes.slice(pos,pos+len),
+      label:'Remove flagged PC Bad Egg, Box '+(1+Math.floor(entry/30))+', Slot '+(1+entry%30)});
+    pos+=len;
+   }
+  }
+  for(const base of mirrors)operations.push({offset:base+entry*80,bytes:bytes.slice(),label:'Clear live PC Bad Egg mirror'});
+ }
+ report.push({heading:candidates.length+' verified Bad Egg(s) in Bill’s PC',
+  body:'Removes only occupied PC entries explicitly flagged isBadEgg in every saved FLASH copy and every detected live PC mirror. Normal Eggs (isEgg alone) and unflagged Pokémon remain untouched. PC box names and positions are not changed.'});
+}
 function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
  if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
