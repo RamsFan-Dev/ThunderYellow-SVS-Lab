@@ -90,7 +90,7 @@
 #trainerNamesSection .input{font-size:17px;letter-spacing:.02em}
 #trainerNamesSection #trainerNamesStatus{overflow-wrap:anywhere}
 </style><style>
-#workspace.unsafe-state > :not(#unsafeStateNotice){display:none!important}
+#workspace.unsafe-state > :not(#unsafeStateNotice):not(#pokemonCleanupPanel){display:none!important}
 #unsafeStateNotice{background:#352127;border:2px solid #ef9494;border-radius:15px;color:#ffe5e5;padding:20px;box-shadow:0 10px 30px #0005}
 #unsafeStateNotice h2{font-size:20px;margin:0 0 10px}
 #unsafeStateNotice p{line-height:1.55}
@@ -110,7 +110,7 @@
 #itemSelection{padding:5px 0 3px;min-height:25px}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.26</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.27</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -122,7 +122,7 @@
  <h2>🛑 Save data doesn't match the running game</h2>
  <p id="unsafeStateReason"></p>
  <p>This SVS can contain an <strong>older game's cartridge-save records</strong> even when the running game has a different Pokémon party. The lab will not substitute those records for your actual Pokémon.</p>
- <p><strong>Editing and SVS export are disabled for this snapshot.</strong> Your uploaded file remains unchanged.</p>
+ <p><strong>Normal editing and SVS export remain disabled.</strong> You may use the separate, read-only <strong>Repair my SVS</strong> assistant below, which downloads a new test file only after strict verification. Your uploaded file remains unchanged.</p>
  <div class="row" style="margin:10px 0"><button id="unsafeExtractTeam" type="button" class="btn secondary">📋 Recover Pokémon Builds (read-only)</button></div>
  <div id="unsafeExtractMessage" class="hint" role="status">Optional: recover the Pokémon's moves, EVs, IVs, PP, natures and other build settings from this mismatched file. Their old trainer and personality IDs will not be copied.</div>
  <p><strong>To repair:</strong> Recover the builds here, then load a <strong>fresh SVS from Jak’s game after saving in-game</strong>. The Lab will fill the party-repair importer automatically. Review the preview and apply it; the untouched original starter Pikachu stays protected.</p>
@@ -266,7 +266,14 @@
 <div id="monMsg" class="status"></div>
 </div><div class="callout warn" style="margin-top:15px">Experimental build: validates Gen 3 record and flash-section checksums, but has not been tested loading an edited Pokémon state in Delta. Keep your original SVS and check your edited copy in-game before overwriting anything.</div></section>
 <section class="panel"><div class="feature">05 • Gym badges</div><h2>Kanto badges</h2><p>All eight badge flags appear below, including unearned badges. Tap a badge to mark earned or not earned, then choose <strong>Save badges</strong>.</p><div id="badgeUnavailable" class="callout warn hidden"></div><div id="badgeGrid" class="badge-grid"></div><div id="badgeStatus" class="status"></div><button id="saveBadges" class="btn primary wide" style="margin-top:12px">💾 Save badges</button></section>
-<section class="panel"><div class="feature">06 • Pokémon cleanup</div><h2>Bad Egg scanner</h2><p>Scans for flagged Gen 3 Bad Egg records in memory. Removal is optional and only clears positively flagged records; it does not change normal eggs.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">Experimental: the same Pokémon may appear in multiple RAM copies. Keep a backup and test in Delta. Do not use this as a Pokémon storage editor.</div></section>
+<section id="pokemonCleanupPanel" class="panel"><div class="feature">06 • Pokémon cleanup</div><h2>Bad Egg scanner &amp; save recovery</h2><p>Legacy diagnostic scan for suspicious Bad Egg memory patterns. For safe cleanup, use the guided repair button below. The old RAM-only deletion is disabled to protect cartridge saves and party counts.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">The legacy RAM scan is a diagnostic only: do not blindly erase a record while the active party count still includes it. Use the guided repair below for a verified snapshot.</div>
+<details id="repairAssistant" open><summary>🛠 Repair my SVS — Bad Eggs &amp; invalid Pokémon</summary>
+<p class="hint">Works even when SVS Lab opens your snapshot READ-ONLY. Inspects both cartridge save copies, the party and live RAM. For a clearly identified corrupt last party member or confirmed flagged PC Bad Egg, it previews the exact changes and downloads a separate repaired .svs. Normal Eggs and healthy Pokémon stay untouched.</p>
+<div class="row" style="margin:12px 0"><button id="repairDiagnose" type="button" class="btn secondary">1. Diagnose &amp; preview repair</button><button id="repairDownload" type="button" class="btn primary" disabled>2. Download repaired SVS</button></div>
+<div id="repairStatus" class="status" role="status" aria-live="polite"></div>
+<div id="repairPreview" class="status"></div>
+<div class="hint">Strict safety rules: no automatic Pokémon creation, no alteration of the original file, no forced repair when evidence disagrees, and no promise that a mid-battle state will safely resume. Use the same ROM build and keep your original .sav and .svs backups.</div>
+</details></section>
 <section class="panel"><div class="feature">07 • Advanced</div><h2>Hex inspection &amp; patching</h2><p>For controlled follower-logic research or other known ThunderYellow offsets. Raw decompressed file offsets, not GBA ROM addresses.</p><details><summary>Open hex editor</summary><div class="grid3"><div><label class="label" for="hexOffset">Offset (hex or decimal)</label><input id="hexOffset" class="input monospace" placeholder="0x2DE6F" value="0x2DE6F"></div><div><label class="label" for="hexBytes">Patch bytes (hex)</label><input id="hexBytes" class="input monospace" placeholder="e.g. 0F 27"></div><div style="display:flex;align-items:end;gap:6px;flex-wrap:wrap"><button id="inspectHex" class="btn secondary">Inspect</button><button id="applyHex" class="btn danger">Patch</button></div></div><div id="hexView" class="preview" style="margin-top:13px"></div><div class="hint">Manual patches modify only the specified offset; unlike the item editor, they do not synchronize copies. Always record the precise source of an offset.</div></details></section>
 <section class="panel"><div class="feature">08 • Export</div><h2>Download your edited save state</h2><div class="callout">The original upload is never changed. The editor recalculates affected FireRed flash-section checksums and writes a new gzip-compressed <b>.svs</b> snapshot.</div><div class="row" style="margin-top:15px"><button id="undo" class="btn secondary" disabled>↶ Undo last change</button><button id="export" class="btn primary" style="flex:1">⬇ Download edited .svs</button></div><div id="exportMsg" class="status"></div><details><summary>Changes made</summary><div id="history" class="log">No changes yet.</div></details></section>
 </div>
@@ -575,7 +582,7 @@ function renderLivePartyReport(){
  node.className='status good';
 }
 
-function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();repairInvalidate();copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -1042,6 +1049,229 @@ function resetInvalidPCItems(){
  }catch(e){for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);msg($('editMsg'),e.message,'bad')}
 }
 $('resetPCItems').onclick=resetInvalidPCItems;
+// Guided repair is export-only. It must never change work, original or the user's loaded SVS.
+let repairPlan=null;
+function repairInvalidate(){
+ repairPlan=null;
+ if($('repairDownload'))$('repairDownload').disabled=true;
+ if($('repairPreview'))$('repairPreview').replaceChildren();
+ if($('repairStatus'))$('repairStatus').textContent='';
+}
+function repairBytesEqual(a,b){return !!a&&!!b&&a.length===b.length&&a.every((x,i)=>x===b[i]);}
+function repairSuspectMementoRattata(bytes){
+ if(!bytes||bytes.length<80||decodeMon(bytes))return false;
+ const pid=u32(bytes,0),ot=u32(bytes,4);
+ if(!pid||!ot||pid===0xffffffff||ot===0xffffffff)return false;
+ const order=monPerms[pid%24],gidx=order.indexOf('G'),aidx=order.indexOf('A');
+ const key=u32(bytes,32+12*gidx)^19;
+ const unpacked=new Uint8Array(48);
+ for(let i=0;i<12;i++)put32(unpacked,4*i,u32(bytes,32+i*4)^key);
+ const g=unpacked.subarray(gidx*12,gidx*12+12),a=unpacked.subarray(aidx*12,aidx*12+12);
+ return u16(g,0)===19&&u16(g,2)===0&&
+  [262,0,0,0].every((n,i)=>u16(a,i*2)===n)&&
+  [10,0,0,0].every((n,i)=>a[8+i]===n);
+}
+function repairReadPC(data,group,index){
+ const result=new Uint8Array(80),start=4+index*80;
+ for(let j=0;j<80;j++){
+  const logical=start+j,sect=group.sectors.get(5+Math.floor(logical/3968));
+  if(!sect)throw Error('Incomplete PC storage sector');
+  result[j]=data[sect.base+logical%3968];
+ }
+ return result;
+}
+function repairPlanPartyTail(groups,operations,report){
+ const s=groups[0].sectors.get(1),count=work[s.base+0x34];
+ if(count<2||count>5)return;
+ if(groups.some(g=>work[g.sectors.get(1).base+0x34]!==count))return;
+ const currentStart=s.base+0x38,slot=count-1;
+ const first=decodeMon(work.subarray(currentStart,currentStart+80));
+ if(!first)return;
+ const expected=[];
+ for(let i=0;i<count-1;i++){
+  const m=decodeMon(work.subarray(currentStart+i*100,currentStart+i*100+80));
+  if(!m)return;
+  expected.push([m.pid,m.ot,m.sp]);
+ }
+ const firstTail=work.subarray(currentStart+slot*100,currentStart+slot*100+80);
+ const exactSignature=repairSuspectMementoRattata(firstTail),flagged=!!(firstTail[19]&1);
+ if(!exactSignature&&!flagged)return;
+ if(decodeMon(firstTail)&&!flagged)return;
+ const pid=u32(firstTail,0),ot=u32(firstTail,4);
+ for(const g of groups){
+  const base=g.sectors.get(1).base+0x38,copy=work.subarray(base+slot*100,base+slot*100+80);
+  for(let i=0;i<count-1;i++){
+   const m=decodeMon(work.subarray(base+i*100,base+i*100+80));
+   if(!m||m.pid!==expected[i][0]||m.ot!==expected[i][1]||m.sp!==expected[i][2])return;
+  }
+  if(u32(copy,0)!==pid||u32(copy,4)!==ot)return;
+  if(decodeMon(copy)&&!(copy[19]&1))return;
+  if(exactSignature&&!repairSuspectMementoRattata(copy))return;
+  if(u32(work,base+count*100)!==0)return;
+ }
+ // A damaged final party entry needs matching native gameplay and SaveBlock1 RAM copies.
+ // Match the intact prefix before trusting either live-memory location.
+ const starts=[],saveBases=[],gameBases=[],end=Math.min(work.length-600,0x90000);
+ for(let pos=0x20260;pos<end;pos++){
+  if(u32(work,pos)!==first.pid||u32(work,pos+4)!==first.ot)continue;
+  let same=true;
+  for(let i=0;i<count-1;i++){
+   if(!repairBytesEqual(work.subarray(pos+i*100,pos+i*100+80),
+      work.subarray(currentStart+i*100,currentStart+i*100+80))){same=false;break;}
+  }
+  if(!same||!repairBytesEqual(work.subarray(pos+slot*100,pos+slot*100+80),firstTail)||
+     u32(work,pos+count*100)!==0)continue;
+  if(u32(work,pos-4)===count)saveBases.push(pos);
+  if(work[pos-0x25b]===count)gameBases.push(pos);
+ }
+ if(!saveBases.length||!gameBases.length)return;
+ const all=[...new Set([...saveBases,...gameBases])];
+ const ids=new Set();
+ const put=(offset,bytes,label)=>{
+  const key=offset+':'+bytes.length;
+  if(ids.has(key))return;
+  ids.add(key);operations.push({offset,bytes:bytes.slice(),label});
+ };
+ for(const g of groups){
+  const sector=g.sectors.get(1),start=sector.base+0x38;
+  const next=work.slice(start+count*100,start+(count+1)*100);
+  put(sector.base+0x34,new Uint8Array([count-1,0,0,0]),'Cartridge party count');
+  put(start+slot*100,next,'Corrupted final party entry');
+ }
+ for(const base of saveBases){
+  put(base-4,new Uint8Array([count-1,0,0,0]),'RAM SaveBlock1 party count');
+ }
+ for(const base of gameBases){
+  put(base-0x25b,new Uint8Array([count-1]),'Live gameplay party count');
+ }
+ for(const base of all){
+  put(base+slot*100,work.slice(base+count*100,base+(count+1)*100),'Corrupt last party entry in RAM');
+ }
+ report.push({heading:'Party slot '+count+' — corrupted / Bad Egg',
+  body:(exactSignature?'Temporary Memento Rattata signature confirmed. ':'Bad Egg flag verified. ')+
+  'Removes only the final damaged Pokémon; keeps '+(count-1)+' valid party members, syncs '+groups.length+
+  ' cartridge save copies, '+saveBases.length+' saved-party mirror(s) and '+gameBases.length+' gameplay-party mirror(s). Preserved Pokémon: '+expected.map(x=>monNames[x[2]]||'Species '+x[2]).join(', ')+'.'});
+}
+
+function repairPlanBadEggPC(groups,operations,report){
+ const candidates=[];
+ for(let slot=0;slot<420;slot++){
+  const ref=repairReadPC(work,groups[0],slot);
+  if(!(ref[19]&1)||!u32(ref,0))continue; // isBadEgg, NOT merely isEgg
+  if(!groups.every(g=>repairBytesEqual(repairReadPC(work,g,slot),ref)))continue;
+  candidates.push({slot,ref});
+ }
+ if(!candidates.length)return;
+ // Never touch PC FLASH without its corroborating live PC buffer.
+ // locateMons() only returns a base when multiple validated PC Pokémon match.
+ const mirrors=locateMons().pcRAM;
+ if(!mirrors.length)return;
+ for(const candidate of candidates){
+  if(mirrors.some(base=>!repairBytesEqual(work.subarray(base+candidate.slot*80,base+(candidate.slot+1)*80),candidate.ref)))return;
+ }
+ for(const candidate of candidates){
+  const entry=candidate.slot,bytes=new Uint8Array(80);
+  for(const g of groups){
+   let start=4+entry*80,pos=0;
+   while(pos<80){
+    const logical=start+pos,section=g.sectors.get(5+Math.floor(logical/3968));
+    const len=Math.min(80-pos,3968-logical%3968);
+    if(!section)throw Error('Incomplete PC sector for Box '+(1+Math.floor(entry/30)));
+    operations.push({offset:section.base+logical%3968,bytes:bytes.slice(pos,pos+len),
+      label:'Remove flagged PC Bad Egg, Box '+(1+Math.floor(entry/30))+', Slot '+(1+entry%30)});
+    pos+=len;
+   }
+  }
+  for(const base of mirrors)operations.push({offset:base+entry*80,bytes:bytes.slice(),label:'Clear live PC Bad Egg mirror'});
+ }
+ report.push({heading:candidates.length+' verified Bad Egg(s) in Bill’s PC',
+  body:'Removes only occupied PC entries explicitly flagged isBadEgg in every saved FLASH copy and every detected live PC mirror. Normal Eggs (isEgg alone) and unflagged Pokémon remain untouched. PC box names and positions are not changed.'});
+}
+function repairPreviewBuild(){
+ repairInvalidate();
+ try{
+  if(!loaded||!work||!original)throw Error('Import a Delta/VBA .svs snapshot first.');
+  if(monDirty||badgeDirty||nameDirty||recoveryDraftPending)throw Error('Save/discard pending edits or recovered team drafts first.');
+  const groups=getFlashGroups();
+  if(!groups.length)throw Error('No complete, checksum-valid cartridge save group detected; repair is unsafe.');
+  const before=work.slice(),ops=[],report=[];
+  repairPlanPartyTail(groups,ops,report);
+  repairPlanBadEggPC(groups,ops,report);
+  if(!ops.length)throw Error('No sufficiently verified corrupted final party Pokémon or flagged PC Bad Egg was found. No changes made. If the Bad Egg is mid-party or the saves disagree, do not force its removal.');
+  const output=work.slice(),allowed=new Set();
+  for(const item of ops){
+   if(item.offset<0||item.offset+item.bytes.length>output.length)throw Error('Proposed repair is outside SVS memory.');
+   for(let j=0;j<item.bytes.length;j++){
+    const idx=item.offset+j;
+    if(allowed.has(idx)&&output[idx]!==item.bytes[j])throw Error('Repair operations conflict at '+hex(idx));
+    allowed.add(idx);output[idx]=item.bytes[j];
+   }
+  }
+  const changed=new Set([...allowed].filter(i=>output[i]!==work[i]));
+  if(!changed.size)throw Error('This snapshot already has the proposed repair; no modifications needed.');
+  // Fix only FLASH sector checksums corresponding to modified Pokémon records.
+  for(const s of flashSectors){
+   if(![...changed].some(i=>i>=s.base&&i<s.base+s.size))continue;
+   const sum=checksum(output,s.base,s.size);
+   if(u16(output,s.checksumOffset)!==sum){
+    w16(output,s.checksumOffset,sum);
+    changed.add(s.checksumOffset);changed.add(s.checksumOffset+1);
+   }
+  }
+  const verifySectors=findSectors(output);
+  if(verifySectors.length!==flashSectors.length)throw Error('FLASH verification failed after repair. No file created.');
+  for(const sector of flashSectors){
+   if(!verifySectors.some(x=>x.base===sector.base&&x.id===sector.id))throw Error('A saved FLASH section changed unexpectedly.');
+  }
+  // The repaired state MUST pass the same identity gate as SVS Lab's regular editors.
+  const prevWork=work,prevSectors=flashSectors;let verified;
+  try{
+   work=output;flashSectors=verifySectors;
+   verified=verifySnapshotIdentity();
+   if(!verified.ok)throw Error('Repaired live-party identity still fails: '+verified.reason);
+   if(!activePartyRAMMirrors().length||!activeGameplayPartyLocations().length)
+    throw Error('Repaired party mirrors are not synchronized.');
+  }finally{work=prevWork;flashSectors=prevSectors;}
+  const actualDiff=output.reduce((n,v,i)=>n+(v!==before[i]),0);
+  const view=$('repairPreview');view.replaceChildren();
+  const lead=document.createElement('p');lead.textContent='READ-ONLY PREVIEW — '+report.length+' targeted repair(s), '+actualDiff+
+   ' raw bytes adjusted (including FLASH checksums). No save data has been changed in this browser session.';view.append(lead);
+  for(const item of report){
+   const block=document.createElement('div');block.className='callout';
+   const title=document.createElement('strong');title.textContent=item.heading;block.append(title);
+   const p=document.createElement('p');p.className='hint';p.textContent=item.body;block.append(p);
+   view.append(block);
+  }
+  const safety=document.createElement('p');safety.className='hint';
+  safety.textContent='Original .svs remains unchanged; all other records are copied from your upload. A corrupted live battle cannot always be safely resumed—test only on a backed-up game and check whether you are in the overworld.';view.append(safety);
+  repairPlan={input:before,output,report,changedBytes:actualDiff};
+  $('repairDownload').disabled=false;
+  msg($('repairStatus'),'✓ Structural repair preview verified against active trainer and party. Choose Download repaired SVS if you accept these exact changes.','good');
+ }catch(e){repairInvalidate();msg($('repairStatus'),'Repair not offered: '+e.message,'warn');}
+}
+async function repairDownloadSVS(){
+ const plan=repairPlan;
+ try{
+  if(!plan)throw Error('Preview a supported repair first.');
+  if(!repairBytesEqual(work,plan.input))throw Error('Loaded snapshot changed since preview; diagnose again.');
+  if(!confirm('Export a separately named, experimental repaired SVS?\n\n'+plan.report.map(x=>x.heading).join('\n')+
+    '\n\nThe original uploaded file will remain unchanged. Back up your current .sav and .svs before loading this in Delta.'))return;
+  $('repairDownload').disabled=true;
+  const zipped=await gzipTransform(plan.output,'zip'),roundtrip=await gzipTransform(zipped,'unzip');
+  if(!repairBytesEqual(roundtrip,plan.output))throw Error('Gzip round-trip verification failed; nothing downloaded.');
+  const base=filename.replace(/\.(svs|sgm|gz)$/i,'');
+  const outname=base+'-BadEgg-Repaired-TEST.svs';
+  const blob=new Blob([zipped],{type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  msg($('repairStatus'),'✓ Downloaded '+outname+' ('+plan.changedBytes+' modified raw bytes). Load through Delta → Load State using the same exact ROM. Verify party, PC and follower behavior before saving normally.','good');
+ }catch(e){msg($('repairStatus'),'Repaired SVS download blocked: '+e.message,'bad');}
+ finally{$('repairDownload').disabled=!repairPlan;}
+}
+
+$('repairDiagnose').onclick=repairPreviewBuild;
+$('repairDownload').onclick=repairDownloadSVS;
 function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
  if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
@@ -1049,15 +1279,15 @@ function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  let validOt=d.subarray(i+20,i+27).includes(255);if(!validOt)continue;
  found.push(i);i+=60;
  }return found}
-function showEggs(){try{eggMatches=scanner();$('eggCount').textContent=eggMatches.length?'Found '+eggMatches.length+' flagged RAM record(s)':'No flagged records detected';$('eggList').innerHTML=eggMatches.length?`<div class="callout warn">${eggMatches.length} matching record(s) (including any duplicates). Clearing sets exactly these 80-byte boxed-Pokémon records to zero.<div class="small" style="margin-top:5px;overflow-wrap:anywhere">Offsets: ${eggMatches.slice(0,35).map(hex).join(', ')}${eggMatches.length>35?' …':''}</div></div>`:'<div class="callout">No matching Bad Egg patterns. This does not guarantee there are none in the in-game .sav or unseen flash memory.</div>';$('clearEggs').classList.toggle('hidden',eggMatches.length===0)}catch(e){msg($('eggList'),e.message,'bad')}}
-function eraseEggs(){if(!eggMatches.length)return;if(!confirm('Remove '+eggMatches.length+' flagged Bad Egg RAM records? This may not repair invalid storage data. Keep your original SVS file.'))return;let patches=[];for(let s of eggMatches)patch(s,new Uint8Array(80),patches);refreshChecksums(patches);snapshot('Cleared '+eggMatches.length+' flagged Bad Egg record(s)',patches);sync();showEggs();msg($('eggList'),'✓ Flagged records cleared from this snapshot. Test loading in Delta before deleting any backups.','good')}
+function showEggs(){try{eggMatches=scanner();$('eggCount').textContent=eggMatches.length?'Found '+eggMatches.length+' flagged RAM record(s)':'No flagged records detected';$('eggList').innerHTML=eggMatches.length?`<div class="callout warn">${eggMatches.length} matching record(s) (including any duplicates). These are memory pattern matches, not a verified repair plan. Use the guided repair assistant below to check the actual party and Bill's PC.<div class="small" style="margin-top:5px;overflow-wrap:anywhere">Offsets: ${eggMatches.slice(0,35).map(hex).join(', ')}${eggMatches.length>35?' …':''}</div></div>`:'<div class="callout">No matching Bad Egg patterns. This does not guarantee there are none in the in-game .sav or unseen flash memory.</div>';$('clearEggs').classList.add('hidden')}catch(e){msg($('eggList'),e.message,'bad')}}
+function eraseEggs(){msg($('eggList'),'The original RAM-only erase is disabled because it can leave Bad Eggs in FLASH or damage the party count. Use Repair my SVS → Diagnose & preview instead.','warn');}
 function parseOffset(s){s=s.trim();if(!/^(0x[\da-f]+|\d+)$/i.test(s))throw Error('Enter a valid hex offset such as 0x2DE6F or a decimal number.');let n=Number(s);if(!Number.isSafeInteger(n)||n<0||n>=work.length)throw Error('Offset out of range.');return n}
 function parseBytes(s){let val=s.trim().replace(/0x/ig,'').replace(/[,;:_-]/g,' ').replace(/\s+/g,'');if(!val||val.length%2||!/^[\da-f]+$/i.test(val))throw Error('Enter pairs of hex digits, e.g. 0F 27');if(val.length>512)throw Error('Patch limited to 256 bytes.');return Uint8Array.from(val.match(/../g).map(x=>parseInt(x,16)))}
 function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,p-32),end=Math.min(work.length,p+160),rows=[];start-=start%16;
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
 function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();repairInvalidate();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('repairStatus'),'SVS opened read-only. Use Diagnose & preview repair to check whether a Bad Egg or corrupted final party slot can be safely removed.','warn');msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();msg($('repairStatus'),'Open the repair assistant to check for verified Bad Eggs or corrupted party records; no edits will be made automatically.','good');hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
 
 function auditExportLiveParty(){
  const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1);

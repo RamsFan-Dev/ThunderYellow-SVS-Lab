@@ -37,6 +37,17 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.27 — Preview-first Bad Egg & save repair
+
+Under **Pokémon cleanup → Repair my SVS — Bad Eggs & invalid Pokémon**, import a backed-up Delta save state and click **Diagnose & preview repair**. The repair assistant is available even when the imported SVS is otherwise READ-ONLY. The second **Download repaired SVS** button creates a separately named experimental file; the original uploaded SVS and active editor state are never modified.
+
+- **Corrupted last party member:** Recognize the specific invalid Memento-only recovery Rattata from its encrypted record or a trailing member explicitly flagged as a Bad Egg. Require every preceding party member to remain valid, matching across FLASH copies. Require the saved party count, gameplay count, RAM SaveBlock1 count, tail record, and empty next slot to agree. Update every proven party copy and its FLASH checksum.
+- **Bad Eggs in Bill's PC:** Remove only slots explicitly carrying the isBadEgg flag, matching across every complete cartridge save and every verified live PC RAM mirror. Ordinary Eggs and unflagged healthy Pokémon are left alone. If any required copy disagrees, refuse repair.
+- **Safety gate:** Generate the repair from a copy of the original binary, validate every FLASH checksum and the normal active-trainer and party identity checks, then verify compressed output round-trip before download. No automatic creation of Pokémon or modification of original saves.
+- **Old dangerous operation:** The legacy RAM-only Bad Egg wipe is disabled; raw RAM-only deletion could leave FLASH and party counts inconsistent.
+- **Known limitations:** Does not automatically repair middle-party damage, missing live mirrors, unidentifiable corruption, or a battle in progress. Use Load State in the same ROM version and check party, PC, gameplay and follower before making a normal in-game save. Keep original .sav and .svs backups.
+
+Static JavaScript and isolated positive/negative tests passed for the corrupt Rattata pattern, healthy starter preservation, mismatch rejection, flagged PC Bad Egg removal and normal Egg preservation. The integrated button has not yet been gameplay tested in Delta.
 ## SVS Lab v2.26 — Gym & League Team Coach
 
 Inside **Party & PC Pokémon Editor → Party Builder & Switcher**, choose one of **10 battle guides**: the eight Kanto gym leaders, Elite Four preparation, or the Champion. The default preview is Cerulean Gym / Misty.
