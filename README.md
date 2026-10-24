@@ -37,6 +37,19 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.28 — Touch-friendly PC rearranging and true shiny Pokémon icons
+
+An optional six-column **Pokémon sprite grid** now displays the party and PC using FireRed/LeafGreen pixel artwork, with a dedicated **Your party** thumbnail strip above Bill's PC like a traditional Pokémon editor. The art is decorative and gracefully falls back to labels when unavailable. **Shiny** artwork and a ✨ badge appear only when the individual Pokémon's real Gen III PID/Original Trainer ID XOR calculation marks it as shiny; this also accurately shows the protected original shiny follower Pikachu without changing its identity. A 🎒 indicates a held item; 🔒 marks the protected starter. **Show Pokémon sprite grid** toggles back to the original detailed cards.
+
+**Rearrange PC Pokémon** is a safe physical move/swap tool for iPhone/iPad and desktop. Load a verified Delta SVS, choose **PC boxes**, then click **Rearrange PC Pokémon**. Tap an occupied Pokémon to select it; switch to a different one of the 14 PC boxes if desired; tap an empty or occupied slot to **move or swap**. Tapping the selected source again or **Cancel selection** cancels. Desktop HTML drag-and-drop can also select a source and drop it on a target. All changes require a separate confirmation.
+
+- Preserves complete 80-byte Pokémon records, personality ID, original Trainer ID, species, held items, original shiny state, all EV/IV/move data, duplicates and other unrelated PC slots.
+- Checks existing 420 PC records and matching RAM mirrors, verifies both FLASH save groups for each proposed source/target, mirrors both changed slots to FLASH and active PC memory, refreshes sector checksums, then revalidates the active trainer and party. Writes are rolled back on verification failure.
+- Protected follower Pikachu is not moved; **party editing uses the existing Party Builder & Switcher**, retaining its locked follower slot. The new compact party strip lets you quickly inspect party Pokémon, not rearrange that protected array.
+- View-only sort and physical PC rearranging remain distinct. Enabling rearranging resets the view to **Current box slots**; selecting a view-only sort cancels rearrange mode. The original PC physical sort and bulk-add continue unchanged. **Undo** is available before exporting an edited SVS.
+- Pokémon sprite files are served from PokeAPI's public GitHub sprite catalog. They require a network connection on the first view; the service worker caches viewed sprites when possible for later offline reuse. All text labels, shiny detection and save operations work without sprite downloads.
+
+**QA:** Inline script syntax passed; isolated tests verified shiny Charizard/Pikachu artwork selection, moving to an empty slot, swapping occupied PC slots, preserving all 80-byte records in both simulated FLASH groups, and stale source-identity rejection. **Live iPhone Safari and Delta gameplay testing is still required.** Keep backups of both the original .svs and in-game .sav.
 ## SVS Lab v2.27 — Preview-first Bad Egg & save repair
 
 Under **Pokémon cleanup → Repair my SVS — Bad Eggs & invalid Pokémon**, import a backed-up Delta save state and click **Diagnose & preview repair**. The repair assistant is available even when the imported SVS is otherwise READ-ONLY. The second **Download repaired SVS** button creates a separately named experimental file; the original uploaded SVS and active editor state are never modified.
