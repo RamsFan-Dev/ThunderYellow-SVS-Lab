@@ -266,7 +266,7 @@
 <div id="monMsg" class="status"></div>
 </div><div class="callout warn" style="margin-top:15px">Experimental build: validates Gen 3 record and flash-section checksums, but has not been tested loading an edited Pokémon state in Delta. Keep your original SVS and check your edited copy in-game before overwriting anything.</div></section>
 <section class="panel"><div class="feature">05 • Gym badges</div><h2>Kanto badges</h2><p>All eight badge flags appear below, including unearned badges. Tap a badge to mark earned or not earned, then choose <strong>Save badges</strong>.</p><div id="badgeUnavailable" class="callout warn hidden"></div><div id="badgeGrid" class="badge-grid"></div><div id="badgeStatus" class="status"></div><button id="saveBadges" class="btn primary wide" style="margin-top:12px">💾 Save badges</button></section>
-<section id="pokemonCleanupPanel" class="panel"><div class="feature">06 • Pokémon cleanup</div><h2>Bad Egg scanner &amp; save recovery</h2><p>Scans for flagged Gen 3 Bad Egg records in memory. Removal is optional and only clears positively flagged records; it does not change normal eggs.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">The legacy RAM scan is a diagnostic only: do not blindly erase a record while the active party count still includes it. Use the guided repair below for a verified snapshot.</div>
+<section id="pokemonCleanupPanel" class="panel"><div class="feature">06 • Pokémon cleanup</div><h2>Bad Egg scanner &amp; save recovery</h2><p>Legacy diagnostic scan for suspicious Bad Egg memory patterns. For safe cleanup, use the guided repair button below. The old RAM-only deletion is disabled to protect cartridge saves and party counts.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">The legacy RAM scan is a diagnostic only: do not blindly erase a record while the active party count still includes it. Use the guided repair below for a verified snapshot.</div>
 <details id="repairAssistant" open><summary>🛠 Repair my SVS — Bad Eggs &amp; invalid Pokémon</summary>
 <p class="hint">Works even when SVS Lab opens your snapshot READ-ONLY. Inspects both cartridge save copies, the party and live RAM. For a clearly identified corrupt last party member or confirmed flagged PC Bad Egg, it previews the exact changes and downloads a separate repaired .svs. Normal Eggs and healthy Pokémon stay untouched.</p>
 <div class="row" style="margin:12px 0"><button id="repairDiagnose" type="button" class="btn secondary">1. Diagnose &amp; preview repair</button><button id="repairDownload" type="button" class="btn primary" disabled>2. Download repaired SVS</button></div>
@@ -1150,7 +1150,7 @@ function repairPlanPartyTail(groups,operations,report){
  report.push({heading:'Party slot '+count+' — corrupted / Bad Egg',
   body:(exactSignature?'Temporary Memento Rattata signature confirmed. ':'Bad Egg flag verified. ')+
   'Removes only the final damaged Pokémon; keeps '+(count-1)+' valid party members, syncs '+groups.length+
-  ' cartridge save copies, '+saveBases.length+' saved-party mirror(s) and '+gameBases.length+' gameplay-party mirror(s).'});
+  ' cartridge save copies, '+saveBases.length+' saved-party mirror(s) and '+gameBases.length+' gameplay-party mirror(s). Preserved Pokémon: '+expected.map(x=>monNames[x[2]]||'Species '+x[2]).join(', ')+'.'});
 }
 
 function repairPlanBadEggPC(groups,operations,report){
@@ -1232,8 +1232,9 @@ function repairPreviewBuild(){
    if(!activePartyRAMMirrors().length||!activeGameplayPartyLocations().length)
     throw Error('Repaired party mirrors are not synchronized.');
   }finally{work=prevWork;flashSectors=prevSectors;}
+  const actualDiff=output.reduce((n,v,i)=>n+(v!==before[i]),0);
   const view=$('repairPreview');view.replaceChildren();
-  const lead=document.createElement('p');lead.textContent='READ-ONLY PREVIEW — '+report.length+' targeted repair(s), '+changed.size+
+  const lead=document.createElement('p');lead.textContent='READ-ONLY PREVIEW — '+report.length+' targeted repair(s), '+actualDiff+
    ' raw bytes adjusted (including FLASH checksums). No save data has been changed in this browser session.';view.append(lead);
   for(const item of report){
    const block=document.createElement('div');block.className='callout';
@@ -1243,7 +1244,7 @@ function repairPreviewBuild(){
   }
   const safety=document.createElement('p');safety.className='hint';
   safety.textContent='Original .svs remains unchanged; all other records are copied from your upload. A corrupted live battle cannot always be safely resumed—test only on a backed-up game and check whether you are in the overworld.';view.append(safety);
-  repairPlan={input:before,output,report,changedBytes:changed.size};
+  repairPlan={input:before,output,report,changedBytes:actualDiff};
   $('repairDownload').disabled=false;
   msg($('repairStatus'),'✓ Structural repair preview verified against active trainer and party. Choose Download repaired SVS if you accept these exact changes.','good');
  }catch(e){repairInvalidate();msg($('repairStatus'),'Repair not offered: '+e.message,'warn');}
@@ -1278,7 +1279,7 @@ function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  let validOt=d.subarray(i+20,i+27).includes(255);if(!validOt)continue;
  found.push(i);i+=60;
  }return found}
-function showEggs(){try{eggMatches=scanner();$('eggCount').textContent=eggMatches.length?'Found '+eggMatches.length+' flagged RAM record(s)':'No flagged records detected';$('eggList').innerHTML=eggMatches.length?`<div class="callout warn">${eggMatches.length} matching record(s) (including any duplicates). Clearing sets exactly these 80-byte boxed-Pokémon records to zero.<div class="small" style="margin-top:5px;overflow-wrap:anywhere">Offsets: ${eggMatches.slice(0,35).map(hex).join(', ')}${eggMatches.length>35?' …':''}</div></div>`:'<div class="callout">No matching Bad Egg patterns. This does not guarantee there are none in the in-game .sav or unseen flash memory.</div>';$('clearEggs').classList.add('hidden')}catch(e){msg($('eggList'),e.message,'bad')}}
+function showEggs(){try{eggMatches=scanner();$('eggCount').textContent=eggMatches.length?'Found '+eggMatches.length+' flagged RAM record(s)':'No flagged records detected';$('eggList').innerHTML=eggMatches.length?`<div class="callout warn">${eggMatches.length} matching record(s) (including any duplicates). These are memory pattern matches, not a verified repair plan. Use the guided repair assistant below to check the actual party and Bill's PC.<div class="small" style="margin-top:5px;overflow-wrap:anywhere">Offsets: ${eggMatches.slice(0,35).map(hex).join(', ')}${eggMatches.length>35?' …':''}</div></div>`:'<div class="callout">No matching Bad Egg patterns. This does not guarantee there are none in the in-game .sav or unseen flash memory.</div>';$('clearEggs').classList.add('hidden')}catch(e){msg($('eggList'),e.message,'bad')}}
 function eraseEggs(){msg($('eggList'),'The original RAM-only erase is disabled because it can leave Bad Eggs in FLASH or damage the party count. Use Repair my SVS → Diagnose & preview instead.','warn');}
 function parseOffset(s){s=s.trim();if(!/^(0x[\da-f]+|\d+)$/i.test(s))throw Error('Enter a valid hex offset such as 0x2DE6F or a decimal number.');let n=Number(s);if(!Number.isSafeInteger(n)||n<0||n>=work.length)throw Error('Offset out of range.');return n}
 function parseBytes(s){let val=s.trim().replace(/0x/ig,'').replace(/[,;:_-]/g,' ').replace(/\s+/g,'');if(!val||val.length%2||!/^[\da-f]+$/i.test(val))throw Error('Enter pairs of hex digits, e.g. 0F 27');if(val.length>512)throw Error('Patch limited to 256 bytes.');return Uint8Array.from(val.match(/../g).map(x=>parseInt(x,16)))}
