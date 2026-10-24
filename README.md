@@ -37,6 +37,18 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.29 — Drag, drop and tap between Party and Bill's PC
+
+**Rearrange Party & PC** now works across both areas, not just within PC boxes. While viewing Bill's PC, the **Your party** sprite strip above the boxes is a compatible source **and** destination. Tap a Pokémon in either area and then tap a destination, or drag between them. On iPhone, Pointer Events support touch dragging even when native HTML drag/drop on buttons is unavailable; tap-to-select/tap-to-place is the reliable fallback.
+
+- **Occupied Party ↔ Occupied PC:** Swap the two Pokémon. The incoming boxed Pokémon is converted to a full 100-byte party record with reconstructed battle stats; the outgoing party member becomes a complete 80-byte box record.
+- **Party → Empty PC:** Deposit any non-protected member *after the fixed follower Pikachu* and close the resulting party gap, reducing the live party count by one. Never leave an invalid middle-party gap.
+- **PC → Next empty Party:** Withdraw a boxed Pokémon only into the next contiguous empty slot, increasing the party count. Full parties cannot accept a seventh member.
+- **Follower safety:** The original follower Pikachu can never be selected, displaced or moved, and operations that would shift its locked party position are rejected.
+- **Snapshot consistency:** Before changes, verify every active party Pokémon and complete 100-byte record across cartridge FLASH and live gameplay/SaveBlock1 RAM, as well as every matching PC FLASH copy and live storage mirror. Apply changes to all validated saved and live copies, update changed party counts, refresh FLASH checksums, and verify trainer/party identity and written PC data. Failures are rolled back; Undo and manual export remain available.
+- **No unintended game modification:** Does not touch the ROM, original uploaded SVS or .sav file, original follower identity, or other PC slots. Confirms action before changing the working snapshot. Export a separately named SVS and use Delta → Load State to test.
+
+**Validation:** Inline JavaScript parsing and isolated transfer tests passed for party deposit and compaction (3→2), PC withdrawal (2→3), occupied swap, original Pikachu byte-for-byte preservation, and protected-slot rejection. Browser-side iOS drag behavior and actual Delta loading are not yet verified.
 ## SVS Lab v2.28 — Touch-friendly PC rearranging and true shiny Pokémon icons
 
 An optional six-column **Pokémon sprite grid** now displays the party and PC using FireRed/LeafGreen pixel artwork, with a dedicated **Your party** thumbnail strip above Bill's PC like a traditional Pokémon editor. The art is decorative and gracefully falls back to labels when unavailable. **Shiny** artwork and a ✨ badge appear only when the individual Pokémon's real Gen III PID/Original Trainer ID XOR calculation marks it as shiny; this also accurately shows the protected original shiny follower Pikachu without changing its identity. A 🎒 indicates a held item; 🔒 marks the protected starter. **Show Pokémon sprite grid** toggles back to the original detailed cards.

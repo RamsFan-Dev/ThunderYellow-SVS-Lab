@@ -124,13 +124,14 @@
 .mon-tile .shiny-icon{left:3px;top:3px}.mon-tile .mon-item-icon{right:3px;bottom:3px;font-size:12px}
 .mon-tile .protected-icon{right:3px;top:3px;font-size:12px}
 .mon-tile.shuffle-source{outline:3px solid #ffdc77;outline-offset:-3px;background:#5a4927}
+.mon-tile.shuffle-touch-target{touch-action:none;user-select:none;-webkit-user-select:none}
 .mon-tile.shuffle-target{outline:2px dashed #7de3a3;outline-offset:-3px}
 .mon-roster.sprite-grid .mon-empty-marker{display:block;font-size:19px;color:#6e829f;line-height:44px}
 @media(max-width:650px){.mon-roster.sprite-grid,.party-mini-strip{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.mon-tile.sprite-tile{min-height:77px;padding:3px 1px}.mon-tile.sprite-tile .pokemon-art{width:40px;height:40px}.mon-tile.sprite-tile .pokemon-art-frame{height:42px;min-height:42px}.mon-tile.sprite-tile strong{font-size:9px}.mon-tile.sprite-tile small{font-size:8px}}
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.28</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.29</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -259,12 +260,12 @@
 </div>
 <div id="monVisualControls" class="row" style="margin:13px 0 4px">
  <label class="tog" style="margin:0"><input id="spriteGridToggle" type="checkbox" checked> Show Pokémon sprite grid</label>
- <button id="pcShuffleToggle" type="button" class="btn secondary">⇄ Rearrange PC Pokémon</button>
+ <button id="pcShuffleToggle" type="button" class="btn secondary">⇄ Rearrange Party & PC</button>
  <button id="pcShuffleCancel" type="button" class="btn ghost hidden">Cancel selection</button>
 </div>
 <div id="pcShuffleStatus" class="status" role="status" aria-live="polite"></div>
 <div id="partySpritePeek" class="hidden" style="margin-top:12px">
- <div class="hint">Your party — tap a Pokémon to view it. Use Party Builder to change party members; follower Pikachu remains protected.</div>
+ <div class="hint">Your party — in Rearrange mode, drag or tap a Pokémon here to transfer or swap with Bill's PC. Follower Pikachu remains protected.</div>
  <div id="partySpritePeekTiles" class="party-mini-strip"></div>
 </div>
 <div id="monRoster" class="mon-roster sprite-grid"></div><div id="monSummary" class="callout" style="margin-top:14px"></div>
@@ -292,7 +293,7 @@
 </details>
 <details id="monStats"><summary>Current party battle stats</summary><div class="grid3" id="partyStatRows"></div><div class="hint">Changing level or species recalculates party stats and matching EXP, keeping the current HP percentage. Battle stats remain editable when level and species are unchanged.</div></details>
 <div id="monSaveStatus" role="status" class="callout" style="margin-top:15px">No pending edits.</div><button class="btn primary wide" id="saveMon" style="margin-top:12px">💾 Save Pokémon changes</button></div>
-<div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. The party cannot be reordered, emptied or expanded in this version; doing so could interfere with the follower system.</div></div>
+<div id="monActions" class="hidden"><hr><h3 style="font-size:15px">Copy, move or delete a PC Pokémon</h3><div class="grid3"><div><label class="label" for="targetBox">Destination box (1–14)</label><input class="input" id="targetBox" type="number" min="1" max="14" value="1" inputmode="numeric"></div><div><label class="label" for="targetSlot">Empty destination slot (1–30)</label><input class="input" id="targetSlot" type="number" min="1" max="30" value="1" inputmode="numeric"></div></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="cloneMon">Copy to empty PC slot</button><button class="btn secondary" id="moveMon">Move to empty PC slot</button><button class="btn danger" id="removeMon">Delete selected PC Pokémon</button></div><div class="hint">You can copy from your party into an empty PC slot, but cannot move/delete a party Pokémon. Only empty destination slots are accepted. Use Rearrange Party & PC above to move or swap party and PC Pokémon safely. The original follower Pikachu stays in the same party slot.</div></div>
 <div id="monMsg" class="status"></div>
 </div><div class="callout warn" style="margin-top:15px">Experimental build: validates Gen 3 record and flash-section checksums, but has not been tested loading an edited Pokémon state in Delta. Keep your original SVS and check your edited copy in-game before overwriting anything.</div></section>
 <section class="panel"><div class="feature">05 • Gym badges</div><h2>Kanto badges</h2><p>All eight badge flags appear below, including unearned badges. Tap a badge to mark earned or not earned, then choose <strong>Save badges</strong>.</p><div id="badgeUnavailable" class="callout warn hidden"></div><div id="badgeGrid" class="badge-grid"></div><div id="badgeStatus" class="status"></div><button id="saveBadges" class="btn primary wide" style="margin-top:12px">💾 Save badges</button></section>
@@ -1316,7 +1317,7 @@ function parseBytes(s){let val=s.trim().replace(/0x/ig,'').replace(/[,;:_-]/g,' 
 function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,p-32),end=Math.min(work.length,p+160),rows=[];start-=start%16;
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
-function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);sync();hexView()}
+function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);monLocations=locateMons();sync();hexView()}
 async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();pcShuffleEnabled=false;pcShuffleSource=null;repairInvalidate();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('repairStatus'),'SVS opened read-only. Use Diagnose & preview repair to check whether a Bad Egg or corrupted final party slot can be safely removed.','warn');msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();msg($('repairStatus'),'Open the repair assistant to check for verified Bad Eggs or corrupted party records; no edits will be made automatically.','good');hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
 
 function auditExportLiveParty(){
@@ -3070,11 +3071,33 @@ function renderPartySpritePeek(){
   const label=document.createElement('strong');label.textContent=name;
   const level=document.createElement('small');level.textContent=mon?'Lv '+pcLevel(mon):'Slot '+(i+1);
   tile.append(label,level);
+  tile.classList.toggle('shuffle-source',pcShuffleEnabled&&pcShuffleSource?.kind==='party'&&pcShuffleSource.slot===i);
+  tile.dataset.dropKind='party';tile.dataset.dropSlot=String(i);
   tile.onclick=()=>{
+   if(Date.now()<pcShuffleIgnoreClickUntil)return;
+   if(pcShuffleEnabled&&pcShuffleChooseParty(i,mon))return;
    if(!confirmMonDiscard())return;
    pcShuffleEnabled=false;clearPCShuffleSelection();monMode='party';monSlot=i;
    invalidateShowdownExport();renderPokemon();
   };
+  if(pcShuffleEnabled){
+   if(mon&&!isProtected(mon)){
+    tile.draggable=true;
+    tile.addEventListener('dragstart',event=>{
+     pcShuffleSource={kind:'party',slot:i,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+     updatePCShuffleControls();
+     event.dataTransfer?.setData('text/plain','party:'+i);
+     if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
+    });
+   }
+   tile.addEventListener('dragover',event=>{if(!pcShuffleSource)return;event.preventDefault();tile.classList.add('shuffle-target');});
+   tile.addEventListener('dragleave',()=>tile.classList.remove('shuffle-target'));
+   tile.addEventListener('drop',event=>{
+    event.preventDefault();tile.classList.remove('shuffle-target');
+    if(pcShuffleSource)pcShuffleChooseParty(i,mon);
+   });
+   setupShuffleTouchDrag(tile,'party',i,mon);
+  }
   target.append(tile);
  }
 }
@@ -3082,14 +3105,13 @@ let pcShuffleEnabled=false,pcShuffleSource=null,pcShuffleBusy=false;
 function updatePCShuffleControls(){
  const mode=$('pcShuffleToggle'),cancel=$('pcShuffleCancel'),status=$('pcShuffleStatus');
  if(!mode||!status)return;
- mode.textContent=pcShuffleEnabled?'✓ Rearrange PC: ON':'⇄ Rearrange PC Pokémon';
+ mode.textContent=pcShuffleEnabled?'✓ Rearrange Party & PC: ON':'⇄ Rearrange Party & PC';
  mode.classList.toggle('primary',pcShuffleEnabled);
  cancel.classList.toggle('hidden',!pcShuffleSource);
  if(!pcShuffleEnabled){status.textContent='';return;}
  status.textContent=pcShuffleSource?
- 'Selected '+pcShuffleSource.label+' from Box '+(1+Math.floor(pcShuffleSource.slot/30))+
- ', Slot '+(1+pcShuffleSource.slot%30)+'. Switch boxes if needed, then tap an occupied or empty PC slot to SWAP or MOVE. Confirm before anything changes.':
- 'Tap a Pokémon in Bill’s PC to pick it up, then tap a destination slot. Works across all 14 boxes. Tap the same slot to cancel. No save changes until confirmed.';
+  'Selected '+pcShuffleSource.label+' from '+(pcShuffleSource.kind==='party'?'Party Slot '+(1+pcShuffleSource.slot):'Box '+(1+Math.floor(pcShuffleSource.slot/30))+', Slot '+(1+pcShuffleSource.slot%30))+'. Tap a party or PC slot to MOVE or SWAP; switch boxes if needed. Confirm before anything changes.':
+  'Tap a Pokémon in the party row or Bill’s PC, then tap a destination in either area. Drag and drop also works when supported. Pikachu is locked. No changes until confirmation.';
 }
 function clearPCShuffleSelection(){pcShuffleSource=null;updatePCShuffleControls();}
 function togglePCShuffle(){
@@ -3107,20 +3129,220 @@ function pcShuffleEntryLabel(slot,mon){
  return (mon?(monNames[mon.sp]||'Species '+mon.sp)+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty')+
   ' (Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30)+')';
 }
+// iOS browsers do not consistently fire HTML5 drag/drop on buttons.
+// Pointer-based touch drags use an explicit pickup after movement; plain taps still work.
+let pcShuffleIgnoreClickUntil=0;
+function setupShuffleTouchDrag(tile,kind,slot,mon){
+ if(!pcShuffleEnabled)return;
+ tile.classList.add('shuffle-touch-target');
+ let start=null,dragging=false;
+ tile.addEventListener('pointerdown',event=>{
+  if(event.pointerType==='mouse'||!mon||isProtected(mon)||!pcShuffleEnabled)return;
+  start={x:event.clientX,y:event.clientY,id:event.pointerId};dragging=false;
+ });
+ tile.addEventListener('pointermove',event=>{
+  if(!start||event.pointerId!==start.id)return;
+  if(!dragging&&Math.hypot(event.clientX-start.x,event.clientY-start.y)>14)dragging=true;
+  if(dragging){event.preventDefault();tile.classList.add('shuffle-source');}
+ });
+ tile.addEventListener('pointercancel',()=>{start=null;dragging=false;tile.classList.remove('shuffle-source');});
+ tile.addEventListener('pointerup',event=>{
+  if(!start||event.pointerId!==start.id)return;
+  const moved=dragging;start=null;dragging=false;tile.classList.remove('shuffle-source');
+  if(!moved)return;event.preventDefault();
+  pcShuffleIgnoreClickUntil=Date.now()+700;
+  const hit=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-drop-kind][data-drop-slot]');
+  if(!hit||!pcShuffleEnabled)return;
+  const targetKind=hit.dataset.dropKind,targetSlot=Number(hit.dataset.dropSlot);
+  if(!Number.isInteger(targetSlot)||!['party','pc'].includes(targetKind))return;
+  if(targetKind===kind&&targetSlot===slot)return;
+  pcShuffleSource={kind,slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  updatePCShuffleControls();
+  if(targetKind==='party'){
+   const sec=monLocations?.groups?.[0]?.sectors?.get(1),count=sec?work[sec.base+0x34]:0;
+   const targetMon=targetSlot<count?decodeMon(getPartyFrom(monLocations.groups[0],targetSlot)):null;
+   pcShuffleChooseParty(targetSlot,targetMon);
+  }else{
+   const targetMon=decodeMon(getPCFrom(monLocations.groups[0],targetSlot));
+   pcShuffleChoose(targetSlot,targetMon);
+  }
+ });
+}
+function pcShuffleChooseParty(slot,mon){
+ if(!pcShuffleEnabled||pcShuffleBusy)return false;
+ if(!confirmMonDiscard())return true;
+ const sec=monLocations?.groups?.[0]?.sectors?.get(1);
+ if(!sec)return true;
+ const count=work[sec.base+0x34];
+ if(slot<0||slot>=6||slot>count){msg($('pcShuffleStatus'),'Choose an active party slot or the very next empty position.','warn');return true;}
+ if(!pcShuffleSource){
+  if(!mon){msg($('pcShuffleStatus'),'Select an occupied Pokémon in either area first.','warn');return true;}
+  if(isProtected(mon)){msg($('pcShuffleStatus'),'Original follower Pikachu must stay in its protected slot.','warn');return true;}
+  pcShuffleSource={kind:'party',slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  updatePCShuffleControls();renderPokemon();return true;
+ }
+ const from=pcShuffleSource;
+ if(from.kind==='party'){
+  if(from.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
+  msg($('pcShuffleStatus'),'Use Party Builder to reorder two party members; tap a PC slot to transfer this Pokémon to Bill’s PC.','warn');
+  return true;
+ }
+ try{partyPCTransferExecute(from,{kind:'party',slot});}
+ catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Party transfer blocked: '+e.message,'bad');renderPokemon();}
+ return true;
+}
 function pcShuffleChoose(slot,mon){
  if(!pcShuffleEnabled||pcShuffleBusy)return false;
  if(!confirmMonDiscard())return true;
  if(!pcShuffleSource){
   if(!mon){msg($('pcShuffleStatus'),'Select an occupied Pokémon first, then choose its destination.','warn');return true;}
   if(isProtected(mon)){msg($('pcShuffleStatus'),'The protected follower Pikachu cannot be rearranged from PC storage.','bad');return true;}
-  pcShuffleSource={slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+  pcShuffleSource={kind:'pc',slot,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
   updatePCShuffleControls();renderPokemon();return true;
  }
  const source=pcShuffleSource;
- if(source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
- try{pcShuffleExecute(source,slot);}
+ if(source.kind!=='party'&&source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
+ try{if(source.kind==='party')partyPCTransferExecute(source,{kind:'pc',slot});else pcShuffleExecute(source,slot);}
  catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
  return true;
+}
+// Transfers are distinct from PC-PC shuffles: full party records have 100 bytes,
+// PC boxes store 80 bytes. All game RAM and both cartridge FLASH saves must agree.
+function partyPCTransferLabel(kind,slot,mon){
+ return (kind==='party'?'Party '+(slot+1):'Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30))+
+  ': '+(mon?(monNames[mon.sp]||'Pokémon')+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty');
+}
+function partyPCTransferPlan(source,destination){
+ if(!loaded||!snapshotSafe)throw Error('Import a compatible, verified save state first.');
+ if(monDirty||badgeDirty||nameDirty||recoveryDraftPending)throw Error('Save or discard pending editor changes first.');
+ if(!source||!destination||!['party','pc'].includes(source.kind)||!['party','pc'].includes(destination.kind)||source.kind===destination.kind)
+  throw Error('Choose one party slot and one PC box slot.');
+ if(!Number.isInteger(source.slot)||!Number.isInteger(destination.slot)||source.slot<0||destination.slot<0)
+  throw Error('Invalid source or destination slot.');
+ const partySlot=source.kind==='party'?source.slot:destination.slot,boxSlot=source.kind==='pc'?source.slot:destination.slot;
+ if(partySlot>=6||boxSlot>=420)throw Error('Party or PC slot is out of range.');
+ if(!monLocations?.pcRAM?.length)throw Error('Live Bill’s PC memory could not be verified. Save in-game and make a fresh SVS.');
+ const live=verifyLivePartyMirrors(),groups=live.groups,count=live.count;
+ const sec=groups[0]?.sectors.get(1);if(!sec)throw Error('Active party save is missing.');
+ const party=[];
+ for(let i=0;i<count;i++){
+  const saved=getPartyFrom(groups[0],i),mon=decodeMon(saved);
+  if(!mon)throw Error('Unreadable party member at slot '+(i+1)+'.');
+  for(const g of groups.slice(1))if(!repairBytesEqual(getPartyFrom(g,i),saved))
+   throw Error('Saved party FLASH copies disagree at slot '+(i+1)+'.');
+  for(const base of live.mirrors){
+   if(!repairBytesEqual(work.subarray(base+100*i,base+100*(i+1)),saved))
+    throw Error('The live party differs from the saved party at slot '+(i+1)+'.');
+  }
+  party.push({mon,bytes:saved});
+ }
+ const pc=pcRosterSnapshot(),target=pc[boxSlot],partyMember=party[partySlot]||null;
+ if(!target)throw Error('PC slot is missing.');
+ for(const g of groups)if(!repairBytesEqual(getPCFrom(g,boxSlot),target.bytes))
+  throw Error('PC FLASH copies differ at the selected Box and Slot; no changes were made.');
+ if(partySlot>count)throw Error('Choose an occupied party slot or its next empty slot '+(count+1)+'.');
+ // Every party member must have exactly one original follower Pikachu in the same slot after editing.
+ const followers=party.map((x,i)=>isProtected(x.mon)?i:-1).filter(x=>x>=0);
+ if(followers.length!==1)throw Error('Cannot verify exactly one original follower Pikachu. Party transfer disabled.');
+ const followerSlot=followers[0];
+ if(isProtected(target.mon)||isProtected(partyMember?.mon))throw Error('The original follower Pikachu cannot be moved or exchanged.');
+ if(source.kind==='party'){
+  if(!partyMember||monIdentity(partyMember.mon)!==source.identity)throw Error('Selected party Pokémon changed. Pick it again.');
+ }else{
+  if(!target.mon||monIdentity(target.mon)!==source.identity)throw Error('Selected PC Pokémon changed. Pick it again.');
+ }
+ // Full-party swaps are legal. Empty boxes are deposit-only. PC→empty party uses the next slot.
+ const action=partyMember&&target.mon?'swap':partyMember&&!target.mon?'deposit':!partyMember&&target.mon?'withdraw':'invalid';
+ if(action==='invalid')throw Error('Select an occupied source Pokémon.');
+ if(action==='deposit'&&(count<=1||partySlot<=followerSlot))
+  throw Error('Cannot remove this member: the party must retain at least one Pokémon and follower Pikachu must stay in the same slot.');
+ if(action==='withdraw'&&(count>=6||partySlot!==count))
+  throw Error('You can only add a Pokémon in the next empty party slot.');
+ const partyAfter=party.map(x=>x.bytes.slice());
+ if(action==='swap')partyAfter[partySlot]=partyRecordFromPC(target);
+ if(action==='deposit'){partyAfter.splice(partySlot,1);}
+ if(action==='withdraw')partyAfter.push(partyRecordFromPC(target));
+ if(partyAfter.length<1||partyAfter.length>6)throw Error('Invalid resulting party size.');
+ if(!repairBytesEqual(partyAfter[followerSlot],party[followerSlot].bytes))
+  throw Error('Follower Pikachu must keep its exact party record and position.');
+ const boxAfter=action==='withdraw'?new Uint8Array(80):partyMember.bytes.slice(0,80);
+ if(!target.mon&&!target.bytes.every(b=>b===0))throw Error('Destination PC slot contains nonempty, unverified data.');
+ // Verify each party count and the next slot in both FLASH groups and RAM before writing.
+ for(const g of groups){
+  const s=g.sectors.get(1);
+  if(!s||u32(work,s.base+0x34)!==count)throw Error('FLASH party counts disagree.');
+ }
+ for(const base of live.saveMirrors)if(u32(work,base-4)!==count)throw Error('Saved-party RAM count changed.');
+ for(const base of live.gameplayMirrors)if(work[base-0x25b]!==count)throw Error('Gameplay party count changed.');
+ const futureSize=partyAfter.length;
+ if(futureSize>count){
+  for(const g of groups){const b=getPartyFrom(g,count);if(!b||b.some(v=>v!==0))throw Error('New party slot is not empty in FLASH.');}
+  for(const base of live.mirrors)if(work.subarray(base+count*100,base+(count+1)*100).some(v=>v!==0))
+   throw Error('New party slot is not empty in RAM.');
+ }
+ return {source,destination,action,partySlot,boxSlot,target,partyMember,partyAfter,boxAfter,
+   beforeCount:count,afterCount:futureSize,live,followerSlot};
+}
+function partyPCTransferExecute(source,destination){
+ if(pcShuffleBusy)throw Error('Finish your previous Pokémon transfer first.');
+ const plan=partyPCTransferPlan(source,destination),oldCount=plan.beforeCount,newCount=plan.afterCount;
+ const from=partyPCTransferLabel(source.kind,source.slot,source.kind==='party'?plan.partyMember.mon:plan.target.mon);
+ const to=partyPCTransferLabel(destination.kind,destination.slot,destination.kind==='party'?plan.partyMember?.mon:plan.target.mon);
+ const verb=plan.action==='swap'?'SWAP':plan.action==='deposit'?'DEPOSIT into PC':'WITHDRAW into party';
+ if(!confirm(verb+' Pokémon?\n\nFROM: '+from+'\nTO: '+to+
+   '\nParty: '+oldCount+' → '+newCount+' Pokémon.'+
+   '\n\nPikachu will stay in party slot '+(plan.followerSlot+1)+'. The full party, both FLASH saves and live RAM are checked. Export a NEW SVS afterward; Undo is available.'))return;
+ const previous={mode:monMode,slot:monSlot,box:boxNo},changes=[];
+ pcShuffleBusy=true;
+ try{
+  const needed=Math.max(oldCount,newCount);
+  for(let i=0;i<needed;i++){
+   writeShowdownSlot('party',i,plan.partyAfter[i]||new Uint8Array(100),changes);
+  }
+  writeShowdownSlot('box',plan.boxSlot,plan.boxAfter,changes);
+  if(oldCount!==newCount){
+   const four=Uint8Array.of(newCount,0,0,0);
+   for(const g of plan.live.groups){
+    const s=g.sectors.get(1);patch(s.base+0x34,four,changes);
+   }
+   for(const base of plan.live.saveMirrors)patch(base-4,four,changes);
+   for(const base of plan.live.gameplayMirrors)patch(base-0x25b,Uint8Array.of(newCount),changes);
+  }
+  refreshChecksums(changes);
+  for(let i=0;i<newCount;i++){
+   const saved=getPartyFrom(plan.live.groups[0],i),expected=plan.partyAfter[i];
+   if(!repairBytesEqual(saved,expected)||!decodeMon(saved))
+    throw Error('Party slot '+(i+1)+' did not write correctly.');
+   for(const g of plan.live.groups)if(!repairBytesEqual(getPartyFrom(g,i),expected))
+    throw Error('Party FLASH mirror verification failed.');
+   for(const base of plan.live.mirrors)if(!repairBytesEqual(work.subarray(base+i*100,base+(i+1)*100),expected))
+    throw Error('Live party mirror verification failed.');
+  }
+  for(let i=newCount;i<oldCount;i++){
+   for(const g of plan.live.groups)if(getPartyFrom(g,i).some(v=>v!==0))
+    throw Error('The vacated party slot is not empty in FLASH.');
+   for(const base of plan.live.mirrors)if(work.subarray(base+i*100,base+(i+1)*100).some(v=>v!==0))
+    throw Error('The vacated party slot is not empty in live memory.');
+  }
+  const actualPC=getPCFrom(plan.live.groups[0],plan.boxSlot);
+  if(!repairBytesEqual(actualPC,plan.boxAfter))throw Error('PC write verification failed.');
+  for(const g of plan.live.groups)if(!repairBytesEqual(getPCFrom(g,plan.boxSlot),plan.boxAfter))
+   throw Error('PC FLASH copy verification failed.');
+  for(const base of monLocations.pcRAM)if(!repairBytesEqual(work.subarray(base+plan.boxSlot*80,base+(plan.boxSlot+1)*80),plan.boxAfter))
+   throw Error('PC RAM mirror verification failed.');
+  const verified=verifySnapshotIdentity();
+  if(!verified.ok)throw Error('After-transfer save validation failed: '+verified.reason);
+  if(!snapshot('Party/PC '+plan.action+': '+from+' → '+to,changes))throw Error('Transfer produced no changes.');
+  pcShuffleSource=null;
+  monMode='box';boxNo=Math.floor(plan.boxSlot/30);monSlot=plan.boxSlot;
+  monLocations=locateMons();sync();
+  msg($('pcShuffleStatus'),'✓ '+verb+' complete. Party '+oldCount+' → '+newCount+
+   '. Original Pikachu, FLASH, party RAM and PC RAM verified. Export a new SVS and use Delta → Load State.','good');
+ }catch(e){
+  for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);
+  monMode=previous.mode;monSlot=previous.slot;boxNo=previous.box;
+  throw e;
+ }finally{pcShuffleBusy=false;}
 }
 function pcShuffleExecute(source,to){
  if(pcShuffleBusy)throw Error('Finish the previous operation first.');
@@ -3494,7 +3716,7 @@ function renderPokemon(){if(!loaded)return;
   const button=document.createElement('button');button.type='button';
   const compact=$('spriteGridToggle').checked,shiny=mon&&shinyStatus(mon.pid,mon.ot);
   button.className='mon-tile'+(compact?' sprite-tile':'')+(idx===monSlot?' chosen':'')+
-   (pcShuffleSource?.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
+   (pcShuffleSource?.kind==='pc'&&pcShuffleSource.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
   if(!mon&&suggested!==undefined)button.style.borderStyle='dashed';
   const title=document.createElement('strong'),extra=document.createElement('small');
   const label=mon?(monNames[mon.sp]||'Species '+mon.sp):suggested!==undefined?'#'+String(nationalDexNo(suggested)).padStart(3,'0')+' '+monNames[suggested]+' (placeholder)':empty?'Empty':'Unreadable';
@@ -3503,6 +3725,7 @@ function renderPokemon(){if(!loaded)return;
   extra.textContent=compact?(mon?'Lv '+pcLevel(mon)+(shiny?' ✨':''):(suggested!==undefined?'Placeholder':inPC?'Slot '+(idx%30+1):'Slot '+(idx+1))):
    (mon?(mon.name||'')+' · '+pcSpeciesType(mon.sp)+' · '+pcSpeciesClass(mon.sp)+' Pokémon · Lv '+pcLevel(mon)+(shiny?' · ✨ Shiny':'')+(isProtected(mon)?' · Starter ★':''):suggested!==undefined?'Empty slot — preview only':'')+
     (inPC?' · Box '+(1+Math.floor(idx/30))+' / Slot '+(1+idx%30):'');
+  button.dataset.dropKind=inPC?'pc':'party';button.dataset.dropSlot=String(idx);
   button.title=(inPC?'Box '+(1+Math.floor(idx/30))+' Slot '+(idx%30+1):'Party '+(idx+1))+
    ': '+label+(mon?' · Lv '+pcLevel(mon)+(shiny?' · SHINY ✨':'')+(mon.held?' · Holds item':''):'')+
    (inPC&&pcShuffleEnabled?' · Tap to rearrange':'');
@@ -3510,7 +3733,9 @@ function renderPokemon(){if(!loaded)return;
   addPokemonArt(button,mon);
   button.append(title,extra);
   button.onclick=()=>{
-   if(inPC&&pcShuffleChoose(idx,mon))return;
+   if(Date.now()<pcShuffleIgnoreClickUntil)return;
+   if(pcShuffleEnabled&&inPC&&pcShuffleChoose(idx,mon))return;
+   if(pcShuffleEnabled&&!inPC&&pcShuffleChooseParty(idx,mon))return;
    if(!confirmMonDiscard())return;
    monSlot=idx;if(inPC)boxNo=Math.floor(idx/30);
    invalidateShowdownExport();$('newSpecies').value=suggested===undefined?'':monNames[suggested];
@@ -3520,7 +3745,7 @@ function renderPokemon(){if(!loaded)return;
    if(mon){
     button.draggable=true;
     button.addEventListener('dragstart',event=>{
-     pcShuffleSource={slot:idx,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+     pcShuffleSource={kind:'pc',slot:idx,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
      updatePCShuffleControls();
      event.dataTransfer?.setData('text/plain',String(idx));
      if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
@@ -3533,6 +3758,7 @@ function renderPokemon(){if(!loaded)return;
     if(pcShuffleSource)pcShuffleChoose(idx,mon);
    });
   }
+  if(pcShuffleEnabled)setupShuffleTouchDrag(button,inPC?'pc':'party',idx,mon);
   roster.append(button);
  }
  if(!indices.length){const notice=document.createElement('div');notice.className='hint';notice.textContent='No PC Pokémon match the current filter.';roster.append(notice);}
