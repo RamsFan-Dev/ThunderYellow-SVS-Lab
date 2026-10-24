@@ -61,3 +61,21 @@ button.btn:disabled{cursor:not-allowed;opacity:.55;filter:grayscale(.25)}
 .visitor-top-total strong{color:var(--yellow);font-size:clamp(23px,3vw,36px);line-height:1.2;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
 .visitor-top-total span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
 @media(max-width:630px){.visitor-top-content{gap:10px;flex-wrap:wrap}.visitor-top-icon{font-size:24px}.visitor-top-text{min-width:calc(100% - 44px)}.visitor-top-total{width:100%;margin-top:2px}.visitor-top-total strong{font-size:29px}}
+
+/* Verified visible badge counter: image-based so Safari doesn't need cross-origin JS. */
+.visitor-top-band{display:block;width:100%;scroll-margin-top:12px}
+.visitor-banner-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
+.visitor-banner-copy{min-width:0}
+.visitor-banner-title,.visitor-banner-subtitle{display:block}
+.visitor-banner-title{font-weight:850;font-size:18px;line-height:1.35;color:#fff2b5}
+.visitor-banner-subtitle{font-size:12px;line-height:1.55;color:var(--muted);margin-top:3px}
+.visitor-banner-data{display:block;min-width:0;max-width:100%}
+.visitor-live-badge{display:block;width:auto;max-width:100%;height:auto;min-height:29px;object-fit:contain}
+.visitor-offline:not([hidden]){display:block;color:#fff2b5;font-size:12px}
+.visitor-footer-badge{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+@media(max-width:640px){
+  .visitor-banner-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+  .visitor-banner-title{font-size:17px!important}
+  .visitor-banner-data{width:100%}
+  .visitor-live-badge{width:auto;max-width:100%;height:auto}
+}
