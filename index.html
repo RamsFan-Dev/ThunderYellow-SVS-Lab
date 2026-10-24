@@ -3436,7 +3436,8 @@ function renderPokemon(){if(!loaded)return;
  const currentBox=Math.floor(monSlot/30);
  $('monTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===monMode));
  $('boxSelector').classList.toggle('hidden',monMode!=='box');if(monMode==='box')updatePCBoxLabels();$('boxSelect').value=boxNo;
- const roster=$('monRoster');roster.replaceChildren();
+ const roster=$('monRoster');roster.replaceChildren();roster.classList.toggle('sprite-grid',$('spriteGridToggle').checked);
+ $('pcShuffleToggle').classList.toggle('hidden',monMode!=='box'&&!pcShuffleEnabled);updatePCShuffleControls();
  const inPC=monMode==='box',sortMode=inPC?$('pcViewOrder').value:'box',sortedView=inPC&&sortMode!=='box';
  const filter=inPC?$('pcDexFilter').value.trim().toLowerCase():'';const group=monLocations.groups[0];
  let indices=monMode==='party'?Array.from({length:6},(_,i)=>i):sortedView?Array.from({length:420},(_,i)=>i).filter(i=>decodeMon(getPCFrom(group,i))):Array.from({length:30},(_,i)=>boxNo*30+i);
@@ -3459,15 +3460,48 @@ function renderPokemon(){if(!loaded)return;
  for(const idx of indices){
   const bytes=monMode==='party'?(monLocations.gameplayParty.length?work.slice(monLocations.gameplayParty[0]+idx*100,monLocations.gameplayParty[0]+idx*100+100):getPartyFrom(group,idx)):(monLocations.pcRAM.length?work.slice(monLocations.pcRAM[0]+idx*80,monLocations.pcRAM[0]+idx*80+80):getPCFrom(group,idx));
   const mon=bytes&&decodeMon(bytes),empty=bytes&&u32(bytes,0)===0,suggested=previews.get(idx);
-  const button=document.createElement('button');button.type='button';button.className='mon-tile'+(idx===monSlot?' chosen':'');
+  const button=document.createElement('button');button.type='button';
+  const compact=$('spriteGridToggle').checked,shiny=mon&&shinyStatus(mon.pid,mon.ot);
+  button.className='mon-tile'+(compact?' sprite-tile':'')+(idx===monSlot?' chosen':'')+
+   (pcShuffleSource?.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
   if(!mon&&suggested!==undefined)button.style.borderStyle='dashed';
   const title=document.createElement('strong'),extra=document.createElement('small');
   const label=mon?(monNames[mon.sp]||'Species '+mon.sp):suggested!==undefined?'#'+String(nationalDexNo(suggested)).padStart(3,'0')+' '+monNames[suggested]+' (placeholder)':empty?'Empty':'Unreadable';
-  title.textContent=monMode==='party'?(idx+1)+'. '+label:sortedView?'#'+String(nationalDexNo(mon.sp)).padStart(3,'0')+' '+label:(idx%30+1)+'. '+label;
-  extra.textContent=(mon?(mon.name||'')+' · '+pcSpeciesType(mon.sp)+' · '+pcSpeciesClass(mon.sp)+' Pokémon · Lv '+pcLevel(mon)+(isProtected(mon)?' · Starter ★':''):suggested!==undefined?'Empty slot — preview only':'')+
-   (inPC?' · Box '+(1+Math.floor(idx/30))+' / Slot '+(1+idx%30):'');
+  const shortName=mon?(monNames[mon.sp]||'Pokémon'):suggested!==undefined?'#'+nationalDexNo(suggested):empty?'Empty':'Invalid';
+  title.textContent=compact?shortName:monMode==='party'?(idx+1)+'. '+label:sortedView?'#'+String(nationalDexNo(mon.sp)).padStart(3,'0')+' '+label:(idx%30+1)+'. '+label;
+  extra.textContent=compact?(mon?'Lv '+pcLevel(mon)+(shiny?' ✨':''):(suggested!==undefined?'Placeholder':inPC?'Slot '+(idx%30+1):'Slot '+(idx+1))):
+   (mon?(mon.name||'')+' · '+pcSpeciesType(mon.sp)+' · '+pcSpeciesClass(mon.sp)+' Pokémon · Lv '+pcLevel(mon)+(shiny?' · ✨ Shiny':'')+(isProtected(mon)?' · Starter ★':''):suggested!==undefined?'Empty slot — preview only':'')+
+    (inPC?' · Box '+(1+Math.floor(idx/30))+' / Slot '+(1+idx%30):'');
+  button.title=(inPC?'Box '+(1+Math.floor(idx/30))+' Slot '+(idx%30+1):'Party '+(idx+1))+
+   ': '+label+(mon?' · Lv '+pcLevel(mon)+(shiny?' · SHINY ✨':'')+(mon.held?' · Holds item':''):'')+
+   (inPC&&pcShuffleEnabled?' · Tap to rearrange':'');
+  button.setAttribute('aria-label',button.title);
+  addPokemonArt(button,mon);
   button.append(title,extra);
-  button.onclick=()=>{if(!confirmMonDiscard())return;monSlot=idx;if(inPC)boxNo=Math.floor(idx/30);invalidateShowdownExport();$('newSpecies').value=suggested===undefined?'':monNames[suggested];updateSpeciesHints();renderPokemon()};
+  button.onclick=()=>{
+   if(inPC&&pcShuffleChoose(idx,mon))return;
+   if(!confirmMonDiscard())return;
+   monSlot=idx;if(inPC)boxNo=Math.floor(idx/30);
+   invalidateShowdownExport();$('newSpecies').value=suggested===undefined?'':monNames[suggested];
+   updateSpeciesHints();renderPokemon();
+  };
+  if(inPC&&pcShuffleEnabled){
+   if(mon){
+    button.draggable=true;
+    button.addEventListener('dragstart',event=>{
+     pcShuffleSource={slot:idx,identity:monIdentity(mon),label:monNames[mon.sp]||'Pokémon'};
+     updatePCShuffleControls();
+     event.dataTransfer?.setData('text/plain',String(idx));
+     if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
+    });
+   }
+   button.addEventListener('dragover',event=>{if(!pcShuffleSource)return;event.preventDefault();button.classList.add('shuffle-target');});
+   button.addEventListener('dragleave',()=>button.classList.remove('shuffle-target'));
+   button.addEventListener('drop',event=>{
+    event.preventDefault();button.classList.remove('shuffle-target');
+    if(pcShuffleSource)pcShuffleChoose(idx,mon);
+   });
+  }
   roster.append(button);
  }
  if(!indices.length){const notice=document.createElement('div');notice.className='hint';notice.textContent='No PC Pokémon match the current filter.';roster.append(notice);}
