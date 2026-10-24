@@ -90,7 +90,10 @@
 #trainerNamesSection .input{font-size:17px;letter-spacing:.02em}
 #trainerNamesSection #trainerNamesStatus{overflow-wrap:anywhere}
 </style><style>
-#workspace.unsafe-state > :not(#unsafeStateNotice):not(#pokemonCleanupPanel){display:none!important}
+#workspace.unsafe-state:not(.unsafe-bag-ready) > :not(#unsafeStateNotice):not(#pokemonCleanupPanel){display:none!important}
+#workspace.unsafe-state.unsafe-bag-ready > :not(#unsafeStateNotice):not(#pokemonCleanupPanel):not(#walletBagPanel):not(#unsavedExportPanel):not(#snapshotInspectionPanel){display:none!important}
+#workspace.unsafe-state.unsafe-bag-ready #pcItemsDetails,
+#workspace.unsafe-state.unsafe-bag-ready #selectedPCBar{display:none!important}
 #unsafeStateNotice{background:#352127;border:2px solid #ef9494;border-radius:15px;color:#ffe5e5;padding:20px;box-shadow:0 10px 30px #0005}
 #unsafeStateNotice h2{font-size:20px;margin:0 0 10px}
 #unsafeStateNotice p{line-height:1.55}
@@ -131,7 +134,7 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.31</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.32</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -140,16 +143,16 @@
 <section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <div id="unsafeStateNotice" class="hidden" role="alert" aria-live="assertive">
- <h2>🛑 Save data doesn't match the running game</h2>
+ <h2>⚠ Unsaved or mismatched game state</h2>
  <p id="unsafeStateReason"></p>
  <p>This SVS can contain an <strong>older game's cartridge-save records</strong> even when the running game has a different Pokémon party. The lab will not substitute those records for your actual Pokémon.</p>
- <p><strong>Normal editing and SVS export remain disabled.</strong> You may use the separate, read-only <strong>Repair my SVS</strong> assistant below, which downloads a new test file only after strict verification. Your uploaded file remains unchanged.</p>
+ <p>When SVS Lab can uniquely identify the <strong>live unsaved bag in RAM</strong>, you may edit item quantities and coins and export a separate test SVS with a warning. Party, Pokémon, badges and other unverified storage remain protected. If the live bag is not identifiable, no speculative edits are made.</p><div id="unsavedBagStatus" class="callout warn" role="status">Checking live RAM inventory…</div>
  <div class="row" style="margin:10px 0"><button id="unsafeExtractTeam" type="button" class="btn secondary">📋 Recover Pokémon Builds (read-only)</button></div>
  <div id="unsafeExtractMessage" class="hint" role="status">Optional: recover the Pokémon's moves, EVs, IVs, PP, natures and other build settings from this mismatched file. Their old trainer and personality IDs will not be copied.</div>
  <p><strong>To repair:</strong> Recover the builds here, then load a <strong>fresh SVS from Jak’s game after saving in-game</strong>. The Lab will fill the party-repair importer automatically. Review the preview and apply it; the untouched original starter Pikachu stays protected.</p>
- <p>To enable safe editing, make a <strong>normal in-game save</strong>, then create a <strong>new Delta savestate after the game has finished loading and you can walk around</strong>. Load that new SVS here. If your game hasn't reached the point where you can save yet, continue playing and try later.</p>
+ <p>If a Pokémon/party editor is still unavailable, make a normal in-game save when possible and capture a fresh Delta state. <strong>You do not have to save in-game to edit a positively identified live RAM bag.</strong> Always back up the original.</p>
 </div>
-<section class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div>
+<section id="snapshotInspectionPanel" class="panel"><div class="feature">02 • Inspection</div><h2>Snapshot integrity</h2><div id="stats" class="grid3"></div><div id="copyInfo" class="status"></div>
 <div id="livePartyReport" class="status" role="status" aria-live="polite"></div>
 <div class="hint"><strong>Delta:</strong> An edited <code>.svs</code> is a save <em>state</em>, not a cartridge <code>.sav</code> save file. In Delta, import it as a <strong>Save State</strong>, then choose <strong>Menu → Load State</strong> and tap that imported state. Simply reopening the ROM or choosing the game's <strong>Continue</strong> option loads a different in-game save.</div>
 </section>
@@ -165,8 +168,8 @@
 <div id="trainerNamesMsg" class="status"></div>
 <div class="hint">Supported: uppercase/lowercase letters, numbers, spaces and common in-game punctuation. This does not alter the ROM, nickname, Pokémon personality IDs or trainer IDs. Some scripted dialogue may still use fixed names.</div>
 </section>
-<section class="panel"><div class="feature">03 • Safe edits</div><h2>Cash, coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="cashAmount">Cash / Pokédollars (0–999,999)</label><input id="cashAmount" type="number" inputmode="numeric" min="0" max="999999" class="input"><div class="row" style="margin-top:9px"><button id="maxCash" class="chip" type="button">Set 999,999</button><button id="applyCash" class="btn primary" type="button">Apply cash</button></div><div class="hint" id="cashStatus" role="status">Import a verified SVS to inspect your wallet.</div></div><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="itemSearch">Find an item by name or number</label><input id="itemSearch" class="input" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Super Repel, 83, or 0x0053" aria-controls="itemResults"><div class="hint">Search all named FireRed / LeafGreen items. Tap a match to choose it and its bag pocket.</div><div id="itemResults" class="item-search-results" role="region" aria-label="Matching item names and IDs"></div><div id="itemSelection" class="hint" role="status">Select an item before setting its quantity.</div><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary" disabled>Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
-<hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div>
+<section id="walletBagPanel" class="panel"><div class="feature">03 • Safe edits</div><h2>Cash, coins &amp; items</h2><p>Item quantities are encoded using ThunderYellow’s Gen 3 encryption key. Changes are applied to all detected copies.</p><div class="grid"><div class="entry"><label class="label" for="cashAmount">Cash / Pokédollars (0–999,999)</label><input id="cashAmount" type="number" inputmode="numeric" min="0" max="999999" class="input"><div class="row" style="margin-top:9px"><button id="maxCash" class="chip" type="button">Set 999,999</button><button id="applyCash" class="btn primary" type="button">Apply cash</button></div><div class="hint" id="cashStatus" role="status">Import a verified SVS to inspect your wallet.</div></div><div class="entry"><label class="label" for="coins">Casino coins (0–9,999)</label><input id="coins" type="number" inputmode="numeric" min="0" max="9999" class="input"><div class="row" style="margin-top:9px"><button id="maxCoins" class="chip">Set 9,999</button><button id="applyCoins" class="btn primary">Apply coins</button></div></div><div class="entry"><label class="label" for="itemSearch">Find an item by name or number</label><input id="itemSearch" class="input" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Super Repel, 83, or 0x0053" aria-controls="itemResults"><div class="hint">Search all named FireRed / LeafGreen items. Tap a match to choose it and its bag pocket.</div><div id="itemResults" class="item-search-results" role="region" aria-label="Matching item names and IDs"></div><div id="itemSelection" class="hint" role="status">Select an item before setting its quantity.</div><div class="row" style="margin-top:9px"><input id="presetQty" type="number" inputmode="numeric" min="0" max="999" placeholder="Set qty" class="input" style="width:108px"><button id="applyPreset" class="btn primary" disabled>Set quantity</button></div></div></div><div id="editMsg" class="status"></div>
+<div class="row" style="margin-top:14px"><button id="quickAddBalls" class="btn secondary" type="button">+15 Poké Balls &amp; +15 Great Balls</button></div><div class="hint">Adds 15 to each existing stack (maximum 999) or creates it if absent. Undo is available. In a verified unsaved state this updates the live RAM bag.</div><hr><div class="row"><h2 style="margin:0">Bag inventory</h2><span id="inventoryDesc" class="small right"></span></div><div id="pockets" class="seg"></div>
 <div class="callout" id="inventoryHelp" style="margin:10px 0"><strong>Two different actions:</strong> <strong>Set Quantity</strong> changes how many you have in your bag. <strong>Select for PC</strong> marks items to move; select the items first, then tap <strong>Move Selected to PC</strong>. The transfer amount defaults to everything owned and can be changed below.</div>
 <div id="selectedPCBar" class="pc-selected-bar"><div class="row" style="justify-content:space-between"><strong id="selectedPCCount">0 items selected</strong><div class="row"><button id="clearSelectedPC" type="button" class="btn secondary" disabled>Clear</button><button id="moveSelectedPC" type="button" class="btn primary" disabled>📦 Move Selected to PC</button></div></div><div id="selectedPCList" class="pc-selection-list"></div><div id="selectedPCWarning" role="status" class="hint"></div></div>
 <div class="tablewrap"><table class="table"><thead><tr><th>Item / Select</th><th class="smallHide">ID</th><th>Owned / New Qty</th><th>Edit Qty</th></tr></thead><tbody id="inventory"></tbody></table></div>
@@ -311,7 +314,7 @@
 <div class="hint">Strict safety rules: no automatic Pokémon creation, no alteration of the original file, no forced repair when evidence disagrees, and no promise that a mid-battle state will safely resume. Use the same ROM build and keep your original .sav and .svs backups.</div>
 </details></section>
 <section class="panel"><div class="feature">07 • Advanced</div><h2>Hex inspection &amp; patching</h2><p>For controlled follower-logic research or other known ThunderYellow offsets. Raw decompressed file offsets, not GBA ROM addresses.</p><details><summary>Open hex editor</summary><div class="grid3"><div><label class="label" for="hexOffset">Offset (hex or decimal)</label><input id="hexOffset" class="input monospace" placeholder="0x2DE6F" value="0x2DE6F"></div><div><label class="label" for="hexBytes">Patch bytes (hex)</label><input id="hexBytes" class="input monospace" placeholder="e.g. 0F 27"></div><div style="display:flex;align-items:end;gap:6px;flex-wrap:wrap"><button id="inspectHex" class="btn secondary">Inspect</button><button id="applyHex" class="btn danger">Patch</button></div></div><div id="hexView" class="preview" style="margin-top:13px"></div><div class="hint">Manual patches modify only the specified offset; unlike the item editor, they do not synchronize copies. Always record the precise source of an offset.</div></details></section>
-<section class="panel"><div class="feature">08 • Export</div><h2>Download your edited save state</h2><div class="callout">The original upload is never changed. The editor recalculates affected FireRed flash-section checksums and writes a new gzip-compressed <b>.svs</b> snapshot.</div><div class="row" style="margin-top:15px"><button id="undo" class="btn secondary" disabled>↶ Undo last change</button><button id="export" class="btn primary" style="flex:1">⬇ Download edited .svs</button></div><div id="exportMsg" class="status"></div><details><summary>Changes made</summary><div id="history" class="log">No changes yet.</div></details></section>
+<section id="unsavedExportPanel" class="panel"><div class="feature">08 • Export</div><h2>Download your edited save state</h2><div class="callout">The original upload is never changed. The editor recalculates affected FireRed flash-section checksums and writes a new gzip-compressed <b>.svs</b> snapshot.</div><div class="row" style="margin-top:15px"><button id="undo" class="btn secondary" disabled>↶ Undo last change</button><button id="export" class="btn primary" style="flex:1">⬇ Download edited .svs</button></div><div id="exportMsg" class="status"></div><details><summary>Changes made</summary><div id="history" class="log">No changes yet.</div></details></section>
 </div>
 <div class="foot">ThunderYellow SVS Lab • No upload server, account, advertisements, or external libraries.<br>Save states are tied to the exact ROM version. This editor does not repair the ROM's follower startup code.</div>
 </main><div id="monSaveDock" class="mon-save-dock hidden" role="status"><strong>Unsaved Pokémon edits</strong><button type="button" class="btn primary" id="saveMonDock">💾 Save Pokémon</button></div>
@@ -326,7 +329,7 @@ const name=id=>named[id]||'Unknown item (#'+id+')';
 function msg(el,text,type=''){el.className='status callout '+type;el.textContent=text}
 function note(text){log.unshift(new Date().toLocaleTimeString()+' • '+text);$('history').textContent=log.join('\n')}
 function snapshot(label,patches){if(!patches.length)return false;undoStack.push({label,patches});$('undo').disabled=false;note(label+' — '+patches.length+' byte region(s)');return true}
-function patch(offset,bytes,patches){if(!snapshotSafe)throw Error('Snapshot is unsafe: editing disabled until live game and cartridge save agree.');if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
+function patch(offset,bytes,patches){if(!snapshotSafe&&!unsavedInventory)throw Error('Live save storage was not verified. Do not patch unidentifiable game memory.');if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
 function patch16(offset,val,patches){patch(offset,Uint8Array.of(val&255,(val>>>8)&255),patches)}
 // FireRed/LeafGreen flash sections: checksums must be updated whenever flash-backed copies change.
 const sectionLengths=[0xF24,0xF80,0xF80,0xF80,0xEE8,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0x7D0];
@@ -409,6 +412,62 @@ function findCopies(d){
   }
  }
  return copies;
+}
+// A save state can have a valid live RAM bag before the next cartridge save.
+// Only activate this path if the *unique* live SaveBlock1 bag can be recognized.
+// Do not touch old FLASH inventories while in this RAM-only unsaved mode.
+let unsavedInventory=null;
+function unsavedValidBagPocket(start,key,pocket){
+ const count=pockets[pocket][1],base=start+offsets[pocket],seen=new Set();let gap=false,owned=0;
+ if(base<0||base+count*4>work.length)return false;
+ for(let i=0;i<count;i++){
+  const id=u16(work,base+i*4),qty=u16(work,base+i*4+2)^key;
+  if(!id){if(qty!==0)return false;gap=true;continue;}
+  if(gap||id>600||qty<1||qty>999||seen.has(id))return false;
+  if(pocket===1&&!((id>=259&&id<=288)||(id>=349&&id<=374)))return false;
+  if(pocket===1&&qty!==1)return false;
+  seen.add(id);owned++;
+ }
+ return owned;
+}
+function detectUnsavedLiveBag(){
+ if(!loaded||snapshotSafe)return null;
+ const groups=getFlashGroups(),latest=groups[0],refs=[];
+ if(latest?.sectors.get(0)&&latest.sectors.get(1)){
+  const start=latest.sectors.get(1).base+0x310,key=u16(work,latest.sectors.get(0).base+0xf20);
+  for(let i=0;i<pockets[1][1];i++){
+   const id=u16(work,start+offsets[1]+4*i),qty=u16(work,start+offsets[1]+4*i+2)^key;
+   if(id&&qty===1)refs.push({slot:i,id});
+  }
+ }
+ const anchor=refs.length>=2?refs.slice(0,3):null;
+ const candidates=[],startMin=0x20000,startMax=Math.min(work.length-800,0x90000);
+ for(let start=startMin;start<startMax;start++){
+  let key;
+  if(anchor){
+   if(anchor.some(r=>u16(work,start+offsets[1]+4*r.slot)!==r.id))continue;
+   key=u16(work,start+offsets[1]+4*anchor[0].slot+2)^1;
+   if(anchor.some(r=>(u16(work,start+offsets[1]+4*r.slot+2)^key)!==1))continue;
+  }else{
+   // With no save yet, two consecutive, unique Key Items plus other owned
+   // pocket data and valid encrypted quantities are required.
+   const first=u16(work,start+offsets[1]),second=u16(work,start+offsets[1]+4);
+   const keyItem=id=>(id>=259&&id<=288)||(id>=349&&id<=374);
+   if(!keyItem(first)||!keyItem(second)||first===second)continue;
+   key=u16(work,start+offsets[1]+2)^1;
+   if((u16(work,start+offsets[1]+6)^key)!==1)continue;
+  }
+  const items=unsavedValidBagPocket(start,key,0),keyItems=unsavedValidBagPocket(start,key,1),
+   balls=unsavedValidBagPocket(start,key,2),tms=unsavedValidBagPocket(start,key,3),berries=unsavedValidBagPocket(start,key,4);
+  if(items===false||keyItems===false||balls===false||tms===false||berries===false||keyItems<2)continue;
+  if(!anchor&&items+balls+berries+tms<1)continue;
+  const coins=u16(work,start-0x7c)^key;
+  if(start-0x310<0x20000||coins>9999)continue;
+  candidates.push({start,key,coins,used:items,kind:'RAM',counter:null,unsaved:true});
+  if(candidates.length>1)return null;
+  start+=offsets[4]+pockets[4][1]*4-1;
+ }
+ return candidates.length===1?candidates[0]:null;
 }
 function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
 
@@ -618,7 +677,17 @@ function renderLivePartyReport(){
  node.className='status good';
 }
 
-function sync(){if(!loaded||!snapshotSafe)return;invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();repairInvalidate();pcShuffleSource=null;copies=findCopies(work);renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
+function sync(){
+ if(!loaded)return;
+ if(!snapshotSafe){
+  if(!unsavedInventory)return;
+  copies=[{...unsavedInventory,coins:u16(work,unsavedInventory.start-0x7c)^unsavedInventory.key}];
+  renderStats();renderInventory();
+  $('applyCash').disabled=true;$('cashStatus').textContent='Cash requires separately verified trainer encryption; this unsaved RAM-only state does not expose a confirmed key.';
+  $('quickAddBalls').disabled=false;
+  return;
+ }
+ invalidateShowdownExport();invalidatePCSortPreview();invalidatePCBulkPreview();repairInvalidate();pcShuffleSource=null;copies=findCopies(work);$('quickAddBalls').disabled=!copies.length;renderTrainerNames();renderStats();renderLivePartyReport();renderInventory();renderPCItems();renderBadges();if(!monDirty)renderPokemon();renderPartyBuilder();renderGymCoach();$('eggList').textContent='';$('clearEggs').classList.add('hidden');eggMatches=[];$('eggCount').textContent='';}
 function renderStats(){let modified=0;for(let i=0;i<work.length;i++)if(work[i]!==original[i])modified++;let cards=[['Snapshot',fmt(work.length)+' bytes'],['Inventory copies',String(copies.length)],['Bytes modified',fmt(modified)]];
  $('stats').innerHTML=cards.map(([label,val])=>`<div class="kpi"><div class="num">${val}</div><div class="cap">${label}</div></div>`).join('');
  if(!copies.length){$('applyCash').disabled=true;$('cashStatus').textContent='Wallet unavailable: inventory save data did not verify.';$('copyInfo').innerHTML='<div class="callout warn">Could not safely identify an Items pocket. Coin and item editing is disabled for this state; advanced hex inspection is still available.</div>';$('applyCoins').disabled=true;$('applyPreset').disabled=true;$('customApply').disabled=true;return}
@@ -883,6 +952,55 @@ function applyItem(id,pocket,qty){try{
  else msg($('editMsg'),'No change needed.');
  }catch(e){msg($('editMsg'),e.message,'bad')}}
 
+function quickAddBalls(){
+ const patches=[];
+ try{
+  if(!loaded||(!snapshotSafe&&!unsavedInventory)||!copies.length)throw Error('A verified live bag or matching save is required.');
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save or discard pending edits first.');
+  const current=getItems(work,copies[0],2);
+  const desired=new Map();
+  for(const id of [4,3]){
+   const owned=current.find(it=>it.id===id)?.qty||0;
+   if(owned+15>999)throw Error(name(id)+' already has '+owned+'. Adding 15 would exceed 999.');
+   desired.set(id,owned+15);
+  }
+  const plan=[];
+  for(const c of copies){
+   const start=c.start+offsets[2],slots=pockets[2][1];
+   const existing=Array.from({length:slots},(_,i)=>u16(work,start+i*4));
+   const seen=new Set();let emptySeen=false;
+   for(let i=0;i<slots;i++){
+    const id=existing[i],qty=u16(work,start+4*i+2)^c.key;
+    if(!id){if(qty!==0)throw Error('Invalid free ball slot in '+c.kind+' copy.');emptySeen=true;}
+    else if(emptySeen||qty<1||qty>999||seen.has(id))throw Error('Ball pocket is inconsistent in '+c.kind+' copy.');
+    if(id)seen.add(id);
+   }
+   for(const id of [4,3]){
+    let index=existing.indexOf(id);
+    if(index<0){index=existing.indexOf(0);if(index<0)throw Error('Poké Ball pocket is full in a save copy.');existing[index]=id;}
+    plan.push({off:start+index*4,id,qty:desired.get(id),key:c.key});
+   }
+  }
+  for(const p of plan){patch16(p.off,p.id,patches);patch16(p.off+2,p.qty^p.key,patches);}
+  refreshChecksums(patches);
+  if(snapshotSafe){
+   const verified=verifySnapshotIdentity();if(!verified.ok)throw Error(verified.reason);
+  }else{
+   const currentBag=detectUnsavedLiveBag();
+   if(!currentBag||currentBag.start!==unsavedInventory.start||currentBag.key!==unsavedInventory.key)
+    throw Error('Live unsaved bag verification changed during edit.');
+  }
+  if(!snapshot('Add 15 Poké Balls and 15 Great Balls',patches))throw Error('The requested ball quantities already match.');
+  sync();
+  msg($('editMsg'),'✓ Added 15 to each ball stack: '+desired.get(4)+' Poké Balls and '+
+   desired.get(3)+' Great Balls. '+(!snapshotSafe?'⚠ Unsaved live RAM: export a separate SVS and test in Delta.':'Export a new SVS.') ,'good');
+ }catch(e){
+  for(let i=patches.length-1;i>=0;i--)work.set(patches[i].old,patches[i].offset);
+  msg($('editMsg'),'Ball edit blocked: '+e.message,'bad');
+ }
+}
+$('quickAddBalls').onclick=quickAddBalls;
+
 // Gen III FRLG pcItems[30] at SaveBlock1 +0x298: item IDs and unencrypted quantities.
 // Bag begins at +0x310 and uses the SaveBlock2 encryption key. Confirm all copies before edits.
 const itemPCSlots=30,itemPCRelativeOffset=-0x78;
@@ -940,6 +1058,7 @@ function findBagPocketForId(id){
 function transferItemPC(id,qty,direction,pocket){
  const changes=[];
  try{
+  if(!snapshotSafe)throw Error('Item PC transfers require an in-game save. Bag quantity edits are still available in verified live RAM.');
   if(monDirty||badgeDirty)throw Error('Save any pending Pokémon or badge edits first.');
   validateInt(id,1,65535,'Item');validateInt(qty,1,999,'Transfer quantity');
   if(direction!=='deposit'&&direction!=='withdraw')throw Error('Unknown transfer action.');
@@ -1322,8 +1441,64 @@ function parseBytes(s){let val=s.trim().replace(/0x/ig,'').replace(/[,;:_-]/g,' 
 function hexView(){try{let p=parseOffset($('hexOffset').value),start=Math.max(0,p-32),end=Math.min(work.length,p+160),rows=[];start-=start%16;
  for(let i=start;i<end;i+=16){let bytes=work.subarray(i,Math.min(i+16,work.length));rows.push(hex(i).padEnd(10)+' '+Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+Array.from(bytes).map(b=>b>=32&&b<=126?String.fromCharCode(b):'.').join(''))}$('hexView').textContent=rows.join('\n')}catch(e){$('hexView').textContent=e.message}}
 function hexPatch(){try{let start=parseOffset($('hexOffset').value),arr=parseBytes($('hexBytes').value),patches=[];if(start+arr.length>work.length)throw Error('Patch goes beyond the end of the file.');if(!confirm('Patch '+arr.length+' byte(s) at '+hex(start)+'? Advanced hex changes are not automatically mirrored.'))return;patch(start,arr,patches);refreshChecksums(patches);snapshot('Hex patch '+hex(start)+' ('+arr.length+' bytes)',patches);sync();hexView()}catch(e){$('hexView').textContent=e.message}}
-function undo(){if(!snapshotSafe)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);monLocations=locateMons();sync();hexView()}
-async function load(file){try{if(!file)return;loaded=false;$('workspace').classList.add('hidden');$('fileInfo').innerHTML='';msg($('fileInfo'),'Reading '+file.name+'…');let bytes=new Uint8Array(await file.arrayBuffer());if(!isBinGzip(bytes))throw Error('This file is not a gzip-compressed Delta/VBA .svs file. Use an .svs save state, not a .sav cartridge save.');let raw=await gzipTransform(bytes,'unzip');if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 decompressed bytes; found '+fmt(raw.length)+'. File not edited.');if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state version; this editor is currently verified only with ThunderYellow’s VBA-style .svs version 10 snapshots.');original=raw;work=raw.slice();pcShuffleEnabled=false;pcShuffleSource=null;repairInvalidate();for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();invalidatePCBulkPreview();undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';copies=[];flashSectors=findSectors(work);setSnapshotSafety(verifySnapshotIdentity());monLocations=snapshotSafe?locateMons():null;if(snapshotSafe)rememberOriginalStarter();monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();$('partyPlanName').value='';$('partyPresets').value='';$('undo').disabled=true;$('history').textContent='No changes yet.';$('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';let title=ascii(raw,4,20);msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes compressed • '+title,'good');if(!snapshotSafe){renderLivePartyReport();msg($('repairStatus'),'SVS opened read-only. Use Diagnose & preview repair to check whether a Bad Egg or corrupted final party slot can be safely removed.','warn');msg($('fileInfo'),'⚠ '+file.name+' opened READ-ONLY — live game and cartridge save do not match. Original SVS unchanged.','warn');return;}sync();msg($('repairStatus'),'Open the repair assistant to check for verified Bad Eggs or corrupted party records; no edits will be made automatically.','good');hexView();restoreRecoveredTeamImport();if(!copies.length)msg($('editMsg'),'Item editing disabled until a compatible inventory signature is detected. Hex inspection remains available.','warn');else $('editMsg').innerHTML='';}catch(e){loaded=false;$('workspace').classList.add('hidden');msg($('fileInfo'),'Could not open: '+e.message,'bad')}}
+function undo(){if(!snapshotSafe&&!unsavedInventory)return;if(nameDirty){alert('Save or revert your unsaved trainer names before Undo.');return;}let change=undoStack.pop();if(!change)return;for(let i=change.patches.length-1;i>=0;i--){let p=change.patches[i];work.set(p.old,p.offset)}$('undo').disabled=undoStack.length===0;note('Undo '+change.label);monLocations=snapshotSafe?locateMons():null;sync();hexView()}
+async function load(file){
+ try{
+  if(!file)return;
+  loaded=false;$('workspace').classList.add('hidden');
+  $('workspace').classList.remove('unsafe-bag-ready');$('fileInfo').innerHTML='';
+  msg($('fileInfo'),'Reading '+file.name+'…');
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  if(!isBinGzip(bytes))throw Error('Not a gzip-compressed Delta/VBA .svs file. Use an .svs state, not a .sav.');
+  const raw=await gzipTransform(bytes,'unzip');
+  if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 bytes; found '+fmt(raw.length)+'.');
+  if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state header.');
+  original=raw;work=raw.slice();unsavedInventory=null;
+  pcShuffleEnabled=false;pcShuffleSource=null;repairInvalidate();
+  for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];
+  filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';
+  invalidatePCSortPreview();invalidatePCBulkPreview();
+  undoStack=[];log=[];loaded=true;snapshotSafe=false;originalStarterIdentity=null;
+  monDirty=false;badgeDirty=false;nameDirty=false;refreshMonSaveStatus();
+  activePocket=0;selectedPC.clear();for(const id of ['coins','presetQty','customQty'])$(id).value='';
+  copies=[];flashSectors=findSectors(work);
+  setSnapshotSafety(verifySnapshotIdentity());
+  if(!snapshotSafe)unsavedInventory=detectUnsavedLiveBag();
+  $('workspace').classList.toggle('unsafe-bag-ready',!!unsavedInventory);
+  monLocations=snapshotSafe?locateMons():null;
+  if(snapshotSafe)rememberOriginalStarter();
+  monMode='party';monSlot=0;boxNo=0;$('partyPicker').replaceChildren();
+  $('partyPlanName').value='';$('partyPresets').value='';
+  $('undo').disabled=true;$('history').textContent='No changes yet.';
+  $('workspace').classList.remove('hidden');$('exportMsg').innerHTML='';
+  const title=ascii(raw,4,20);
+  msg($('fileInfo'),'✓ '+file.name+' • '+fmt(bytes.length)+' bytes • '+title,'good');
+  if(!snapshotSafe){
+   renderLivePartyReport();
+   if(unsavedInventory){
+    sync();
+    msg($('unsavedBagStatus'),'⚠ Unsaved state: one live RAM bag was uniquely verified at '+hex(unsavedInventory.start)+
+     '. Bag item quantities and coins may be edited and exported to a separate SVS. Historical cartridge Pokémon and items will not be rewritten. Save in-game after testing the exported state.','warn');
+    msg($('fileInfo'),'⚠ '+file.name+' loaded in UNSAVED LIVE BAG mode. Bag edits are available with a warning; original untouched.','warn');
+    msg($('repairStatus'),'Live RAM inventory is available. Pokémon/party editing is still locked because that separate data cannot be verified.','warn');
+    return;
+   }
+   $('quickAddBalls').disabled=true;
+   msg($('unsavedBagStatus'),'⚠ Live RAM inventory could not be identified unambiguously. No unsafe edits have been enabled.','warn');
+   msg($('repairStatus'),'No safe live RAM bag match. Guided Bad Egg repair remains available.','warn');
+   msg($('fileInfo'),'⚠ '+file.name+' opened with a WARNING. The live bag and active Pokémon could not be confirmed; original unchanged.','warn');
+   return;
+  }
+  sync();
+  msg($('repairStatus'),'Use the repair assistant to diagnose verified Bad Eggs or corrupted party records.','good');
+  hexView();restoreRecoveredTeamImport();
+  if(!copies.length)msg($('editMsg'),'Inventory data was not verified; item editing remains unavailable.','warn');
+  else $('editMsg').innerHTML='';
+ }catch(e){
+  loaded=false;unsavedInventory=null;$('workspace').classList.add('hidden');
+  msg($('fileInfo'),'Could not open: '+e.message,'bad');
+ }
+}
 
 function auditExportLiveParty(){
  const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1);
@@ -1344,7 +1519,49 @@ function auditExportLiveParty(){
  }
  return {count,gameplayCount:work[gameplay[0]-0x25b],ramCopies:inSave.length,flashGroups:groups.length};
 }
-async function exportSVS(){if(!loaded)return;if(!undoStack.length){msg($('exportMsg'),'No edits have been applied. Preview and APPLY your Pokémon import (or Save Names) before downloading an edited SVS.','bad');return;}if(recoveryDraftPending){msg($('exportMsg'),'Recovered Pokémon builds have NOT been applied to this SVS. Preview and apply Complete Party Repair first, or discard the recovered draft. Export blocked to prevent another unchanged file.','bad');return;}if(snapshotSafe){const latest=verifySnapshotIdentity();if(!latest.ok){msg($('exportMsg'),'Export blocked: '+latest.reason+'. The active game and saved party disagree; no unsafe file will be downloaded.','bad');return;}}if(!snapshotSafe){msg($('exportMsg'),'Unsafe game state. Export blocked until the live trainer and Pokémon party match the stored save.','bad');return;}if(nameDirty){msg($('exportMsg'),'Save your player and rival name edits first.','bad');alert('You have unsaved trainer name edits. Tap Save Names before exporting.');return;}if(badgeDirty){alert('Save your badge changes before exporting.');return;}if(monDirty){msg($('exportMsg'),'Save Pokémon changes before exporting.','bad');alert('You have unsaved Pokémon edits. Tap Save Pokémon before exporting.');return;}let b=$('export');b.disabled=true;b.textContent='Verifying…';try{const exportAudit=auditExportLiveParty();const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');if(test.length!==work.length||!test.every((x,i)=>x===work[i]))throw Error('Export verification failed. Nothing was downloaded.');const base=filename.replace(/\.(svs|sgm|gz)$/i,'');const outname=base+'-TY-Edited.svs',blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+' bytes • '+work[getFlashGroups()[0].sectors.get(1).base+0x34]+' party Pokémon verified in live gameplay AND saved data ('+exportAudit.ramCopies+' active save mirrors). In Delta import it as a Save State, then Menu → Load State. Do not use the game’s Continue menu to load an SVS.','good')}catch(e){msg($('exportMsg'),'Export failed: '+e.message,'bad')}finally{b.disabled=false;b.textContent='⬇ Download edited .svs'}}
+async function exportSVS(){
+ if(!loaded)return;
+ const ramOnly=!snapshotSafe&&!!unsavedInventory;
+ if(!undoStack.length){msg($('exportMsg'),'No edits have been applied. Set a bag quantity or use +15 Poké Balls & +15 Great Balls before exporting.','bad');return;}
+ if(recoveryDraftPending){msg($('exportMsg'),'Unapplied recovered Pokémon builds must be applied to a verified save or discarded first.','bad');return;}
+ if(!snapshotSafe&&!ramOnly){msg($('exportMsg'),'The live game data is not identified. No edit can be safely exported from this state.','bad');return;}
+ if(nameDirty||badgeDirty||monDirty){msg($('exportMsg'),'Save or discard unfinished trainer, Pokémon and badge edits before export.','bad');return;}
+ const button=$('export');button.disabled=true;button.textContent='Verifying…';
+ try{
+  let audit=null;
+  if(snapshotSafe){
+   const identity=verifySnapshotIdentity();if(!identity.ok)throw Error('Active trainer verification: '+identity.reason);
+   audit=auditExportLiveParty();
+  }else{
+   const again=detectUnsavedLiveBag();
+   if(!again||again.start!==unsavedInventory.start||again.key!==unsavedInventory.key)
+    throw Error('The live RAM bag moved or became ambiguous. Reload the original save state.');
+   const a=unsavedInventory.start,b=a+offsets[4]+pockets[4][1]*4,coin=a-0x7c;
+   let edits=0;
+   for(let i=0;i<work.length;i++){
+    if(work[i]===original[i])continue;
+    edits++;
+    if(!((i>=a&&i<b)||(i>=coin&&i<coin+2)))
+     throw Error('A change outside the verified live RAM bag or coin balance was detected at '+hex(i)+'. Export refused.');
+   }
+   if(!edits)throw Error('No RAM bag edits found.');
+  }
+  const zipped=await gzipTransform(work,'zip'),test=await gzipTransform(zipped,'unzip');
+  if(test.length!==work.length||!test.every((v,i)=>v===work[i]))throw Error('Export verification failed: gzip round-trip differs.');
+  const base=filename.replace(/\.(svs|sgm|gz)$/i,''),outname=base+
+   (ramOnly?'-Live-Bag-UNSAVED-TEST.svs':'-TY-Edited.svs');
+  const blob=new Blob([zipped],{type:'application/octet-stream'}),url=URL.createObjectURL(blob);
+  const link=document.createElement('a');link.href=url;link.download=outname;
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  if(ramOnly)msg($('exportMsg'),'✓ Downloaded '+outname+'. ⚠ UNSAVED GAME: only positively identified live RAM bag/coin bytes were changed. Earlier FLASH Pokémon and inventories remain untouched. Load in Delta via Load State, inspect the bag, then save in-game if correct. Keep the original .svs.','warn');
+  else msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+
+   ' bytes • '+audit.count+' party Pokémon verified in live gameplay and saved data ('+audit.ramCopies+
+   ' active save mirrors). In Delta import it as a Save State, then Menu → Load State.','good');
+ }catch(e){msg($('exportMsg'),'Export blocked: '+e.message,'bad');}
+ finally{button.disabled=false;button.textContent='⬇ Download edited .svs';}
+}
+
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 // The search catalog is read-only until the user explicitly taps an item.
 const searchableItems=Object.entries(named)
