@@ -3121,6 +3121,142 @@ function pcShuffleChoose(slot,mon){
  catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
  return true;
 }
+// Transfers are distinct from PC-PC shuffles: full party records have 100 bytes,
+// PC boxes store 80 bytes. All game RAM and both cartridge FLASH saves must agree.
+function partyPCTransferLabel(kind,slot,mon){
+ return (kind==='party'?'Party '+(slot+1):'Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30))+
+  ': '+(mon?(monNames[mon.sp]||'Pokémon')+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty');
+}
+function partyPCTransferPlan(source,destination){
+ if(!loaded||!snapshotSafe)throw Error('Import a compatible, verified save state first.');
+ if(monDirty||badgeDirty||nameDirty||recoveryDraftPending)throw Error('Save or discard pending editor changes first.');
+ if(!source||!destination||!['party','pc'].includes(source.kind)||!['party','pc'].includes(destination.kind)||source.kind===destination.kind)
+  throw Error('Choose one party slot and one PC box slot.');
+ if(!Number.isInteger(source.slot)||!Number.isInteger(destination.slot)||source.slot<0||destination.slot<0)
+  throw Error('Invalid source or destination slot.');
+ const partySlot=source.kind==='party'?source.slot:destination.slot,boxSlot=source.kind==='pc'?source.slot:destination.slot;
+ if(partySlot>=6||boxSlot>=420)throw Error('Party or PC slot is out of range.');
+ if(!monLocations?.pcRAM?.length)throw Error('Live Bill’s PC memory could not be verified. Save in-game and make a fresh SVS.');
+ const live=verifyLivePartyMirrors(),groups=live.groups,count=live.count;
+ const sec=groups[0]?.sectors.get(1);if(!sec)throw Error('Active party save is missing.');
+ const party=[];
+ for(let i=0;i<count;i++){
+  const saved=getPartyFrom(groups[0],i),mon=decodeMon(saved);
+  if(!mon)throw Error('Unreadable party member at slot '+(i+1)+'.');
+  for(const g of groups.slice(1))if(!repairBytesEqual(getPartyFrom(g,i),saved))
+   throw Error('Saved party FLASH copies disagree at slot '+(i+1)+'.');
+  for(const base of live.mirrors){
+   if(!repairBytesEqual(work.subarray(base+100*i,base+100*(i+1)),saved))
+    throw Error('The live party differs from the saved party at slot '+(i+1)+'.');
+  }
+  party.push({mon,bytes:saved});
+ }
+ const pc=pcRosterSnapshot(),target=pc[boxSlot],partyMember=party[partySlot]||null;
+ if(!target)throw Error('PC slot is missing.');
+ if(partySlot>count)throw Error('Choose an occupied party slot or its next empty slot '+(count+1)+'.');
+ // Every party member must have exactly one original follower Pikachu in the same slot after editing.
+ const followers=party.map((x,i)=>isProtected(x.mon)?i:-1).filter(x=>x>=0);
+ if(followers.length!==1)throw Error('Cannot verify exactly one original follower Pikachu. Party transfer disabled.');
+ const followerSlot=followers[0];
+ if(isProtected(target.mon)||isProtected(partyMember?.mon))throw Error('The original follower Pikachu cannot be moved or exchanged.');
+ if(source.kind==='party'){
+  if(!partyMember||monIdentity(partyMember.mon)!==source.identity)throw Error('Selected party Pokémon changed. Pick it again.');
+ }else{
+  if(!target.mon||monIdentity(target.mon)!==source.identity)throw Error('Selected PC Pokémon changed. Pick it again.');
+ }
+ // Full-party swaps are legal. Empty boxes are deposit-only. PC→empty party uses the next slot.
+ const action=partyMember&&target.mon?'swap':partyMember&&!target.mon?'deposit':!partyMember&&target.mon?'withdraw':'invalid';
+ if(action==='invalid')throw Error('Select an occupied source Pokémon.');
+ if(action==='deposit'&&(count<=1||partySlot<=followerSlot))
+  throw Error('Cannot remove this member: the party must retain at least one Pokémon and follower Pikachu must stay in the same slot.');
+ if(action==='withdraw'&&(count>=6||partySlot!==count))
+  throw Error('You can only add a Pokémon in the next empty party slot.');
+ const partyAfter=party.map(x=>x.bytes.slice());
+ if(action==='swap')partyAfter[partySlot]=partyRecordFromPC(target);
+ if(action==='deposit'){partyAfter.splice(partySlot,1);}
+ if(action==='withdraw')partyAfter.push(partyRecordFromPC(target));
+ if(partyAfter.length<1||partyAfter.length>6)throw Error('Invalid resulting party size.');
+ if(!repairBytesEqual(partyAfter[followerSlot],party[followerSlot].bytes))
+  throw Error('Follower Pikachu must keep its exact party record and position.');
+ const boxAfter=action==='withdraw'?new Uint8Array(80):partyMember.bytes.slice(0,80);
+ if(!target.mon&&!target.bytes.every(b=>b===0))throw Error('Destination PC slot contains nonempty, unverified data.');
+ // Verify each party count and the next slot in both FLASH groups and RAM before writing.
+ for(const g of groups){
+  const s=g.sectors.get(1);
+  if(!s||u32(work,s.base+0x34)!==count)throw Error('FLASH party counts disagree.');
+ }
+ for(const base of live.saveMirrors)if(u32(work,base-4)!==count)throw Error('Saved-party RAM count changed.');
+ for(const base of live.gameplayMirrors)if(work[base-0x25b]!==count)throw Error('Gameplay party count changed.');
+ const futureSize=partyAfter.length;
+ if(futureSize>count){
+  for(const g of groups){const b=getPartyFrom(g,count);if(!b||b.some(v=>v!==0))throw Error('New party slot is not empty in FLASH.');}
+  for(const base of live.mirrors)if(work.subarray(base+count*100,base+(count+1)*100).some(v=>v!==0))
+   throw Error('New party slot is not empty in RAM.');
+ }
+ return {source,destination,action,partySlot,boxSlot,target,partyMember,partyAfter,boxAfter,
+   beforeCount:count,afterCount:futureSize,live,followerSlot};
+}
+function partyPCTransferExecute(source,destination){
+ if(pcShuffleBusy)throw Error('Finish your previous Pokémon transfer first.');
+ const plan=partyPCTransferPlan(source,destination),oldCount=plan.beforeCount,newCount=plan.afterCount;
+ const from=partyPCTransferLabel(source.kind,source.slot,source.kind==='party'?plan.partyMember.mon:plan.target.mon);
+ const to=partyPCTransferLabel(destination.kind,destination.slot,destination.kind==='party'?plan.partyMember?.mon:plan.target.mon);
+ const verb=plan.action==='swap'?'SWAP':plan.action==='deposit'?'DEPOSIT into PC':'WITHDRAW into party';
+ if(!confirm(verb+' Pokémon?\n\nFROM: '+from+'\nTO: '+to+
+   '\nParty: '+oldCount+' → '+newCount+' Pokémon.'+
+   '\n\nPikachu will stay in party slot '+(plan.followerSlot+1)+'. The full party, both FLASH saves and live RAM are checked. Export a NEW SVS afterward; Undo is available.'))return;
+ const previous={mode:monMode,slot:monSlot,box:boxNo},changes=[];
+ pcShuffleBusy=true;
+ try{
+  const needed=Math.max(oldCount,newCount);
+  for(let i=0;i<needed;i++){
+   writeShowdownSlot('party',i,plan.partyAfter[i]||new Uint8Array(100),changes);
+  }
+  writeShowdownSlot('box',plan.boxSlot,plan.boxAfter,changes);
+  if(oldCount!==newCount){
+   const four=Uint8Array.of(newCount,0,0,0);
+   for(const g of plan.live.groups){
+    const s=g.sectors.get(1);patch(s.base+0x34,four,changes);
+   }
+   for(const base of plan.live.saveMirrors)patch(base-4,four,changes);
+   for(const base of plan.live.gameplayMirrors)patch(base-0x25b,Uint8Array.of(newCount),changes);
+  }
+  refreshChecksums(changes);
+  for(let i=0;i<newCount;i++){
+   const saved=getPartyFrom(plan.live.groups[0],i),expected=plan.partyAfter[i];
+   if(!repairBytesEqual(saved,expected)||!decodeMon(saved))
+    throw Error('Party slot '+(i+1)+' did not write correctly.');
+   for(const g of plan.live.groups)if(!repairBytesEqual(getPartyFrom(g,i),expected))
+    throw Error('Party FLASH mirror verification failed.');
+   for(const base of plan.live.mirrors)if(!repairBytesEqual(work.subarray(base+i*100,base+(i+1)*100),expected))
+    throw Error('Live party mirror verification failed.');
+  }
+  for(let i=newCount;i<oldCount;i++){
+   for(const g of plan.live.groups)if(getPartyFrom(g,i).some(v=>v!==0))
+    throw Error('The vacated party slot is not empty in FLASH.');
+   for(const base of plan.live.mirrors)if(work.subarray(base+i*100,base+(i+1)*100).some(v=>v!==0))
+    throw Error('The vacated party slot is not empty in live memory.');
+  }
+  const actualPC=getPCFrom(plan.live.groups[0],plan.boxSlot);
+  if(!repairBytesEqual(actualPC,plan.boxAfter))throw Error('PC write verification failed.');
+  for(const g of plan.live.groups)if(!repairBytesEqual(getPCFrom(g,plan.boxSlot),plan.boxAfter))
+   throw Error('PC FLASH copy verification failed.');
+  for(const base of monLocations.pcRAM)if(!repairBytesEqual(work.subarray(base+plan.boxSlot*80,base+(plan.boxSlot+1)*80),plan.boxAfter))
+   throw Error('PC RAM mirror verification failed.');
+  const verified=verifySnapshotIdentity();
+  if(!verified.ok)throw Error('After-transfer save validation failed: '+verified.reason);
+  if(!snapshot('Party/PC '+plan.action+': '+from+' → '+to,changes))throw Error('Transfer produced no changes.');
+  pcShuffleSource=null;
+  monMode='box';boxNo=Math.floor(plan.boxSlot/30);monSlot=plan.boxSlot;
+  monLocations=locateMons();sync();
+  msg($('pcShuffleStatus'),'✓ '+verb+' complete. Party '+oldCount+' → '+newCount+
+   '. Original Pikachu, FLASH, party RAM and PC RAM verified. Export a new SVS and use Delta → Load State.','good');
+ }catch(e){
+  for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);
+  monMode=previous.mode;monSlot=previous.slot;boxNo=previous.box;
+  throw e;
+ }finally{pcShuffleBusy=false;}
+}
 function pcShuffleExecute(source,to){
  if(pcShuffleBusy)throw Error('Finish the previous operation first.');
  if(monDirty||badgeDirty||nameDirty)throw Error('Save Pokémon, badges and trainer-name edits before rearranging.');
