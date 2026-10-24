@@ -12,6 +12,17 @@
 
 **Emulators and original-game sourcing:** The site includes direct links to [Delta for iOS](https://apps.apple.com/us/app/delta-game-emulator/id1048524688), [Pizza Boy A Basic for Android](https://play.google.com/store/apps/details?id=it.dbtecno.pizzaboygba), a [search for authentic LeafGreen GBA cartridges](https://www.ebay.com/sch/i.html?_nkw=pokemon+leaf+green+version+authentic), and the [GB Operator cartridge-backup guide](https://www.epilogue.co/support/getting-started/what-is-gb-operator). The user must supply a lawfully sourced original compatible LeafGreen USA Rev 1 backup; a physical cartridge alone does not guarantee the right revision. There are **no commercial ROM downloads** linked, included or hosted.
 
+## ThunderYellow visitor counter
+
+The public `/game/` site includes a shared page-view counter on its homepage and subpages, powered by the free, no-account [CounterAPI.com](https://counterapi.com/) service. Source: `game/visitors.js` and `game/site.css`. Every production game-page load updates the same counter; local previews do not.
+
+- **Measures page views, not unique people**. Reloads, repeat visits, and browsing multiple pages can increase the count.
+- **Starts when deployed**, not when this site was first created; it cannot recover past GitHub Pages traffic.
+- No cookies or personally identifying information are collected by our own script, but the third-party counter provider may process visitors' IP/browser details for abuse prevention and visit de-duplication according to its published privacy terms.
+- The live number shows **—** instead of a fabricated zero when the counter cannot be reached. Ad blockers and network conditions can undercount; artificial calls and bots can overcount.
+- All six public game pages share namespace `ramsfan-dev.github.io`, action `pageview`, and key `thunderyellow-game-site`. Changing these identifiers resets the displayed count.
+- We intentionally do not count visits to the SVS Lab root editor as ThunderYellow game-site traffic.
+
 **Community technical support and Delta save-state diagnostics**
 
 - **[Open the public technical support website](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/support/)**
