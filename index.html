@@ -3238,6 +3238,8 @@ function partyPCTransferPlan(source,destination){
  }
  const pc=pcRosterSnapshot(),target=pc[boxSlot],partyMember=party[partySlot]||null;
  if(!target)throw Error('PC slot is missing.');
+ for(const g of groups)if(!repairBytesEqual(getPCFrom(g,boxSlot),target.bytes))
+  throw Error('PC FLASH copies differ at the selected Box and Slot; no changes were made.');
  if(partySlot>count)throw Error('Choose an occupied party slot or its next empty slot '+(count+1)+'.');
  // Every party member must have exactly one original follower Pikachu in the same slot after editing.
  const followers=party.map((x,i)=>isProtected(x.mon)?i:-1).filter(x=>x>=0);
@@ -3714,7 +3716,7 @@ function renderPokemon(){if(!loaded)return;
   const button=document.createElement('button');button.type='button';
   const compact=$('spriteGridToggle').checked,shiny=mon&&shinyStatus(mon.pid,mon.ot);
   button.className='mon-tile'+(compact?' sprite-tile':'')+(idx===monSlot?' chosen':'')+
-   (pcShuffleSource?.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
+   (pcShuffleSource?.kind==='pc'&&pcShuffleSource.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
   if(!mon&&suggested!==undefined)button.style.borderStyle='dashed';
   const title=document.createElement('strong'),extra=document.createElement('small');
   const label=mon?(monNames[mon.sp]||'Species '+mon.sp):suggested!==undefined?'#'+String(nationalDexNo(suggested)).padStart(3,'0')+' '+monNames[suggested]+' (placeholder)':empty?'Empty':'Unreadable';
