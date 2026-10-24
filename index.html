@@ -1049,6 +1049,109 @@ function resetInvalidPCItems(){
  }catch(e){for(let i=changes.length-1;i>=0;i--)work.set(changes[i].old,changes[i].offset);msg($('editMsg'),e.message,'bad')}
 }
 $('resetPCItems').onclick=resetInvalidPCItems;
+// Guided repair is export-only. It must never change work, original or the user's loaded SVS.
+let repairPlan=null;
+function repairInvalidate(){
+ repairPlan=null;
+ if($('repairDownload'))$('repairDownload').disabled=true;
+ if($('repairPreview'))$('repairPreview').replaceChildren();
+}
+function repairBytesEqual(a,b){return !!a&&!!b&&a.length===b.length&&a.every((x,i)=>x===b[i]);}
+function repairSuspectMementoRattata(bytes){
+ if(!bytes||bytes.length<80||decodeMon(bytes))return false;
+ const pid=u32(bytes,0),ot=u32(bytes,4);
+ if(!pid||!ot||pid===0xffffffff||ot===0xffffffff)return false;
+ const order=monPerms[pid%24],gidx=order.indexOf('G'),aidx=order.indexOf('A');
+ const key=u32(bytes,32+12*gidx)^19;
+ const unpacked=new Uint8Array(48);
+ for(let i=0;i<12;i++)put32(unpacked,4*i,u32(bytes,32+i*4)^key);
+ const g=unpacked.subarray(gidx*12,gidx*12+12),a=unpacked.subarray(aidx*12,aidx*12+12);
+ return u16(g,0)===19&&u16(g,2)===0&&
+  [262,0,0,0].every((n,i)=>u16(a,i*2)===n)&&
+  [10,0,0,0].every((n,i)=>a[8+i]===n);
+}
+function repairReadPC(data,group,index){
+ const result=new Uint8Array(80),start=4+index*80;
+ for(let j=0;j<80;j++){
+  const logical=start+j,sect=group.sectors.get(5+Math.floor(logical/3968));
+  if(!sect)throw Error('Incomplete PC storage sector');
+  result[j]=data[sect.base+logical%3968];
+ }
+ return result;
+}
+function repairPlanPartyTail(groups,operations,report){
+ const s=groups[0].sectors.get(1),count=work[s.base+0x34];
+ if(count<2||count>5)return;
+ if(groups.some(g=>work[g.sectors.get(1).base+0x34]!==count))return;
+ const currentStart=s.base+0x38,slot=count-1;
+ const first=decodeMon(work.subarray(currentStart,currentStart+80));
+ if(!first)return;
+ const expected=[];
+ for(let i=0;i<count-1;i++){
+  const m=decodeMon(work.subarray(currentStart+i*100,currentStart+i*100+80));
+  if(!m)return;
+  expected.push([m.pid,m.ot,m.sp]);
+ }
+ const firstTail=work.subarray(currentStart+slot*100,currentStart+slot*100+80);
+ const exactSignature=repairSuspectMementoRattata(firstTail),flagged=!!(firstTail[19]&1);
+ if(!exactSignature&&!flagged)return;
+ if(decodeMon(firstTail)&&!flagged)return;
+ const pid=u32(firstTail,0),ot=u32(firstTail,4);
+ for(const g of groups){
+  const base=g.sectors.get(1).base+0x38,copy=work.subarray(base+slot*100,base+slot*100+80);
+  for(let i=0;i<count-1;i++){
+   const m=decodeMon(work.subarray(base+i*100,base+i*100+80));
+   if(!m||m.pid!==expected[i][0]||m.ot!==expected[i][1]||m.sp!==expected[i][2])return;
+  }
+  if(u32(copy,0)!==pid||u32(copy,4)!==ot)return;
+  if(decodeMon(copy)&&!(copy[19]&1))return;
+  if(exactSignature&&!repairSuspectMementoRattata(copy))return;
+  if(u32(work,base+count*100)!==0)return;
+ }
+ // A damaged final party entry needs matching native gameplay and SaveBlock1 RAM copies.
+ // Match the intact prefix before trusting either live-memory location.
+ const starts=[],saveBases=[],gameBases=[],end=Math.min(work.length-600,0x90000);
+ for(let pos=0x20260;pos<end;pos++){
+  if(u32(work,pos)!==first.pid||u32(work,pos+4)!==first.ot)continue;
+  let same=true;
+  for(let i=0;i<count-1;i++){
+   if(!repairBytesEqual(work.subarray(pos+i*100,pos+i*100+80),
+      work.subarray(currentStart+i*100,currentStart+i*100+80))){same=false;break;}
+  }
+  if(!same||!repairBytesEqual(work.subarray(pos+slot*100,pos+slot*100+80),firstTail)||
+     u32(work,pos+count*100)!==0)continue;
+  if(u32(work,pos-4)===count)saveBases.push(pos);
+  if(work[pos-0x25b]===count)gameBases.push(pos);
+ }
+ if(!saveBases.length||!gameBases.length)return;
+ const all=[...new Set([...saveBases,...gameBases])];
+ const ids=new Set();
+ const put=(offset,bytes,label)=>{
+  const key=offset+':'+bytes.length;
+  if(ids.has(key))return;
+  ids.add(key);operations.push({offset,bytes:bytes.slice(),label});
+ };
+ for(const g of groups){
+  const sector=g.sectors.get(1),start=sector.base+0x38;
+  const next=work.slice(start+count*100,start+(count+1)*100);
+  put(sector.base+0x34,new Uint8Array([count-1,0,0,0]),'Cartridge party count');
+  put(start+slot*100,next,'Corrupted final party entry');
+ }
+ for(const base of saveBases){
+  put(base-4,new Uint8Array([count-1,0,0,0]),'RAM SaveBlock1 party count');
+ }
+ for(const base of gameBases){
+  put(base-0x25b,new Uint8Array([count-1]),'Live gameplay party count');
+ }
+ for(const base of all){
+  put(base+slot*100,work.slice(base+count*100,base+(count+1)*100),'Corrupt last party entry in RAM');
+ }
+ report.push({heading:'Party slot '+count+' — corrupted / Bad Egg',
+  body:(exactSignature?'Temporary Memento Rattata signature confirmed. ':'Bad Egg flag verified. ')+
+  'Removes only the final damaged Pokémon; keeps '+(count-1)+' valid party members, syncs '+groups.length+
+  ' cartridge save copies, '+saveBases.length+' saved-party mirror(s) and '+gameBases.length+' gameplay-party mirror(s).'});
+}
+
 function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
  if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
