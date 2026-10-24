@@ -413,6 +413,62 @@ function findCopies(d){
  }
  return copies;
 }
+// A save state can have a valid live RAM bag before the next cartridge save.
+// Only activate this path if the *unique* live SaveBlock1 bag can be recognized.
+// Do not touch old FLASH inventories while in this RAM-only unsaved mode.
+let unsavedInventory=null;
+function unsavedValidBagPocket(start,key,pocket){
+ const count=pockets[pocket][1],base=start+offsets[pocket],seen=new Set();let gap=false,owned=0;
+ if(base<0||base+count*4>work.length)return false;
+ for(let i=0;i<count;i++){
+  const id=u16(work,base+i*4),qty=u16(work,base+i*4+2)^key;
+  if(!id){if(qty!==0)return false;gap=true;continue;}
+  if(gap||id>600||qty<1||qty>999||seen.has(id))return false;
+  if(pocket===1&&!((id>=259&&id<=288)||(id>=349&&id<=374)))return false;
+  if(pocket===1&&qty!==1)return false;
+  seen.add(id);owned++;
+ }
+ return owned;
+}
+function detectUnsavedLiveBag(){
+ if(!loaded||snapshotSafe)return null;
+ const groups=getFlashGroups(),latest=groups[0],refs=[];
+ if(latest?.sectors.get(0)&&latest.sectors.get(1)){
+  const start=latest.sectors.get(1).base+0x310,key=u16(work,latest.sectors.get(0).base+0xf20);
+  for(let i=0;i<pockets[1][1];i++){
+   const id=u16(work,start+offsets[1]+4*i),qty=u16(work,start+offsets[1]+4*i+2)^key;
+   if(id&&qty===1)refs.push({slot:i,id});
+  }
+ }
+ const anchor=refs.length>=2?refs.slice(0,3):null;
+ const candidates=[],startMin=0x20000,startMax=Math.min(work.length-800,0x90000);
+ for(let start=startMin;start<startMax;start++){
+  let key;
+  if(anchor){
+   if(anchor.some(r=>u16(work,start+offsets[1]+4*r.slot)!==r.id))continue;
+   key=u16(work,start+offsets[1]+4*anchor[0].slot+2)^1;
+   if(anchor.some(r=>(u16(work,start+offsets[1]+4*r.slot+2)^key)!==1))continue;
+  }else{
+   // With no save yet, two consecutive, unique Key Items plus other owned
+   // pocket data and valid encrypted quantities are required.
+   const first=u16(work,start+offsets[1]),second=u16(work,start+offsets[1]+4);
+   const keyItem=id=>(id>=259&&id<=288)||(id>=349&&id<=374);
+   if(!keyItem(first)||!keyItem(second)||first===second)continue;
+   key=u16(work,start+offsets[1]+2)^1;
+   if((u16(work,start+offsets[1]+6)^key)!==1)continue;
+  }
+  const items=unsavedValidBagPocket(start,key,0),keyItems=unsavedValidBagPocket(start,key,1),
+   balls=unsavedValidBagPocket(start,key,2),tms=unsavedValidBagPocket(start,key,3),berries=unsavedValidBagPocket(start,key,4);
+  if(items===false||keyItems===false||balls===false||tms===false||berries===false||keyItems<2)continue;
+  if(!anchor&&items+balls+berries+tms<1)continue;
+  const coins=u16(work,start-0x7c)^key;
+  if(start-0x310<0x20000||coins>9999)continue;
+  candidates.push({start,key,coins,used:items,kind:'RAM',counter:null,unsaved:true});
+  if(candidates.length>1)return null;
+  start+=offsets[4]+pockets[4][1]*4-1;
+ }
+ return candidates.length===1?candidates[0]:null;
+}
 function getItems(d,c,idx){let o=c.start+offsets[idx],count=pockets[idx][1],out=[];for(let j=0;j<count;j++){let pos=o+j*4;if(pos+3>=d.length)break;let id=u16(d,pos),qty=u16(d,pos+2)^c.key;if(id)out.push({id,qty,slot:j,pos});}return out}
 
 // FRLG SaveBlock2 +0x000 = playerName[8]; SaveBlock1 +0x3A4C = rivalName[8].
