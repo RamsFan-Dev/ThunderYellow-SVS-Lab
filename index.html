@@ -90,7 +90,7 @@
 #trainerNamesSection .input{font-size:17px;letter-spacing:.02em}
 #trainerNamesSection #trainerNamesStatus{overflow-wrap:anywhere}
 </style><style>
-#workspace.unsafe-state > :not(#unsafeStateNotice){display:none!important}
+#workspace.unsafe-state > :not(#unsafeStateNotice):not(#pokemonCleanupPanel){display:none!important}
 #unsafeStateNotice{background:#352127;border:2px solid #ef9494;border-radius:15px;color:#ffe5e5;padding:20px;box-shadow:0 10px 30px #0005}
 #unsafeStateNotice h2{font-size:20px;margin:0 0 10px}
 #unsafeStateNotice p{line-height:1.55}
@@ -122,7 +122,7 @@
  <h2>🛑 Save data doesn't match the running game</h2>
  <p id="unsafeStateReason"></p>
  <p>This SVS can contain an <strong>older game's cartridge-save records</strong> even when the running game has a different Pokémon party. The lab will not substitute those records for your actual Pokémon.</p>
- <p><strong>Editing and SVS export are disabled for this snapshot.</strong> Your uploaded file remains unchanged.</p>
+ <p><strong>Normal editing and SVS export remain disabled.</strong> You may use the separate, read-only <strong>Repair my SVS</strong> assistant below, which downloads a new test file only after strict verification. Your uploaded file remains unchanged.</p>
  <div class="row" style="margin:10px 0"><button id="unsafeExtractTeam" type="button" class="btn secondary">📋 Recover Pokémon Builds (read-only)</button></div>
  <div id="unsafeExtractMessage" class="hint" role="status">Optional: recover the Pokémon's moves, EVs, IVs, PP, natures and other build settings from this mismatched file. Their old trainer and personality IDs will not be copied.</div>
  <p><strong>To repair:</strong> Recover the builds here, then load a <strong>fresh SVS from Jak’s game after saving in-game</strong>. The Lab will fill the party-repair importer automatically. Review the preview and apply it; the untouched original starter Pikachu stays protected.</p>
@@ -266,7 +266,7 @@
 <div id="monMsg" class="status"></div>
 </div><div class="callout warn" style="margin-top:15px">Experimental build: validates Gen 3 record and flash-section checksums, but has not been tested loading an edited Pokémon state in Delta. Keep your original SVS and check your edited copy in-game before overwriting anything.</div></section>
 <section class="panel"><div class="feature">05 • Gym badges</div><h2>Kanto badges</h2><p>All eight badge flags appear below, including unearned badges. Tap a badge to mark earned or not earned, then choose <strong>Save badges</strong>.</p><div id="badgeUnavailable" class="callout warn hidden"></div><div id="badgeGrid" class="badge-grid"></div><div id="badgeStatus" class="status"></div><button id="saveBadges" class="btn primary wide" style="margin-top:12px">💾 Save badges</button></section>
-<section class="panel"><div class="feature">06 • Pokémon cleanup</div><h2>Bad Egg scanner &amp; save recovery</h2><p>Scans for flagged Gen 3 Bad Egg records in memory. Removal is optional and only clears positively flagged records; it does not change normal eggs.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">The legacy RAM scan is a diagnostic only: do not blindly erase a record while the active party count still includes it. Use the guided repair below for a verified snapshot.</div>
+<section id="pokemonCleanupPanel" class="panel"><div class="feature">06 • Pokémon cleanup</div><h2>Bad Egg scanner &amp; save recovery</h2><p>Scans for flagged Gen 3 Bad Egg records in memory. Removal is optional and only clears positively flagged records; it does not change normal eggs.</p><div class="row"><button id="scanEggs" class="btn secondary">Scan Bad Eggs</button><span id="eggCount" class="small"></span></div><div id="eggList" class="status"></div><button id="clearEggs" class="btn danger hidden" style="margin-top:12px">Remove detected Bad Eggs</button><div class="hint">The legacy RAM scan is a diagnostic only: do not blindly erase a record while the active party count still includes it. Use the guided repair below for a verified snapshot.</div>
 <details id="repairAssistant" open><summary>🛠 Repair my SVS — Bad Eggs &amp; invalid Pokémon</summary>
 <p class="hint">Works even when SVS Lab opens your snapshot READ-ONLY. Inspects both cartridge save copies, the party and live RAM. For a clearly identified corrupt last party member or confirmed flagged PC Bad Egg, it previews the exact changes and downloads a separate repaired .svs. Normal Eggs and healthy Pokémon stay untouched.</p>
 <div class="row" style="margin:12px 0"><button id="repairDiagnose" type="button" class="btn secondary">1. Diagnose &amp; preview repair</button><button id="repairDownload" type="button" class="btn primary" disabled>2. Download repaired SVS</button></div>
