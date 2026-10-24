@@ -374,6 +374,65 @@ function refreshChecksums(patches){const touched=patches.map(p=>[p.offset,p.offs
 function isBinGzip(file){return file.length>=10&&file[0]===31&&file[1]===139&&file[2]===8}
 async function gzipTransform(b,mode){if(typeof DecompressionStream==='undefined'||typeof CompressionStream==='undefined')throw Error('This browser does not support built-in gzip streams. Please open in recent Safari or Chrome.');let transform=mode==='unzip'?new DecompressionStream('gzip'):new CompressionStream('gzip');let stream=new Blob([b]).stream().pipeThrough(transform);return new Uint8Array(await new Response(stream).arrayBuffer())}
 function ascii(d,start,len){return String.fromCharCode(...d.slice(start,start+len)).replace(/\x00/g,'').trim()}
+// Cartridge SRAM and emulator save states are different formats.
+// Accept only complete, checksum-valid FRLG .sav data; produce genuine .svs
+// through Delta's running emulator (a .sav cannot encode CPU and RAM state).
+function inspectGen3SAV(data){
+ if(!(data instanceof Uint8Array)||![65536,131072].includes(data.length))
+  throw Error('Expected a 64 KB or 128 KB GBA FLASH .sav (65,536 or 131,072 bytes), not an .svs or renamed file.');
+ const found=findSectors(data),generations=new Map();
+ for(const sector of found){
+  const counter=u32(data,sector.base+0xffc);
+  if(!generations.has(counter))generations.set(counter,new Map());
+  const group=generations.get(counter);
+  if(group.has(sector.id))throw Error('Ambiguous duplicate FLASH section '+sector.id+' in one save generation.');
+  group.set(sector.id,sector);
+ }
+ const complete=[...generations.entries()].filter(([,parts])=>parts.size===14);
+ if(!complete.length)throw Error('No complete set of 14 checksum-valid FireRed/LeafGreen save sectors was found. This .sav might be unsupported, damaged or not yet saved in-game.');
+ complete.sort((a,b)=>b[0]-a[0]);
+ const [counter,parts]=complete[0];
+ const trainer=parts.get(0),party=parts.get(1);
+ if(!trainer||!party)throw Error('Trainer or party save sector missing.');
+ const count=u32(data,party.base+0x34);
+ if(count<1||count>6)throw Error('The saved game does not yet contain a valid 1–6 Pokémon party. Play and make a normal in-game save first.');
+ for(let i=0;i<count;i++){
+  const pokemon=decodeMon(data.subarray(party.base+0x38+i*100,party.base+0x38+i*100+80));
+  if(!pokemon)throw Error('The SAV has an unreadable Pokémon in party slot '+(i+1)+'. Do not import it over a working save.');
+ }
+ const trainerName=gameNameFromBytes(data.subarray(trainer.base,trainer.base+8));
+ const trainerID=u32(data,trainer.base+10);
+ return {count,counter,trainerName,trainerID,validSectors:found.length,generations:complete.length};
+}
+async function validateSavConversionFile(file){
+ const panel=$('savConvertStatus'),actions=$('savConvertActions');
+ actions.classList.add('hidden');$('savConvertSteps').classList.add('hidden');
+ if(!file){msg(panel,'Choose a .sav file to check its format.');return;}
+ try{
+  if(!/\.sav$/i.test(file.name))throw Error('Choose a .sav cartridge-save file, not a .svs save state.');
+  if(file.size!==65536&&file.size!==131072)throw Error('Expected 64 KB or 128 KB. Selected file is '+fmt(file.size)+' bytes.');
+  const data=new Uint8Array(await file.arrayBuffer()),info=inspectGen3SAV(data);
+  if($('savConvertFile').files?.[0]!==file)return;
+  msg(panel,'✓ Valid '+(data.length/1024)+' KB Gen III SAV • Trainer: '+(info.trainerName||'(unnamed)')+
+   ' • Party: '+info.count+' Pokémon • '+info.generations+' complete save generation(s). Use the Delta conversion steps below to create a real SVS.','good');
+  actions.classList.remove('hidden');
+ }catch(e){msg(panel,'⚠ SAV validation: '+e.message,'warn');}
+}
+$('savConvertFile').addEventListener('change',()=>validateSavConversionFile($('savConvertFile').files[0]));
+$('savConvertStepsButton').onclick=()=>{$('savConvertSteps').classList.toggle('hidden');$('savConvertStepsButton').textContent=
+ $('savConvertSteps').classList.contains('hidden')?'Show SAV → SVS steps for Delta':'Hide conversion steps';};
+$('savConvertClear').onclick=()=>{
+ $('savConvertFile').value='';$('savConvertActions').classList.add('hidden');
+ $('savConvertSteps').classList.add('hidden');$('savConvertStepsButton').textContent='Show SAV → SVS steps for Delta';
+ msg($('savConvertStatus'),'Choose a .sav file to check its format.');
+};
+const savDrop=$('savConverter').querySelector('.sav-drop');
+for(const eventName of ['dragenter','dragover'])savDrop.addEventListener(eventName,event=>{event.preventDefault();savDrop.classList.add('drag');});
+for(const eventName of ['dragleave','drop'])savDrop.addEventListener(eventName,event=>{event.preventDefault();savDrop.classList.remove('drag');});
+savDrop.addEventListener('drop',event=>{
+ const file=event.dataTransfer?.files?.[0];if(file)validateSavConversionFile(file);
+});
+
 function findCopies(d){
  // Read validated FireRed flash SaveBlock2 (sector 0) and SaveBlock1 (sector 1).
  // The bag may be completely full: an empty item slot is NOT required to locate or decrypt it.
