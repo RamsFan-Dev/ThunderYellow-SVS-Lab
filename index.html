@@ -3188,7 +3188,7 @@ function pcShuffleChooseParty(slot,mon){
   return true;
  }
  try{partyPCTransferExecute(from,{kind:'party',slot});}
- catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Party transfer blocked: '+e.message,'bad');renderPokemon();}
+ catch(e){pcShuffleSource=null;renderPokemon();msg($('pcShuffleStatus'),'Party transfer blocked: '+e.message,'bad');}
  return true;
 }
 function pcShuffleChoose(slot,mon){
@@ -3203,7 +3203,7 @@ function pcShuffleChoose(slot,mon){
  const source=pcShuffleSource;
  if(source.kind!=='party'&&source.slot===slot){clearPCShuffleSelection();renderPokemon();return true;}
  try{if(source.kind==='party')partyPCTransferExecute(source,{kind:'pc',slot});else pcShuffleExecute(source,slot);}
- catch(e){pcShuffleSource=null;updatePCShuffleControls();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');renderPokemon();}
+ catch(e){pcShuffleSource=null;renderPokemon();msg($('pcShuffleStatus'),'Rearrangement blocked: '+e.message,'bad');}
  return true;
 }
 // Transfers are distinct from PC-PC shuffles: full party records have 100 bytes,
@@ -3228,8 +3228,15 @@ function partyPCTransferPlan(source,destination){
  for(let i=0;i<count;i++){
   const saved=getPartyFrom(groups[0],i),mon=decodeMon(saved);
   if(!mon)throw Error('Unreadable party member at slot '+(i+1)+'.');
-  for(const g of groups.slice(1))if(!repairBytesEqual(getPartyFrom(g,i),saved))
-   throw Error('Saved party FLASH copies disagree at slot '+(i+1)+'.');
+  // Previous cartridge-save generations may legitimately differ in current HP,
+  // status, experience or party battle-stat cache. Compare verified Pokémon identity
+  // (PID, original trainer and species), not every 100-byte party record.
+  // Edits still mirror the active party record to all protected FLASH/RAM copies.
+  for(const g of groups.slice(1)){
+   const other=decodeMon(getPartyFrom(g,i));
+   if(!other||monIdentity(other)!==monIdentity(mon))
+    throw Error('Cartridge-save backups identify different Pokémon in party slot '+(i+1)+'. No changes were made.');
+  }
   for(const base of live.mirrors){
    if(!repairBytesEqual(work.subarray(base+100*i,base+100*(i+1)),saved))
     throw Error('The live party differs from the saved party at slot '+(i+1)+'.');
@@ -3255,9 +3262,9 @@ function partyPCTransferPlan(source,destination){
  const action=partyMember&&target.mon?'swap':partyMember&&!target.mon?'deposit':!partyMember&&target.mon?'withdraw':'invalid';
  if(action==='invalid')throw Error('Select an occupied source Pokémon.');
  if(action==='deposit'&&(count<=1||partySlot<=followerSlot))
-  throw Error('Cannot remove this member: the party must retain at least one Pokémon and follower Pikachu must stay in the same slot.');
+  throw Error('Cannot DEPOSIT into an empty PC slot: Pikachu is locked in party position '+(followerSlot+1)+', and removing this Pokémon would shift him. Choose an OCCUPIED PC slot to SWAP instead (party and PC members will exchange).');
  if(action==='withdraw'&&(count>=6||partySlot!==count))
-  throw Error('You can only add a Pokémon in the next empty party slot.');
+  throw Error(count>=6?'Your party already contains six Pokémon. Choose an OCCUPIED party slot other than Pikachu to SWAP with the selected boxed Pokémon.':'Choose the next contiguous empty party slot '+(count+1)+' to withdraw from Bill’s PC.');
  const partyAfter=party.map(x=>x.bytes.slice());
  if(action==='swap')partyAfter[partySlot]=partyRecordFromPC(target);
  if(action==='deposit'){partyAfter.splice(partySlot,1);}
