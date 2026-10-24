@@ -37,6 +37,16 @@ Describe your ROM version or internal test build (if known), Delta or other emul
 
 **Privacy:** This is a public repository. Bug-report attachments may be viewed and downloaded by others. Do not upload confidential or sensitive personal information.
 
+## SVS Lab v2.33 — SAV → SVS Import Assist
+
+A compact second file input now sits directly below the main SVS uploader. It checks a raw 128 KiB SAV locally, requiring at least one independent 14-sector bank with unique section IDs, matching save counters, FRLG section checksums and signatures. It does not combine incomplete banks, change uploaded files or change the currently open editor. One valid bank is reported with a backup warning; unsupported sizes and invalid banks show a specific error.
+
+**Conversion requires Delta:** A cartridge SAV does not contain CPU, RAM, graphics and other emulator state. The assist provides an explicit backup → import cartridge save into the same ROM → title-screen Continue → create and export a new Delta state → open SVS workflow. It does not offer a fake one-file conversion or inject a SAV into a donor state. Structural validity is not proof of exact ROM compatibility. See [Delta’s save-state guide](https://faq.deltaemulator.com/using-delta/save-states).
+
+The v2.31 Gym Coach Build & Swap action and v2.32 unsaved inventory editing remain in place. RAM-only writes are now constrained to the verified bag/coin ranges at the patch boundary as well as export, protecting other memory even if an unrelated control is invoked.
+
+Validation: `node tests/sav-import.test.cjs` covers independent banks, corrupt checksums, mixed counters, duplicate IDs, unsupported sizes, non-mutating inspection, RAM-only write bounds, +15 ball edits and Undo. Async input tests cover success/error/reset states and overlapping file selections. A Playwright mobile smoke test is included (`node tests/browser-smoke.cjs`, requires Playwright and Chromium), but could not run in this environment because the browser download was unavailable. Mobile visual checks and actual Delta gameplay remain untested.
+
 ## SVS Lab v2.32 — Unsaved live RAM inventory: warning, not automatic lock
 
 When an SVS has not been saved in-game, its FLASH cartridge history may not match the running party or trainer. Previously the entire editor (and SVS export) was locked and may show only an old inventory. The new **warning-based RAM inventory mode** identifies a uniquely corroborated live SaveBlock1 bag from EWRAM, independent of the stale FLASH bag. It only offers editing if the live inventory is confidently located.

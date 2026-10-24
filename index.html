@@ -12,10 +12,11 @@
 :root{color-scheme:dark;--bg:#0d111a;--panel:#171e2b;--panel2:#1f2939;--ink:#f3f6ff;--muted:#a6b3c6;--line:#354257;--gold:#ffd05c;--yellow:#ffe16c;--blue:#8bc9ff;--green:#85e6ac;--red:#ff9797;--r:17px}
 *{box-sizing:border-box}html,body{margin:0}body{font:15px/1.48 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 70% -10%,#36425a 0,transparent 32%),var(--bg);color:var(--ink);min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}a{color:var(--blue)}
 .shell{max-width:1060px;margin:0 auto;padding:24px 16px 80px}.brand{display:flex;align-items:center;gap:13px;margin:3px 0 20px}.bolt{height:54px;width:54px;display:grid;place-items:center;background:linear-gradient(135deg,#ffe783,#ffa338);color:#24283d;border-radius:17px;font-size:30px;box-shadow:0 8px 30px #edb14835}.brand h1{font-size:clamp(1.45rem,5vw,2.1rem);margin:0;letter-spacing:-.04em}.sub{color:var(--muted);font-size:13px;margin-top:2px}.pill{border-radius:99px;border:1px solid #5b6b85;padding:4px 10px;font-size:11px;color:#c6d3e8;margin-left:auto;white-space:nowrap}
-.panel{border:1px solid var(--line);background:linear-gradient(160deg,#1b2432,#151c29);border-radius:var(--r);padding:19px;margin-bottom:15px;box-shadow:0 12px 30px #02051127}.panel h2{font-size:1.1rem;margin:0 0 6px;letter-spacing:-.018em}.panel p{margin:4px 0 15px;color:var(--muted)}.label{display:block;color:#c7d4e8;font-size:13px;margin-bottom:6px;font-weight:650}.hint{color:var(--muted);font-size:12px;margin-top:7px}.small{font-size:13px;color:var(--muted)}.feature{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);font-weight:800}
+.panel{border:1px solid var(--line,#394a63);background:linear-gradient(160deg,#1b2432,#151c29);border-radius:var(--r);padding:19px;margin-bottom:15px;box-shadow:0 12px 30px #02051127}.panel h2{font-size:1.1rem;margin:0 0 6px;letter-spacing:-.018em}.panel p{margin:4px 0 15px;color:var(--muted)}.label{display:block;color:#c7d4e8;font-size:13px;margin-bottom:6px;font-weight:650}.hint{color:var(--muted);font-size:12px;margin-top:7px}.small{font-size:13px;color:var(--muted)}.feature{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);font-weight:800}
 .drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1.5px dashed #7586a0;background:#202b3a63;border-radius:14px;min-height:160px;padding:26px;gap:8px}.drop.drag{border-color:var(--gold);background:#64522140}.drop strong{font-size:18px}.drop input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}.filetitle{font-weight:700;overflow-wrap:anywhere}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.entry{min-width:0}.input,select,textarea{width:100%;background:#0c1420;border:1px solid #516078;color:var(--ink);border-radius:11px;padding:11px 12px;min-height:45px;outline:none}.input:focus,select:focus,textarea:focus{border-color:#ffd66f;box-shadow:0 0 0 3px #fbd76b22}option{background:#1c2636}.btn{border:1px solid #53617a;background:#2d3950;color:#fff;border-radius:12px;padding:11px 15px;min-height:43px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}.btn:hover:not(:disabled){filter:brightness(1.12)}.btn:active:not(:disabled){transform:translateY(1px)}.primary{background:linear-gradient(135deg,#ffdc77,#ffad48);border-color:#ffdc77;color:#1a1c29}.secondary{background:#202c3e}.danger{border-color:#a74e55;color:#ffb3b3;background:#48282c}.ghost{background:transparent}.wide{width:100%}.chip{background:#334158;border:1px solid #5d6d83;color:#e3edfc;border-radius:100px;padding:8px 12px;font-size:13px;font-weight:700}
 .kpi{background:#101827;border:1px solid #334157;border-radius:13px;padding:14px;min-width:0}.kpi .num{font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.025em;color:#fff}.kpi .cap{font-size:12px;color:#acbdd1;margin-top:6px}.muted{color:var(--muted)}.good{color:var(--green)}.warn{color:var(--gold)}.bad{color:var(--red)}.callout{border-radius:12px;padding:12px 14px;background:#17283a;border:1px solid #486885;font-size:13px}.callout.warn{background:#352c1d;border-color:#77623b;color:#f6d99f}.callout.bad{background:#352127;border-color:#925465;color:#ffd0d4}.log{max-height:175px;overflow:auto;font-size:12px;background:#101824;padding:10px 13px;border-radius:12px;border:1px solid #344153;white-space:pre-wrap;overflow-wrap:anywhere}.tablewrap{max-height:380px;overflow:auto;border:1px solid #334258;border-radius:11px}.table{border-collapse:collapse;width:100%;font-size:13px}.table th,.table td{padding:8px 10px;border-bottom:1px solid #2e3c51;text-align:left}.table th{position:sticky;top:0;background:#202a3a;color:#c2d0e3;z-index:1}.table td:last-child{text-align:right}.qtyField{max-width:96px;min-height:36px;padding:5px 8px}.seg{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.seg button{background:#273248;color:#b5c5d9;padding:7px 10px;border-radius:9px;border:1px solid #445268;font-size:12px;font-weight:700}.seg button.selected{background:#664f28;color:#ffdf83;border-color:#d2a648}hr{border:0;border-top:1px solid #344356;margin:18px 0}details{border:1px solid #394a63;border-radius:13px;padding:12px 14px;background:#111b28;margin:12px 0}summary{cursor:pointer;font-weight:700}details[open] summary{margin-bottom:14px}.tog{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d0dbea}.tog input{margin-top:3px;accent-color:#ffd369}.hidden{display:none!important}.hr{height:1px;background:#2e3c50;margin:16px 0}.right{margin-left:auto}.foot{margin-top:18px;color:#8697ad;text-align:center;font-size:12px}.compact{margin:0!important}.monospace{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.status{margin-top:12px}.preview{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.6 ui-monospace,Menlo,monospace;border:1px solid #344258;background:#090f1a;padding:11px;border-radius:12px;color:#bacee8}
 @media(max-width:650px){.shell{padding:17px 12px 55px}.brand{gap:9px}.bolt{height:43px;width:43px;font-size:24px;border-radius:12px}.pill{display:none}.panel{padding:15px}.grid,.grid3{grid-template-columns:1fr}.kpi .num{font-size:23px}.table th,.table td{padding:7px 6px}.btn{font-size:13px}.drop{min-height:140px}.smallHide{display:none}}
+.sav-assist{margin-top:14px;padding-top:12px;border-top:1px solid var(--line,#394a63)}.sav-assist .status{overflow-wrap:anywhere}.sav-assist .btn{white-space:normal}.sav-assist h3{margin:0 0 8px}.sav-assist ol{padding-left:22px}.sav-assist li{margin:10px 0}.sav-assist summary{cursor:pointer;padding:12px 0}
 </style>
 <style>
 .mon-roster{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.mon-tile{display:flex;flex-direction:column;align-items:flex-start;min-height:64px;padding:9px;border-radius:11px;border:1px solid #485873;background:#182538;color:#f3f6ff;text-align:left;min-width:0}.mon-tile.chosen{border-color:#ffdc77;background:#59492b}.mon-tile strong{font-size:13px;overflow-wrap:anywhere}.mon-tile small{font-size:11px;color:#bfd0e3;overflow-wrap:anywhere}.mon-move-row{display:grid;grid-template-columns:25px 1.5fr 1fr 1fr;gap:9px;align-items:end;margin-bottom:11px}.mon-move-row .small{padding-bottom:13px}@media(max-width:650px){.mon-roster{grid-template-columns:repeat(2,minmax(0,1fr))}.mon-move-row{grid-template-columns:20px 1fr 1fr 1fr;gap:5px}.mon-move-row .label{font-size:11px}.mon-move-row .input{padding:9px 5px}}
@@ -134,13 +135,29 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.32</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.33</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
   <a href="https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues/new?template=bug-report.yml" style="font-weight:750">Report a bug ↗</a>
 </nav>
-<section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div id="fileInfo" class="status"></div></section>
+<section class="panel"><div class="feature">01 • Import</div><h2>Open your Delta save state</h2><p>Select a ThunderYellow <strong>.svs</strong> file. Everything stays on your device.</p><div id="drop" class="drop"><div style="font-size:30px">📁</div><strong>Tap to choose an .svs file</strong><span class="small">Or drop a file here on a computer</span><input id="file" type="file" accept=".svs,.sgm,.gz,application/gzip,application/octet-stream" aria-label="Choose a save state"></div><div class="sav-assist" id="savAssist">
+<h3>SAV → SVS Import Assist</h3>
+<p class="small">Have a cartridge <strong>.sav</strong>? Check it here, then let Delta create its matching save state. A SAV alone does not contain the running emulator state needed for an SVS.</p>
+<div id="savDrop" class="drop" style="padding:14px;min-height:0"><strong>Choose or drop a .sav file</strong><span class="small">Read-only check • original stays untouched</span><input id="savFile" type="file" accept=".sav,application/octet-stream" aria-label="Choose a cartridge SAV file"></div>
+<div id="savStatus" class="status" role="status" aria-live="polite"></div>
+<details id="savGuide"><summary>How to create the matching SVS in Delta</summary>
+<ol class="small">
+<li>Back up your existing Delta cartridge save with <strong>Manage Save File → Export Save File</strong>, and keep your original SAV and SVS files.</li>
+<li>In Delta’s game library, long-press the <strong>same ThunderYellow ROM build</strong> that created this SAV. Choose <strong>Manage Save File → Import Save File</strong> and select your SAV. This replaces that game’s cartridge save in Delta.</li>
+<li>Start the game from its title screen and choose the in-game <strong>Continue</strong>. Do not resume an old save state or preview state: it may restore old progress. Check your trainer, party and follower Pikachu; let any startup recovery finish.</li>
+<li>Once safely in the overworld, save in-game. Open Delta’s pause menu, choose <strong>Save State</strong>, then <strong>+</strong> to create a new state. Long-press that new state and choose <strong>Export</strong> to Files.</li>
+<li>Open the exported <strong>.svs</strong> in the main uploader above. SVS Lab will perform its normal layout and live-data checks before enabling edits.</li>
+</ol>
+<p class="small">This assist checks cartridge structure only. It cannot identify your exact ROM build or guarantee emulator compatibility. It never injects SAV data into another state or generates an SVS by renaming a file.</p>
+<button id="savOpenState" class="btn" type="button">Open the SVS created in Delta</button>
+<a href="https://faq.deltaemulator.com/using-delta/save-states" target="_blank" rel="noopener">Delta save-state guide</a>
+</details></div><div id="fileInfo" class="status"></div></section>
 <div id="workspace" class="hidden">
 <div id="unsafeStateNotice" class="hidden" role="alert" aria-live="assertive">
  <h2>⚠ Unsaved or mismatched game state</h2>
@@ -329,7 +346,7 @@ const name=id=>named[id]||'Unknown item (#'+id+')';
 function msg(el,text,type=''){el.className='status callout '+type;el.textContent=text}
 function note(text){log.unshift(new Date().toLocaleTimeString()+' • '+text);$('history').textContent=log.join('\n')}
 function snapshot(label,patches){if(!patches.length)return false;undoStack.push({label,patches});$('undo').disabled=false;note(label+' — '+patches.length+' byte region(s)');return true}
-function patch(offset,bytes,patches){if(!snapshotSafe&&!unsavedInventory)throw Error('Live save storage was not verified. Do not patch unidentifiable game memory.');if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
+function patch(offset,bytes,patches){if(!snapshotSafe&&!unsavedInventory)throw Error('Live save storage was not verified. Do not patch unidentifiable game memory.');if(offset<0||offset+bytes.length>work.length)throw Error('Patch outside save state');if(!snapshotSafe&&unsavedInventory){const a=unsavedInventory.start,b=a+offsets[4]+pockets[4][1]*4,coin=a-0x7c,end=offset+bytes.length;if(!((offset>=a&&end<=b)||(offset>=coin&&end<=coin+2)))throw Error('Unsaved mode only permits writes inside the verified live bag or coin balance.');}let old=work.slice(offset,offset+bytes.length);if(old.every((v,i)=>v===bytes[i]))return;patches.push({offset,old});work.set(bytes,offset)}
 function patch16(offset,val,patches){patch(offset,Uint8Array.of(val&255,(val>>>8)&255),patches)}
 // FireRed/LeafGreen flash sections: checksums must be updated whenever flash-backed copies change.
 const sectionLengths=[0xF24,0xF80,0xF80,0xF80,0xEE8,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0x7D0];
@@ -341,6 +358,43 @@ function findSectors(d){let sectors=[];for(let i=0;i<d.length-4;i++){
  let size=sectionLengths[id];if(checksum(d,base,size)!==u16(d,i-2))continue;
  sectors.push({base,id,size,checksumOffset:i-2});i+=3;
 }return sectors;}
+// Read cartridge banks independently; never combine fragments from two banks.
+// This inspector has no access to work/original and cannot modify an open SVS.
+function inspectCartridgeSave(bytes){
+ if(bytes.length!==0x20000)throw Error('Expected a 128 KiB (131,072-byte) raw Gen III cartridge SAV. Truncated, wrapped or emulator-state files are not supported; export a raw save from your emulator.');
+ const banks=[];
+ for(let bank=0;bank<2;bank++){
+  const sectors=new Map();let counter=null,valid=true;
+  for(let slot=0;slot<14;slot++){
+   const base=(bank*14+slot)*0x1000,id=u16(bytes,base+0xff4),count=u32(bytes,base+0xffc);
+   if(id>13||sectors.has(id)||u32(bytes,base+0xff8)!==0x08012025||
+      checksum(bytes,base,sectionLengths[id])!==u16(bytes,base+0xff6)||
+      (counter!==null&&counter!==count)){valid=false;break;}
+   counter=count;sectors.set(id,base);
+  }
+  if(valid&&sectors.size===14)banks.push({bank:bank+1,counter,sectors});
+ }
+ if(!banks.length)throw Error('No complete checksum-valid FireRed/LeafGreen-format save bank was found. This may be a damaged save or a different game format. No conversion or repair was attempted.');
+ return {banks};
+}
+let savReadSequence=0;
+async function inspectSAVFile(file){
+ if(!file)return;
+ const sequence=++savReadSequence;
+ msg($('savStatus'),'Checking '+file.name+'…');$('savGuide').open=false;
+ try{
+  if(file.size!==0x20000)throw Error('Choose a raw 128 KiB (131,072-byte) cartridge .sav, not an SVS or ZIP. No file was changed.');
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  if(sequence!==savReadSequence)return;
+  const result=inspectCartridgeSave(bytes);
+  const details=result.banks.map(b=>'bank '+b.bank+' (save counter '+b.counter+')').join('; ');
+  msg($('savStatus'),'✓ '+file.name+': '+result.banks.length+' complete checksum-valid bank(s): '+details+
+   '. Cartridge structure checked; exact ThunderYellow ROM compatibility is not verified.'+
+   (result.banks.length===1?' The other bank is incomplete or invalid; keep your backup.':'')+
+   ' Follow the Delta steps below to create the SVS. Your open editor and original files are unchanged.',result.banks.length===1?'warn':'good');
+  $('savGuide').open=true;
+ }catch(e){if(sequence===savReadSequence)msg($('savStatus'),e.message,'bad');}
+}
 function refreshChecksums(patches){const touched=patches.map(p=>[p.offset,p.offset+p.old.length]);let fixed=0;
  for(const s of flashSectors){if(!touched.some(([a,b])=>a<s.base+s.size&&b>s.base))continue;
   let desired=checksum(work,s.base,s.size);if(desired!==u16(work,s.checksumOffset)){patch16(s.checksumOffset,desired,patches);fixed++}
@@ -1562,6 +1616,12 @@ async function exportSVS(){
  finally{button.disabled=false;button.textContent='⬇ Download edited .svs';}
 }
 
+$('savFile').addEventListener('change',e=>{inspectSAVFile(e.target.files[0]);e.target.value='';});
+const savDrop=$('savDrop');
+['dragenter','dragover'].forEach(type=>savDrop.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();savDrop.classList.add('drag');}));
+['dragleave','drop'].forEach(type=>savDrop.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();savDrop.classList.remove('drag');}));
+savDrop.addEventListener('drop',e=>inspectSAVFile(e.dataTransfer.files[0]));
+$('savOpenState').onclick=()=>$('file').click();
 $('file').addEventListener('change',e=>load(e.target.files[0]));const drop=$('drop');['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>load(e.dataTransfer.files[0]));
 // The search catalog is read-only until the user explicitly taps an item.
 const searchableItems=Object.entries(named)
