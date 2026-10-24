@@ -131,7 +131,7 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.30</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.31</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -233,7 +233,12 @@
  <div style="align-self:end"><button id="gymCoachRefresh" type="button" class="btn secondary">Analyze my Pokémon &amp; bag</button></div></div>
  <div id="gymCoachStatus" class="status" role="status" aria-live="polite"></div>
  <div id="gymCoachResults"></div>
- <div class="row" style="margin:12px 0 0"><button id="gymCoachUse" class="btn secondary" type="button" disabled>Use suggested team in builder (preview only)</button></div>
+ <div class="row" style="margin:12px 0 0">
+<button id="gymCoachBuildSwap" class="btn primary" type="button" disabled>⚡ Build &amp; Swap Suggested Team</button>
+<button id="gymCoachUse" class="btn secondary" type="button" disabled>Customize in Party Builder</button>
+</div>
+<div id="gymCoachSwapStatus" class="status" role="status" aria-live="polite"></div>
+<p class="hint">Build &amp; Swap shows all six positions, which Pokémon return to Bill's PC and how party size changes. Nothing is changed until you confirm. Only your owned Pokémon are used, and original follower Pikachu stays in his fixed position. Export a new SVS for Delta.</p>
  <p class="hint">These are beginner-friendly advisory level goals, not verified gym level caps or guaranteed wins. Check actual moves and TM compatibility in-game; the coach cannot determine whether a stored Pokémon was caught naturally or added through an editor.</p>
 </div>
 <div class="grid" style="margin-bottom:12px"><div><label class="label" for="partyPlanName">Team name</label><input id="partyPlanName" class="input" maxlength="32" placeholder="e.g. Elite Four team"></div><div><label class="label" for="partyPresets">Saved teams on this device</label><select id="partyPresets" class="input"></select></div></div>
@@ -2114,9 +2119,9 @@ function gymCoachText(parent,tag,content,cls=''){
  const node=document.createElement(tag);node.textContent=content;if(cls)node.className=cls;parent.append(node);return node;
 }
 function renderGymCoach(){
- const host=$('gymCoachResults'),menu=$('gymCoachChallenge'),apply=$('gymCoachUse');
+ const host=$('gymCoachResults'),menu=$('gymCoachChallenge'),apply=$('gymCoachUse'),build=$('gymCoachBuildSwap');
  if(!host||!menu)return;
- host.replaceChildren();apply.disabled=true;gymCoachSelection=null;
+ host.replaceChildren();apply.disabled=true;build.disabled=true;gymCoachSelection=null;
  if(!loaded||!snapshotSafe){msg($('gymCoachStatus'),'Open a verified SVS to see teams made from your Pokémon and bag.','warn');return;}
  try{
   const guide=gymCoachGuides.find(x=>x.id===menu.value)||gymCoachGuides[0];
@@ -2183,9 +2188,16 @@ function renderGymCoach(){
    try{const roster=teamRoster();usable=team.some(x=>x.val===roster.anchor.val)&&roster.party.length===6}
    catch(_){}
   }
-  gymCoachSelection=usable?{guide:guide.id,team:team.map(x=>x.val)}:null;
+  const complete=team.length===6&&new Set(team.map(x=>x.val)).size===6;
+  const active=team.filter(x=>isProtected(x.mon));
+  const recommendedSafe=complete&&active.length===1&&active[0].kind==='party'&&!!monLocations?.pcRAM?.length;
+  gymCoachSelection=recommendedSafe?{guide:guide.id,team:team.map(x=>x.val),identities:team.map(x=>monIdentity(x.mon))}:null;
+  build.disabled=!recommendedSafe;
   apply.disabled=!usable;
-  msg($('gymCoachStatus'),(usable?'✓ Suggestions ready. You can copy this lineup into the Party Builder, review its switch preview, and choose whether to apply.':'✓ Read-only strategy ready. The Party Switcher requires six valid party Pokémon before it can load a suggested team.')+' This advisor cannot confirm provenance of individual Pokémon.','good');
+  msg($('gymCoachStatus'),recommendedSafe?
+   '✓ A complete six-Pokémon team is ready. Tap Build & Swap Suggested Team to review its lineup and confirm the exchanges. '+(usable?'Customize in Party Builder is also available.':'Your current party has fewer than six members; direct Build & Swap can fill empty positions.'):
+   'Strategy ready, but automatic team exchange is unavailable: '+(!complete?'fewer than six verified Pokémon are available.':!monLocations?.pcRAM?.length?'live PC storage could not be verified.':'the original follower Pikachu could not be verified in your party.')+
+   ' The advisor does not create Pokémon, add levels or teach moves.','good');
  }catch(e){msg($('gymCoachStatus'),'Gym guidance unavailable: '+e.message,'warn');}
 }
 function gymCoachUseSuggestedTeam(){
@@ -2216,6 +2228,7 @@ function initializeGymCoach(){
  menu.onchange=renderGymCoach;
  $('gymCoachRefresh').onclick=renderGymCoach;
  $('gymCoachUse').onclick=gymCoachUseSuggestedTeam;
+ $('gymCoachBuildSwap').onclick=gymCoachBuildAndSwap;
 }
 
 function teamRoster(){
