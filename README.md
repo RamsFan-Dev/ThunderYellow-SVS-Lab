@@ -12,16 +12,16 @@
 
 **Emulators and original-game sourcing:** The site includes direct links to [Delta for iOS](https://apps.apple.com/us/app/delta-game-emulator/id1048524688), [Pizza Boy A Basic for Android](https://play.google.com/store/apps/details?id=it.dbtecno.pizzaboygba), a [search for authentic LeafGreen GBA cartridges](https://www.ebay.com/sch/i.html?_nkw=pokemon+leaf+green+version+authentic), and the [GB Operator cartridge-backup guide](https://www.epilogue.co/support/getting-started/what-is-gb-operator). The user must supply a lawfully sourced original compatible LeafGreen USA Rev 1 backup; a physical cartridge alone does not guarantee the right revision. There are **no commercial ROM downloads** linked, included or hosted.
 
-## ThunderYellow visitor counter
+## ThunderYellow site visits tally
 
-The public game site uses a no-JavaScript [Hits Counter](https://hitscounter.dev/) SVG badge, now visible just below the homepage navigation. All `/game/` pages use the *same exact URL identifier* (`https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/`) so every game page counts toward one total. The service's badge shows **today and total hits**. This image-based solution replaces the earlier CounterAPI request, which did not return a count on iOS Safari.
+The official game pages now display a tiny, non-clickable **Site Visits** counter at the very bottom of each page's footer. There is no counter in the hero area or navigation. It is provided by [Hits Counter](https://hitscounter.dev/) as a small SVG image, so it works without cross-site JavaScript or a visitor login.
 
-- Counts **page hits, not unique people**. Reloading and navigating between game pages can increment the count; caches, bots or ad blockers can cause discrepancies.
-- Only begins counting from the new SVG badge deployment. We cannot claim to have recovered historical or earlier CounterAPI totals.
-- Counts can be viewed in the [Hits Counter history page](https://hitscounter.dev/history?url=https%3A%2F%2Framsfan-dev.github.io%2FThunderYellow-SVS-Lab%2Fgame%2F).
-- The badge is loaded by the visitor's browser from a third-party host; the provider may receive normal web request information. No custom visitor identity, cookies, or form data is sent by the site code.
-- Counter failure hides the broken badge and shows **"View total temporarily unavailable"**, not a fictional count.
-- The SVS Lab root editor is separate and intentionally excluded.
+- All `/game/` pages use the same website URL as a counting key (`https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/`). The provider displays both today's hits and total hits. **Hits are not unique visitors**; reloads or multiple page visits may be included.
+- Counts start when this new SVG counter was introduced. Past traffic from the previous CounterAPI provider has not been transferred.
+- The only visible element is the subdued badge at the bottom of each game page. It cannot be clicked and does not reveal analytics details.
+- A browser requesting the SVG contacts the third-party provider. Browser caching, tracking protection or outages can affect counting.
+- If the badge fails to load, the page shows `Site Visits: —` rather than a fabricated total.
+- The separate SVS Lab editor homepage is not counted.
 
 **Community technical support and Delta save-state diagnostics**
 
