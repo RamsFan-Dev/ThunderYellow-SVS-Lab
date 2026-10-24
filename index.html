@@ -952,6 +952,55 @@ function applyItem(id,pocket,qty){try{
  else msg($('editMsg'),'No change needed.');
  }catch(e){msg($('editMsg'),e.message,'bad')}}
 
+function quickAddBalls(){
+ const patches=[];
+ try{
+  if(!loaded||(!snapshotSafe&&!unsavedInventory)||!copies.length)throw Error('A verified live bag or matching save is required.');
+  if(monDirty||badgeDirty||nameDirty)throw Error('Save or discard pending edits first.');
+  const current=getItems(work,copies[0],2);
+  const desired=new Map();
+  for(const id of [4,3]){
+   const owned=current.find(it=>it.id===id)?.qty||0;
+   if(owned+15>999)throw Error(name(id)+' already has '+owned+'. Adding 15 would exceed 999.');
+   desired.set(id,owned+15);
+  }
+  const plan=[];
+  for(const c of copies){
+   const start=c.start+offsets[2],slots=pockets[2][1];
+   const existing=Array.from({length:slots},(_,i)=>u16(work,start+i*4));
+   const seen=new Set();let emptySeen=false;
+   for(let i=0;i<slots;i++){
+    const id=existing[i],qty=u16(work,start+4*i+2)^c.key;
+    if(!id){if(qty!==0)throw Error('Invalid free ball slot in '+c.kind+' copy.');emptySeen=true;}
+    else if(emptySeen||qty<1||qty>999||seen.has(id))throw Error('Ball pocket is inconsistent in '+c.kind+' copy.');
+    if(id)seen.add(id);
+   }
+   for(const id of [4,3]){
+    let index=existing.indexOf(id);
+    if(index<0){index=existing.indexOf(0);if(index<0)throw Error('Poké Ball pocket is full in a save copy.');existing[index]=id;}
+    plan.push({off:start+index*4,id,qty:desired.get(id),key:c.key});
+   }
+  }
+  for(const p of plan){patch16(p.off,p.id,patches);patch16(p.off+2,p.qty^p.key,patches);}
+  refreshChecksums(patches);
+  if(snapshotSafe){
+   const verified=verifySnapshotIdentity();if(!verified.ok)throw Error(verified.reason);
+  }else{
+   const currentBag=detectUnsavedLiveBag();
+   if(!currentBag||currentBag.start!==unsavedInventory.start||currentBag.key!==unsavedInventory.key)
+    throw Error('Live unsaved bag verification changed during edit.');
+  }
+  if(!snapshot('Add 15 Poké Balls and 15 Great Balls',patches))throw Error('The requested ball quantities already match.');
+  sync();
+  msg($('editMsg'),'✓ Added 15 to each ball stack: '+desired.get(4)+' Poké Balls and '+
+   desired.get(3)+' Great Balls. '+(!snapshotSafe?'⚠ Unsaved live RAM: export a separate SVS and test in Delta.':'Export a new SVS.') ,'good');
+ }catch(e){
+  for(let i=patches.length-1;i>=0;i--)work.set(patches[i].old,patches[i].offset);
+  msg($('editMsg'),'Ball edit blocked: '+e.message,'bad');
+ }
+}
+$('quickAddBalls').onclick=quickAddBalls;
+
 // Gen III FRLG pcItems[30] at SaveBlock1 +0x298: item IDs and unencrypted quantities.
 // Bag begins at +0x310 and uses the SaveBlock2 encryption key. Confirm all copies before edits.
 const itemPCSlots=30,itemPCRelativeOffset=-0x78;
