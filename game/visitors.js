@@ -38,9 +38,9 @@
     } catch (_) {
       // Keep the honest unavailable state; do not invent visitor totals.
       output.forEach((el) => {
-        el.textContent = "—";
+        el.textContent = "Unavailable";
         el.removeAttribute("aria-busy");
-        el.title = "Visit count temporarily unavailable";
+        el.title = "Counter service could not be reached. This is not a zero count.";
       });
     }
   }
