@@ -43,6 +43,29 @@ evaluate('undo()');evaluate('undo()');assert(evaluate('work.every((v,i)=>v===ori
 assert(!html.includes('id="quickAddBalls"'));
 assert.doesNotMatch(fn('exportSVS'),/Unapplied recovered Pokémon builds must be applied/);
 assert.match(fn('exportSVS'),/was NOT included in this download/);
+// Use the production export audit against a party whose live slot 2 HP has drifted.
+// This tests the bug observed when an unrelated Pokemon's battle cache differed.
+const stored=[new Uint8Array(100),new Uint8Array(100)];
+const active=[new Uint8Array(100),new Uint8Array(100)];
+const state=new Uint8Array(2500);
+for(let i=0;i<2;i++)stored[i][0]=active[i][0]=i+1;
+state[500+0x34]=2;active[1][86]=25;
+state.set(active[0],1200);state.set(active[1],1300);
+const saveContext=vm.createContext({
+ Uint8Array,Map,Error,work:state,
+ getFlashGroups:()=>[{sectors:new Map([[1,{base:500}]])}],
+ getPartyFrom:(_,slot)=>stored[slot],
+ activeGameplayPartyLocations:()=>[1200],activePartyRAMMirrors:()=>[1200],
+ decodeMon:b=>b&&b[0]?{pid:b[0],ot:7,sp:b[0]===2?25:152}:null,
+ monIdentity:m=>m.pid+':'+m.ot+':'+m.sp
+});
+vm.runInContext(fn('repairBytesEqual')+'\n'+fn('auditExportLiveParty'),saveContext);
+const driftAudit=vm.runInContext('auditExportLiveParty()',saveContext);
+assert.equal(JSON.stringify(driftAudit.driftSlots),'[2]');
+active[1][0]=3;state.set(active[1],1300);
+assert.throws(()=>vm.runInContext('auditExportLiveParty()',saveContext),/different Pokémon identities/);
+assert.match(fn('partyPCTransferPlan'),/party\.push\(\{mon,bytes:active\}\)/);
+assert.doesNotMatch(fn('partyPCTransferPlan'),/The live party differs from the saved party at slot/);
 // Critical pre-existing Coach guards remain on the exact transaction path.
 const plan=fn('gymCoachBuildSwapPlan'),swap=fn('gymCoachBuildAndSwap');
 assert.match(plan,/repairBytesEqual\(full\[follower.index\],activeParty\[follower.index\]\)/);
