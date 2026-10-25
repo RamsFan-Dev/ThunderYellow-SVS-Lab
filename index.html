@@ -134,7 +134,7 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.36</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.37</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -1455,7 +1455,7 @@ function auditExportLiveParty(){
  const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1);
  if(!sector)throw Error('Export blocked: no complete current party save.');
  const count=work[sector.base+0x34],gameplay=activeGameplayPartyLocations(groups),
-       inSave=activePartyRAMMirrors(groups);
+       inSave=activePartyRAMMirrors(groups),driftSlots=[];
  if(count<1||count>6||!gameplay.length||!inSave.length)throw Error('Export blocked: saved party and live gameplay party do not match.');
  for(let i=0;i<count;i++){
   const stored=getPartyFrom(groups[0],i);
@@ -1463,12 +1463,15 @@ function auditExportLiveParty(){
   for(const [label,bases] of [['gameplay',gameplay],['SaveBlock1',inSave]]){
    for(const base of bases){
     const ram=work.subarray(base+100*i,base+100*(i+1));
-    if(stored.length!==ram.length||!stored.every((v,j)=>v===ram[j]))
-     throw Error('Export blocked: party slot '+(i+1)+' differs between cartridge data and '+label+' memory. Please create a fresh in-game save/SVS or undo the incomplete edit.');
+    const live=decodeMon(ram.subarray(0,80)),saved=decodeMon(stored);
+    if(ram.length!==100||!live||!saved||monIdentity(live)!==monIdentity(saved))
+     throw Error('Export blocked: party slot '+(i+1)+' has different Pokémon identities in live and cartridge data.');
+    // Legitimate unsaved HP, PP, EXP, moves and battle changes must not block exporting.
+    if(!repairBytesEqual(stored,ram)&&!driftSlots.includes(i+1))driftSlots.push(i+1);
    }
   }
  }
- return {count,gameplayCount:work[gameplay[0]-0x25b],ramCopies:inSave.length,flashGroups:groups.length};
+ return {count,gameplayCount:work[gameplay[0]-0x25b],ramCopies:inSave.length,flashGroups:groups.length,driftSlots};
 }
 async function exportSVS(){
  if(!loaded)return;
@@ -1506,8 +1509,10 @@ async function exportSVS(){
   setTimeout(()=>URL.revokeObjectURL(url),60000);
   if(ramOnly)msg($('exportMsg'),'✓ Downloaded '+outname+'. ⚠ UNSAVED GAME: only positively identified live RAM bag/coin bytes were changed. Earlier FLASH Pokémon and inventories remain untouched. Load in Delta via Load State, inspect the bag, then save in-game if correct. Keep the original .svs.','warn');
   else msg($('exportMsg'),'✓ Downloaded '+outname+' • gzip verified • '+fmt(zipped.length)+
-   ' bytes • '+audit.count+' party Pokémon verified in live gameplay and saved data ('+audit.ramCopies+
-   ' active save mirrors). In Delta import it as a Save State, then Menu → Load State.','good');
+   ' bytes • '+audit.count+' party Pokémon identities verified ('+audit.ramCopies+
+   ' active save mirrors). '+(audit.driftSlots.length?'⚠ Existing live/saved data differences at slot(s) '+audit.driftSlots.join(', ')+
+   ' were preserved; inspect your party in Delta before replacing any save. ':'')+
+   'Import in Delta as a Save State, then Menu → Load State.',audit.driftSlots.length?'warn':'good');
   if(recoveryDraftPending){
    $('exportMsg').textContent += ' Note: Your recovered Pokémon draft is still pending and was NOT included in this download.';
    $('exportMsg').classList.remove('good');$('exportMsg').classList.add('warn');
@@ -3538,7 +3543,7 @@ function pcShuffleChoose(slot,mon){
  return true;
 }
 // Transfers are distinct from PC-PC shuffles: full party records have 100 bytes,
-// PC boxes store 80 bytes. All game RAM and both cartridge FLASH saves must agree.
+// PC boxes store 80 bytes. Match Pokemon identities, preserving current gameplay records.
 function partyPCTransferLabel(kind,slot,mon){
  return (kind==='party'?'Party '+(slot+1):'Box '+(1+Math.floor(slot/30))+', Slot '+(1+slot%30))+
   ': '+(mon?(monNames[mon.sp]||'Pokémon')+(shinyStatus(mon.pid,mon.ot)?' ✨':''):'Empty');
@@ -3569,10 +3574,13 @@ function partyPCTransferPlan(source,destination){
     throw Error('Cartridge-save backups identify different Pokémon in party slot '+(i+1)+'. No changes were made.');
   }
   for(const base of live.mirrors){
-   if(!repairBytesEqual(work.subarray(base+100*i,base+100*(i+1)),saved))
-    throw Error('The live party differs from the saved party at slot '+(i+1)+'.');
+   const raw=work.subarray(base+100*i,base+(i+1)*100),active=decodeMon(raw.subarray(0,80));
+   if(raw.length!==100||!active||monIdentity(active)!==monIdentity(mon))
+    throw Error('Party slot '+(i+1)+' identifies a different Pokémon in the live game.');
   }
-  party.push({mon,bytes:saved});
+  // Use the current gameplay record, not the earlier in-game cartridge-save version.
+  const active=work.slice(live.gameplayMirrors[0]+100*i,live.gameplayMirrors[0]+(i+1)*100);
+  party.push({mon,bytes:active});
  }
  const pc=pcRosterSnapshot(),target=pc[boxSlot],partyMember=party[partySlot]||null;
  if(!target)throw Error('PC slot is missing.');
