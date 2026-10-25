@@ -11,7 +11,7 @@ function fn(name){
  throw Error('Cannot extract '+name);
 }
 const elements=new Map();
-const c=vm.createContext({console,Uint8Array,Map,Set,Error,Date,alert:()=>{},
+const c=vm.createContext({console,Uint8Array,Map,Set,Error,Date,alert:()=>{},fmt:n=>String(n),
  $:id=>{if(!elements.has(id))elements.set(id,{textContent:'',disabled:false});return elements.get(id)},
  sync:()=>{},hexView:()=>{},note:()=>{},getFlashGroups:()=>[],name:id=>String(id),msg:(el,text)=>el.textContent=text});
 vm.runInContext(`
@@ -19,7 +19,7 @@ const u16=(d,x)=>d[x]|d[x+1]<<8,u32=(d,x)=>(d[x]|d[x+1]<<8|d[x+2]<<16|d[x+3]<<24
 const sectionLengths=[0xF24,0xF80,0xF80,0xF80,0xEE8,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0xF80,0x7D0];
 const pockets=[['Items',42],['Key Items',30],['Balls',13],['TMs',58],['Berries',43]],offsets=[0,168,288,340,572];
 let work,original,loaded=true,snapshotSafe=false,unsavedInventory=null,copies=[],flashSectors=[],undoStack=[],monDirty=false,badgeDirty=false,nameDirty=false;
-${['checksum','patch','patch16','getItems','unsavedValidBagPocket','detectUnsavedLiveBag','refreshChecksums','snapshot','quickAddBalls','undo'].map(fn).join('\n')}
+${['checksum','patch','patch16','getItems','unsavedValidBagPocket','detectUnsavedLiveBag','refreshChecksums','snapshot','validateInt','applyItem','undo'].map(fn).join('\n')}
 `,c);
 const evaluate=s=>vm.runInContext(s,c);
 // Real RAM bag detector + transaction; no saved FLASH and no Pokemon writes.
@@ -32,15 +32,20 @@ assert.equal(evaluate('unsavedInventory.start'),0x2de27);
 assert.throws(()=>evaluate('patch(0,Uint8Array.of(1),[])'),/only permits/);
 assert.throws(()=>evaluate('patch(unsavedInventory.start-1,Uint8Array.of(1,2),[])'),/only permits/);
 assert.throws(()=>evaluate('patch(unsavedInventory.start+743,Uint8Array.of(1,2),[])'),/only permits/);
-evaluate('quickAddBalls()');
-assert.equal(evaluate('undoStack.length'),1);
+evaluate('applyItem(4,2,15)');
+evaluate('applyItem(3,2,15)');
+assert.equal(evaluate('undoStack.length'),2);
 assert.equal(evaluate('getItems(work,copies[0],2).find(x=>x.id===4).qty'),15);
 assert.equal(evaluate('getItems(work,copies[0],2).find(x=>x.id===3).qty'),15);
 assert(evaluate('work.every((v,i)=>v===original[i]||(i>=unsavedInventory.start+288&&i<unsavedInventory.start+340))'));
-evaluate('undo()');assert(evaluate('work.every((v,i)=>v===original[i])'));assert.equal(evaluate('undoStack.length'),0);
+evaluate('undo()');evaluate('undo()');assert(evaluate('work.every((v,i)=>v===original[i])'));assert.equal(evaluate('undoStack.length'),0);
+// Normal quantity editing stays available; export must not be blocked by an unrelated recovery draft.
+assert(!html.includes('id="quickAddBalls"'));
+assert.doesNotMatch(fn('exportSVS'),/Unapplied recovered Pokémon builds must be applied/);
+assert.match(fn('exportSVS'),/was NOT included in this download/);
 // Critical pre-existing Coach guards remain on the exact transaction path.
 const plan=fn('gymCoachBuildSwapPlan'),swap=fn('gymCoachBuildAndSwap');
 assert.match(plan,/repairBytesEqual\(full\[follower.index\],activeParty\[follower.index\]\)/);
 assert.match(swap,/confirm\(gymCoachBuildSwapPreview\(plan\)\)/);
 assert.match(swap,/work.set\(changes\[i\].old,changes\[i\].offset\)/);
-console.log('PASS: inline syntax, RAM-only patch bounds, live detector, +15 ball transaction, Undo and Coach guard checks.');
+console.log('PASS: inline syntax, RAM-only patch bounds, live detector, normal item quantity edits, Undo, export-draft and Coach guard checks.');
