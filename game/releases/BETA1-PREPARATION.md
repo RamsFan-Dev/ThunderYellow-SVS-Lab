@@ -17,6 +17,7 @@
 3. Internal Test125Q→Test125R IPS available and checksums documented. **It is NOT a clean LeafGreen base patch and must never be advertised as the public installer patch.**
 
 ## Blocking release gates (in order)
+**Hardware note:** Test125R has a GBA header complement mismatch (0xBD = 0x7C, calculated expected = 0x80). Evaluate separate one-byte H1 test version on genuine GBA before finalizing public Beta 1. See [hardware header QA](BETA1-HARDWARE-HEADER-QA.md).
 - [ ] Obtain and verify a **lawfully obtained original Pokémon LeafGreen USA Rev 1 (1.1)** 16 MiB GBA. SHA-1: `7862c67bdecbe21d1d69ce082ce34327e1c6ed5e`. Do not upload original to public repo.
 - [ ] Run `game/release-tools/make_beta1_patch.py` with that clean base and the exact frozen Test125R target. Tool must produce an IPS which round-trips exactly to the SHA-256 above.
 - [ ] Test public `/game/install/` experience using the **clean-base IPS**, not a Test125Q incremental patch. Confirm the final patched ROM's SHA-256.
