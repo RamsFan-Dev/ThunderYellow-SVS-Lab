@@ -36,7 +36,7 @@ The `/game/install/` webpage checks a visitor's chosen ROM locally and does **no
    - `publicRelease`: `true`
    - `releaseStatus`: `"released"`
    - `publicVersion`: assigned official release number (not the old internal “v1” label)
-   - `patch`: `{"format":"ips","path":"assets/ThunderYellow-FirstRelease.ips","sha256":"<VERIFIED PATCH SHA256>"}`
+   - `patch`: `{"format":"ips","path":"assets/ThunderYellow-Beta1.ips","sha256":"<VERIFIED PATCH SHA256>"}`
    - `expectedOutputSha256`: SHA-256 of the **exact verified target** ROM
 
 7. Test the public `/game/install/` workflow with the supported original LeafGreen file: base hash, downloaded patch integrity, fully patched game hash and actual launch in Delta.
