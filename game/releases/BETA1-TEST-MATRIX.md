@@ -18,12 +18,16 @@ For every test, mark PASS / FAIL / NOT TESTED and note save origin, game area, e
 | Catch ordinary wild Rattata | Capture allowed | NOT TESTED |
 | Catch other ordinary wild Pokémon | Capture allowed | NOT TESTED |
 | Party/PC inspect and transfer | All legitimate Pokémon intact; no new Bad Egg | NOT TESTED |
+| S.S. Anne Pokémon menu / Cut help strip | Party screen bottom help text and graphics are readable, without colored tile corruption | **FAIL — user screenshot on Test 125R** |
+| Party-menu rendering after closing/reopening and on other maps | Background tiles and text remain stable | NOT TESTED |
 | Surf follower / known event regressions | Test prior protected behavior | NOT TESTED |
 | Existing title/credits | Prior protected behavior retained | NOT TESTED |
 | EZ-Flash Mode A Clean Boot | Game boots without addon cheats/save-state modifications | NOT TESTED |
 | In-game save on cartridge | Save succeeds; power off then reboot and Continue | NOT TESTED |
 | Repeat hardware cold restart | No save rollback or follower corruption | NOT TESTED |
 | Public installer patch on clean LeafGreen Rev1 | Exact candidate output SHA-256: bf11349b...f9948b | BLOCKED: CLEAN BASE NOT PROVIDED |
+
+**Known visual defect (2026-10-28):** User screenshot from internal Test 125R on S.S. Anne shows a full-width band of corrupted colorful tiles behind the Pokémon party context-menu help string when **Cut** is selected. The letters read approximately 'Cut a tree or grass.', but the background strip is corrupted. The on-screen prompt 'Do what with this PkMn?' and the Cut menu entry are intact. Do not attribute the issue to a separate Recharged Yellow SVS edit: user confirms this screenshot is ThunderYellow Test 125R and predates those edits. ROM differential: 125Q→125R changes only four Bag Poké Ball use-function pointers at 0x3E82B0/2DC/308/334 and code at 0xF8A300–0xF8A3D7, not directly the party menu tile data. This does not exclude an earlier patch or an indirect memory side effect. Needs controlled reproduction on the same game/area and comparison with 125Q and a fresh normal save before a binary fix. Preserve Test125R. Beta release notes must disclose if unresolved.
 
 **Save safety:** Back up original native `.sav` before transferring it. Never rely on mid-battle `.svs` as your only backup. Test risky Rattata capture paths on throwaway copies. Distinguish verified binary checks from real gameplay results.
 
