@@ -1,0 +1,24 @@
+name: SVS Lab regression tests
+on:
+  push:
+    paths:
+      - index.html
+      - tests/**
+      - .github/workflows/svs-lab-tests.yml
+  pull_request:
+    paths:
+      - index.html
+      - tests/**
+      - .github/workflows/svs-lab-tests.yml
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inventory and export safety tests
+        run: node tests/inventory.test.cjs
+      - name: Current-vs-historical FLASH party regression tests
+        run: node tests/party-save-backups.test.cjs
