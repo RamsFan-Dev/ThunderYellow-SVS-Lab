@@ -31,6 +31,10 @@ The official game pages now display a tiny, non-clickable **Site Visits** counte
 - **[Visit the existing SVS Lab editor](https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/)**
 - **[Join the Reddit community](https://www.reddit.com/r/PokemonYellowThunder/)**
 
+## SVS Lab v2.38 — Gym Coach and team backup validation (October 28, 2026)
+
+The Gym Coach and manual Party Switcher now validate the current cartridge FLASH party against active gameplay and saved RAM mirrors without requiring historical backup FLASH generations to contain the same Pokémon. Previous save generations can legitimately have different Pokémon or party counts. Real current/live mismatches remain blocked; protected follower Pikachu stays locked, PC data is verified against current live storage, team exchanges still require confirmation and can be undone. Team edits normalize counts in the FLASH generations they update. Originals remain untouched; download an edited .svs and load it as a state in Delta.
+
 ## Bug reporting
 
 Describe your ROM version or internal test build (if known), Delta or other emulator version, the in-game location, what went wrong, and the exact steps to reproduce the issue. Attach your broken `.svs` file inside a `.zip` archive (up to 25 MB). Screenshots and multiple states from a single test sequence are welcome. **Do not upload a full copyrighted .gba ROM.**

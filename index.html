@@ -134,7 +134,7 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.37</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.38</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -2261,15 +2261,18 @@ function gymCoachScore(entry,guide){
 }
 function gymCoachOwned(){
  if(!loaded||!snapshotSafe||!monLocations?.groups?.length)throw Error('Open a compatible, verified Delta SVS.');
- const groups=getFlashGroups(),sector=groups[0]?.sectors.get(1),entries=[];
+ // Trust the newest FLASH save only after matching its current live party.
+ // Older GBA backup generations can legitimately hold different teammates.
+ const {groups,mirrors}=verifyLivePartyMirrors(),sector=groups[0]?.sectors.get(1),entries=[];
  if(!sector)throw Error('Party save is missing.');
  const count=work[sector.base+0x34];
  if(count<1||count>6)throw Error('The current party has an invalid Pokémon count.');
  for(let i=0;i<count;i++){
   const bytes=getPartyFrom(groups[0],i),mon=decodeMon(bytes);
   if(!mon)throw Error('Party slot '+(i+1)+' is unreadable.');
-  for(const group of groups.slice(1)){
-   if(monIdentity(decodeMon(getPartyFrom(group,i)))!==monIdentity(mon))throw Error('Saved party copies disagree. Capture a new SVS.');
+  for(const base of mirrors){
+   const live=decodeMon(work.subarray(base+i*100,base+i*100+80));
+   if(monIdentity(live)!==monIdentity(mon))throw Error('Live party and current save disagree in slot '+(i+1)+'. Save in-game and capture a new SVS.');
   }
   entries.push({val:'P'+i,kind:'party',index:i,mon});
  }
@@ -2420,23 +2423,15 @@ function gymCoachBuildSwapPlan(){
     throw Error('Live party battle data differs from the current saved Pokémon in slot '+(e.index+1)+'. Make a normal in-game save and fresh SVS.');
   }
  }
- for(const g of groups){
-  const section=g.sectors.get(1);
-  if(!section||u32(work,section.base+0x34)!==count)throw Error('Cartridge save party counts disagree.');
-  for(const e of party){
-   const other=decodeMon(getPartyFrom(g,e.index));
-   if(!other||monIdentity(other)!==monIdentity(e.mon))
-    throw Error('Cartridge save backup identifies a different Pokémon in party slot '+(e.index+1)+'.');
-  }
- }
+ // The verified newest FLASH group and all live RAM mirrors must agree.
+ // Older FLASH groups are previous saves and are not a reason to block swaps.
  for(const base of live.saveMirrors)if(u32(work,base-4)!==count)throw Error('Saved-party RAM count differs.');
  for(const base of live.gameplayMirrors)if(work[base-0x25b]!==count)throw Error('Live gameplay party count differs.');
  const pcs=pcRosterSnapshot(),boxWrites=[];
  for(let i=0;i<incoming.length;i++){
   const target=incoming[i],record=pcs[target.index];
   if(!record?.mon||monIdentity(record.mon)!==monIdentity(target.mon))throw Error('A recommended PC Pokémon changed.');
-  for(const g of groups)if(!repairBytesEqual(getPCFrom(g,target.index),record.bytes))
-   throw Error('Cartridge-save PC copies disagree for Box '+(1+Math.floor(target.index/30))+', Slot '+(1+target.index%30)+'.');
+  // pcRosterSnapshot already verified the current FLASH and live PC records.
   boxWrites.push({slot:target.index,bytes:displaced[i]?activeParty[displaced[i].index].slice(0,80):new Uint8Array(80),
    outgoing:displaced[i]||null,incoming:target});
  }
@@ -2480,7 +2475,8 @@ function gymCoachBuildAndSwap(){
   for(const g of plan.groups){
    const section=g.sectors.get(1);
    for(let i=0;i<6;i++)patch(section.base+0x38+100*i,plan.full[i],changes);
-   if(plan.count!==6)patch(section.base+0x34,countBytes,changes);
+   // Normalize each edited backup's count, even when its old party was smaller.
+   if(u32(work,section.base+0x34)!==6)patch(section.base+0x34,countBytes,changes);
   }
   for(const base of plan.live.mirrors)for(let i=0;i<6;i++)patch(base+100*i,plan.full[i],changes);
   if(plan.count!==6){
@@ -2553,16 +2549,12 @@ function teamRoster(){
  if(!loaded||!monLocations?.groups?.length)throw Error('Open a verified SVS before editing teams.');
  const groups=monLocations.groups,sec=groups[0].sectors.get(1);
  if(!sec)throw Error('Party save sector missing.');
- const counts=groups.map(g=>{const b=g.sectors.get(1);return b?work[b.base+0x34]:255});
- if(counts.some(x=>x!==6))throw Error('The Party Switcher needs a complete six-Pokémon party with matching flash copies.');
+ if(work[sec.base+0x34]!==6)throw Error('The Party Switcher needs six Pokémon in the current party. Older save backups need not match.');
  const party=[],pc=[],byLoc=new Map();
  for(let i=0;i<6;i++){
   const bytes=getPartyFrom(groups[0],i),mon=decodeMon(bytes);
   if(!mon)throw Error('Party slot '+(i+1)+' is empty or unreadable.');
-  for(const g of groups.slice(1)){
-   const other=decodeMon(getPartyFrom(g,i));
-   if(!other||monIdentity(other)!==monIdentity(mon))throw Error('Party flash copies disagree at slot '+(i+1)+'.');
-  }
+  // Check the actual live team, not a prior cartridge-save generation.
   for(const base of [...new Set([...monLocations.partyRAM,...monLocations.gameplayParty])]){
    const live=decodeMon(work.subarray(base+100*i,base+100*i+80));
    if(!live||monIdentity(live)!==monIdentity(mon))throw Error('Live party and flash disagree in slot '+(i+1)+'. Save in-game and take a new SVS first.');
@@ -2573,10 +2565,6 @@ function teamRoster(){
  for(let i=0;i<420;i++){
   const bytes=getPCFrom(groups[0],i),mon=decodeMon(bytes);
   if(!mon){if(bytes&&u32(bytes,0)!==0)throw Error('Unreadable PC Pokémon record in box '+(1+Math.floor(i/30))+' slot '+(1+i%30));continue}
-  for(const g of groups.slice(1)){
-   const other=decodeMon(getPCFrom(g,i));
-   if(!other||monIdentity(other)!==monIdentity(mon))throw Error('PC flash copies disagree at box '+(1+Math.floor(i/30))+' slot '+(1+i%30)+'.');
-  }
   for(const base of monLocations.pcRAM){
    const other=decodeMon(work.subarray(base+i*80,base+i*80+80));
    if(!other||monIdentity(other)!==monIdentity(mon))throw Error('Live PC Pokémon differs from flash storage. Save in-game and take a fresh SVS.');
@@ -2702,6 +2690,12 @@ function applyPartyPlan(){
   const outgoing=plan.displaced.map(entry=>entry.bytes.slice(0,80));
   // Exchange equal numbers of Pokémon; no PC slot is lost or duplicated.
   for(let i=0;i<6;i++)writeShowdownSlot('party',i,full[i],patches);
+  // The writer synchronizes all FLASH generations; match their party count.
+  for(const group of monLocations.groups){
+   const section=group.sectors.get(1);
+   if(!section)throw Error('Missing party save sector.');
+   if(u32(work,section.base+0x34)!==6)patch(section.base+0x34,Uint8Array.of(6,0,0,0),patches);
+  }
   for(let i=0;i<plan.incoming.length;i++)writeShowdownSlot('box',plan.incoming[i].index,outgoing[i],patches);
   refreshChecksums(patches);
   {const check=verifySnapshotIdentity();if(!check.ok)throw Error('Post-switch verification failed: '+check.reason+' Changes were rolled back.');}
