@@ -134,7 +134,7 @@
 @media(max-width:360px){.mon-roster.sprite-grid{gap:2px}.mon-tile.sprite-tile .pokemon-art{height:35px;width:35px}}
 </style></head>
 <body><main class="shell">
-<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.38</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
+<header class="brand"><div class="bolt">ϟ</div><div><h1>Pokemon: ThunderYellow Version <span style="color:var(--gold)">(2026 Special Edition)</span></h1><div class="sub">SVS Lab • Delta save-state editor • Local &amp; offline • v2.39</div></div><span class="pill">Made for our FireRed / LeafGreen build</span></header>
 <nav aria-label="Support resources" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:-2px 0 18px;padding:12px 15px;border:1px solid #354257;border-radius:12px;background:#171e2b">
   <span style="font-size:12px;color:#a6b3c6;flex:1;min-width:160px">Pokemon: ThunderYellow Version (2026 Special Edition)</span>
   <a href="./support/" style="font-weight:750">Technical support</a>
@@ -3345,7 +3345,24 @@ function pcSorter(a,b,mode){
  return cmp||na-nb||a.index-b.index;
 }
 
-function nationalDexNo(internalId){return internalId<=251?internalId:internalId>=277&&internalId<=411?internalId-25:internalId;}
+// FireRed/LeafGreen internal Hoenn species order differs from National Dex order.
+// Indexed by internal species ID minus 277. Source: PokeAPI pokemon_species.csv.
+// Use this for sprites, Dex labels, PC sorting, and numeric box placement.
+const GEN3_INTERNAL_TO_NATIONAL=Object.freeze([
+ 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266,
+ 267, 268, 269, 270, 271, 272, 273, 274, 275, 290, 291, 292, 276, 277, 285,
+ 286, 327, 278, 279, 283, 284, 320, 321, 300, 301, 352, 343, 344, 299, 324,
+ 302, 339, 340, 370, 341, 342, 349, 350, 318, 319, 328, 329, 330, 296, 297,
+ 309, 310, 322, 323, 363, 364, 365, 331, 332, 361, 362, 337, 338, 298, 325,
+ 326, 311, 312, 303, 307, 308, 333, 334, 360, 355, 356, 315, 287, 288, 289,
+ 316, 317, 357, 293, 294, 295, 366, 367, 368, 359, 353, 354, 336, 335, 369,
+ 304, 305, 306, 351, 313, 314, 345, 346, 347, 348, 280, 281, 282, 371, 372,
+ 373, 374, 375, 376, 377, 378, 379, 382, 383, 384, 380, 381, 385, 386, 358
+]);
+function nationalDexNo(internalId){
+ if(internalId>=277&&internalId<=411)return GEN3_INTERNAL_TO_NATIONAL[internalId-277];
+ return internalId; // Kanto/Johto already use their National Dex IDs.
+}
 // A compact sprite grid with true Gen III shiny PID/OT calculations.
 // Images are decorative; names and shiny labels remain when artwork is unavailable.
 function pokemonArt(mon){
