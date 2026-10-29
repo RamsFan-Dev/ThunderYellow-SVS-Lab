@@ -35,6 +35,10 @@ The official game pages now display a tiny, non-clickable **Site Visits** counte
 
 The Gym Coach and manual Party Switcher now validate the current cartridge FLASH party against active gameplay and saved RAM mirrors without requiring historical backup FLASH generations to contain the same Pokémon. Previous save generations can legitimately have different Pokémon or party counts. Real current/live mismatches remain blocked; protected follower Pikachu stays locked, PC data is verified against current live storage, team exchanges still require confirmation and can be undone. Team edits normalize counts in the FLASH generations they update. Originals remain untouched; download an edited .svs and load it as a state in Delta.
 
+## SVS Lab v2.39 — Hoenn Pokémon sprite and Pokédex correction (October 28, 2026)
+
+Generation III internal species IDs are not in National Pokédex order throughout Hoenn. Previously SVS Lab simply subtracted 25, causing Snorunt (internal #346) to display Wailord (#321) artwork instead of Snorunt (#361) and also mislabeling or misplacing other Hoenn Pokémon in sorted PC boxes. v2.39 uses a complete 135-entry mapping, verified against PokeAPI species data, for normal/shiny sprite URLs, National Dex labels, and Pokédex-based PC sorting and numeric placement. **This is a display and organization logic fix only; existing Pokémon/save-state bytes are not modified by updating the app.**
+
 ## Bug reporting
 
 Describe your ROM version or internal test build (if known), Delta or other emulator version, the in-game location, what went wrong, and the exact steps to reproduce the issue. Attach your broken `.svs` file inside a `.zip` archive (up to 25 MB). Screenshots and multiple states from a single test sequence are welcome. **Do not upload a full copyrighted .gba ROM.**
