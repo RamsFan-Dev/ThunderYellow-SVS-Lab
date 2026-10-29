@@ -21,6 +21,7 @@ For every test, mark PASS / FAIL / NOT TESTED and note save origin, game area, e
 | Pokémon party menu / Cut help strip | Party-screen bottom field-move description background and text readable | **FAIL — every time Cut selected; screenshot IMG_3655** |
 | Pokémon party menu / Flash help strip | Field-move description "Light up darkness." rendered over correct background | **FAIL — screenshot IMG_3658 confirms same multicolor tile strip** |
 | Pokémon party menu / other HM descriptions (Fly, Surf, Strength, Rock Smash, Waterfall) | All draw clean help-window background | NOT TESTED |
+| Experimental Test125S graphics-only repair of field move help-window | Cut and Flash backgrounds repaired; main menu Continue and follower still work | NOT TESTED — ROM/IPS binary QA passed only |
 | Party-menu rendering after closing/reopening and on other maps | Background tiles and text remain stable | NOT TESTED |
 | Surf follower / known event regressions | Test prior protected behavior | NOT TESTED |
 | Existing title/credits | Prior protected behavior retained | NOT TESTED |
@@ -34,5 +35,7 @@ For every test, mark PASS / FAIL / NOT TESTED and note save origin, game area, e
 **Additional user evidence (2026-10-28):** Screenshot IMG_3658 shows party-menu selection **FLASH** with text **"Light up darkness."** rendered over the *same* horizontally corrupted multicolor help-background strip seen with CUT in IMG_3655. Thus at least **two field-move descriptions** are affected, indicating a **shared rendering/graphics path** rather than one damaged move description string. Do not claim other HMs are broken without testing. The upstream FRLG field move description routine `ToggleFieldMoveDescriptionWindow` calls `DrawHelpMessageWindowTilesById` to draw the same tiled background for all field-move descriptions, then prints the individual move string. Check 4bpp source graphic, help-window tile buffer, and VRAM tile offsets for data collisions or missing redraws. Keep Test125R frozen; test any prospective repair separately.
 
 **Save safety:** Back up original native `.sav` before transferring it. Never rely on mid-battle `.svs` as your only backup. Test risky Rattata capture paths on throwaway copies. Distinguish verified binary checks from real gameplay results.
+
+**New graphics-repair candidate:** [Test125S technical repair and playtest criteria](BETA1-HM-WINDOW-REPAIR-QA.md). The beta baseline remains Test125R until user verifies the fix in Delta.
 
 **Go/no-go:** Do not mark `latest.json` released until all critical tests pass and the public clean-base patch is verified.
