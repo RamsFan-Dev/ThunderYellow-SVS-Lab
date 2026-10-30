@@ -1,5 +1,5 @@
-const CACHE_NAME = "thunderyellow-svs-lab-v2-39";
-const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
+const CACHE_NAME = "thunderyellow-svs-lab-v2-40";
+const FILES = ["./", "./index.html", "./frozen-recovery.js", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(FILES)));
   self.skipWaiting();
