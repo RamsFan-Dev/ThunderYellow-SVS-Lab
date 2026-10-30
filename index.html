@@ -313,12 +313,23 @@
 <div id="repairStatus" class="status" role="status" aria-live="polite"></div>
 <div id="repairPreview" class="status"></div>
 <div class="hint">Strict safety rules: no automatic Pokémon creation, no alteration of the original file, no forced repair when evidence disagrees, and no promise that a mid-battle state will safely resume. Use the same ROM build and keep your original .sav and .svs backups.</div>
+</details>
+<details id="frozenRecovery"><summary>🧊 Recover Frozen Game — SVS to SAV</summary>
+<p class="hint">If your game is stuck during a Pokémon transfer, capture or menu, this tool extracts a clean cartridge game save (.sav) from your frozen .svs. It checks the trainer, active party, Bill’s PC and all 28 FLASH checksums. It does <strong>not</strong> change the original SVS or repair the ROM bug.</p>
+<div class="row" style="margin:12px 0">
+<button type="button" id="frozenAnalyze" class="btn secondary">1. Diagnose frozen SVS</button>
+<button type="button" id="frozenLatest" class="btn primary" disabled>2. Download latest progress (.sav)</button>
+<button type="button" id="frozenFallback" class="btn secondary" disabled>Download last in-game save (.sav)</button>
+</div>
+<div id="frozenStatus" class="status" role="status" aria-live="polite"></div>
+<p class="hint">Save recovery is experimental and requires identifiable live memory. When live recovery cannot be verified, the button stays disabled; you may still export the older valid in-game save. In Delta: back up your existing file, choose Manage Save File → Import Save File, restart the ROM and choose Continue. Do not Load State. Verify your location, Pokémon, inventory and follower before saving normally.</p>
 </details></section>
 <section class="panel"><div class="feature">07 • Advanced</div><h2>Hex inspection &amp; patching</h2><p>For controlled follower-logic research or other known ThunderYellow offsets. Raw decompressed file offsets, not GBA ROM addresses.</p><details><summary>Open hex editor</summary><div class="grid3"><div><label class="label" for="hexOffset">Offset (hex or decimal)</label><input id="hexOffset" class="input monospace" placeholder="0x2DE6F" value="0x2DE6F"></div><div><label class="label" for="hexBytes">Patch bytes (hex)</label><input id="hexBytes" class="input monospace" placeholder="e.g. 0F 27"></div><div style="display:flex;align-items:end;gap:6px;flex-wrap:wrap"><button id="inspectHex" class="btn secondary">Inspect</button><button id="applyHex" class="btn danger">Patch</button></div></div><div id="hexView" class="preview" style="margin-top:13px"></div><div class="hint">Manual patches modify only the specified offset; unlike the item editor, they do not synchronize copies. Always record the precise source of an offset.</div></details></section>
 <section id="unsavedExportPanel" class="panel"><div class="feature">08 • Export</div><h2>Download your edited save state</h2><div class="callout">The original upload is never changed. The editor recalculates affected FireRed flash-section checksums and writes a new gzip-compressed <b>.svs</b> snapshot.</div><div class="row" style="margin-top:15px"><button id="undo" class="btn secondary" disabled>↶ Undo last change</button><button id="export" class="btn primary" style="flex:1">⬇ Download edited .svs</button></div><div id="exportMsg" class="status"></div><details><summary>Changes made</summary><div id="history" class="log">No changes yet.</div></details></section>
 </div>
 <div class="foot">ThunderYellow SVS Lab • No upload server, account, advertisements, or external libraries.<br>Save states are tied to the exact ROM version. This editor does not repair the ROM's follower startup code.</div>
 </main><div id="monSaveDock" class="mon-save-dock hidden" role="status"><strong>Unsaved Pokémon edits</strong><button type="button" class="btn primary" id="saveMonDock">💾 Save Pokémon</button></div>
+<script src="./frozen-recovery.js"></script>
 <script>
 'use strict';
 (()=>{
@@ -1379,6 +1390,45 @@ async function repairDownloadSVS(){
 
 $('repairDiagnose').onclick=repairPreviewBuild;
 $('repairDownload').onclick=repairDownloadSVS;
+let frozenRecoveryPlan=null;
+function resetFrozenRecovery(){
+ frozenRecoveryPlan=null;
+ for(const id of ['frozenLatest','frozenFallback'])$(id).disabled=true;
+ $('frozenStatus').textContent='';
+}
+$('frozenAnalyze').onclick=()=>{
+ resetFrozenRecovery();
+ try{
+  if(!loaded||!original)throw Error('Load a Delta/VBA .svs save state first.');
+  if(!window.ThunderYellowFrozenRecovery)throw Error('The frozen recovery engine failed to load. Refresh SVS Lab.');
+  const plan=window.ThunderYellowFrozenRecovery.build(original,findSectors(original));
+  frozenRecoveryPlan={...plan,source:original};
+  $('frozenFallback').disabled=false;
+  if(plan.latest){
+   $('frozenLatest').disabled=false;
+   msg($('frozenStatus'),'✓ Verified live recovery: '+plan.report.partyCount+' party Pokémon, current PC Box '+plan.report.currentBox+', '+plan.report.checksumSectors+'/28 valid FLASH sections. Latest progress and the untouched previous save are ready for separate downloads.','good');
+  }else{
+   msg($('frozenStatus'),'⚠ Latest progress could not be verified: '+plan.error+' You can still download the last in-game save, which may return you to an earlier location.','warn');
+  }
+ }catch(e){msg($('frozenStatus'),'Recovery unavailable: '+e.message,'bad');}
+};
+function downloadFrozenSave(which){
+ try{
+  const plan=frozenRecoveryPlan;
+  if(!plan||plan.source!==original)throw Error('Run Diagnose frozen SVS on the current file again.');
+  const bytes=plan[which];
+  if(!bytes||!window.ThunderYellowFrozenRecovery.validateFlash(bytes))throw Error('Cartridge checksums failed; nothing was downloaded.');
+  const label=which==='latest'?'Live-Progress-RECOVERED':'Last-InGame-Save-BACKUP';
+  const base=filename.replace(/\.(svs|sgm|gz)$/i,'');
+  const outname=base+'-'+label+'.sav';
+  const blob=new Blob([bytes],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=outname;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  msg($('frozenStatus'),'✓ Downloaded '+outname+'. In Delta use Manage Save File → Import Save File, then start the ROM and choose Continue. Do not Load State. Check Pokémon, location, inventory and the Pikachu follower. Your original SVS was not changed.','good');
+ }catch(e){msg($('frozenStatus'),'Recovery download blocked: '+e.message,'bad');}
+}
+$('frozenLatest').onclick=()=>downloadFrozenSave('latest');
+$('frozenFallback').onclick=()=>downloadFrozenSave('fallback');
 function scanner(){const d=work,found=[];for(let i=0;i<d.length-80;i++){
  // BoxPokemon: language=2, isBadEgg=1, hasSpecies=1, isEgg=1.
  if(d[i+18]!==2||d[i+19]!==7||d[i+27]!==0||d[i+30]!==0||d[i+31]!==0||d[i+8]<160)continue;
@@ -1405,7 +1455,7 @@ async function load(file){
   const raw=await gzipTransform(bytes,'unzip');
   if(raw.length!==2102280)throw Error('Unsupported snapshot layout. Expected 2,102,280 bytes; found '+fmt(raw.length)+'.');
   if(u16(raw,0)!==10||!ascii(raw,4,20).startsWith('POKEMON LEAF'))throw Error('Unsupported ROM or save-state header.');
-  original=raw;work=raw.slice();unsavedInventory=null;
+  original=raw;work=raw.slice();unsavedInventory=null;resetFrozenRecovery();
   pcShuffleEnabled=false;pcShuffleSource=null;repairInvalidate();
   for(const key of Object.keys(gymCoachChecklistState))delete gymCoachChecklistState[key];
   filename=file.name;$('pcViewOrder').value='box';confirmedPCView='box';
