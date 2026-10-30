@@ -3,11 +3,13 @@ on:
   push:
     paths:
       - index.html
+      - frozen-recovery.js
       - tests/**
       - .github/workflows/svs-lab-tests.yml
   pull_request:
     paths:
       - index.html
+      - frozen-recovery.js
       - tests/**
       - .github/workflows/svs-lab-tests.yml
 jobs:
@@ -20,5 +22,7 @@ jobs:
           node-version: '22'
       - name: Inventory and export safety tests
         run: node tests/inventory.test.cjs
+      - name: Frozen-state recovery tests
+        run: node tests/frozen-recovery.test.cjs
       - name: Current-vs-historical FLASH party regression tests
         run: node tests/party-save-backups.test.cjs
