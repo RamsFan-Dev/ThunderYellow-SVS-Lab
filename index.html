@@ -287,6 +287,13 @@
  <button id="createMon" class="btn primary wide" style="margin-top:12px">＋ Create Pokémon in selected slot</button>
 </div>
 <div id="monForm" class="hidden">
+<div class="callout" id="monNicknameSection" style="margin-top:16px">
+<h3 style="font-size:16px;margin:0 0 8px">✏️ Pokémon Nickname</h3>
+<div class="grid"><div><label class="label" for="monNickname">Rename selected Pokémon (1–10 characters)</label>
+<input id="monNickname" class="input" type="text" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="monNicknameHelp" placeholder="Nickname"></div>
+<div style="display:flex;align-items:end"><button id="monNicknameSpecies" type="button" class="btn secondary">Use species name</button></div></div>
+<div id="monNicknameHelp" class="hint" role="status" aria-live="polite">For party and PC Pokémon. Tap Save Pokémon below, then export your SVS.</div>
+</div>
 <div class="grid3" style="margin-top:17px"><div><label class="label" for="species">Pokémon species</label><select class="input" id="species"></select></div><div><label class="label" for="monLevel">Level (1–100)</label><input class="input" id="monLevel" type="number" min="1" max="100" inputmode="numeric"></div><div><label class="label" for="held">Held item</label><select class="input" id="held"></select></div><div><label class="label" for="experience">Experience</label><input class="input" id="experience" type="number" min="0" max="3000000" inputmode="numeric"></div><div><label class="label" for="friendship">Friendship / happiness</label><input class="input" id="friendship" type="number" min="0" max="255" inputmode="numeric"></div><div><label class="label" for="monAbility">Ability</label><select class="input" id="monAbility"></select></div><div><label class="label" for="monGender">Gender</label><select class="input" id="monGender" aria-describedby="monGenderHelp"></select></div><div><label class="label" for="monShiny">Shiny</label><select class="input" id="monShiny"><option value="0">No</option><option value="1">Yes ✨</option></select></div></div><div class="hint" id="monGenderHelp">In Generation III, gender depends on the Pokémon personality ID. Changing gender preserves nature and shiny status where supported.</div><div class="hint" id="monShinyHelp">Changing Shiny requires a new personality ID. Protected starter Pikachu cannot change shininess without risking follower logic.</div><div class="hint" id="monLevelHelp" style="margin-top:10px">Changing level sets matching EXP and recalculates party stats.</div><div class="hint" id="monAbilityHelp">Only species-supported abilities are selectable.</div>
 <h3 style="font-size:15px;margin:21px 0 9px">All four moves • PP and PP Ups</h3><div class="hint">Choose a move for each slot, adjust PP and PP Ups, then save the Pokémon changes below.</div><div id="monMoveRows"></div>
 <div class="row" style="margin:12px 0">
@@ -491,6 +498,18 @@ for(let i=0;i<26;i++){gen3NameMap[String.fromCharCode(65+i)]=0xBB+i;gen3NameMap[
 for(let i=0;i<10;i++)gen3NameMap[String(i)]=0xA1+i;
 Object.assign(gen3NameMap,{' ':0x00,'!':0xAB,'?':0xAC,'.':0xAD,'-':0xAE,',':0xB8,"'":0xB4,':':0xF0,'/':0xBA,'&':0x2D,'+':0x2E,'é':0x1B,'É':0x06,'ñ':0x29,'Ñ':0x14,'ä':0xF4,'ö':0xF5,'ü':0xF6,'Ä':0xF1,'Ö':0xF2,'Ü':0xF3});
 const gen3Reverse={};for(const [character,code] of Object.entries(gen3NameMap))gen3Reverse[code]=character;
+// English Pokémon nickname character table from Generation III FireRed/LeafGreen.
+const pokemonNicknameChars=Object.assign({},gen3NameMap,{
+ 'À':0x01,'Á':0x02,'Â':0x03,'Ç':0x04,'È':0x05,'Ê':0x07,'Ë':0x08,'Ì':0x09,'Î':0x0B,'Ï':0x0C,
+ 'Ò':0x0D,'Ó':0x0E,'Ô':0x0F,'Œ':0x10,'Ù':0x11,'Ú':0x12,'Û':0x13,'ß':0x15,
+ 'à':0x16,'á':0x17,'ç':0x19,'è':0x1A,'ê':0x1C,'ë':0x1D,'ì':0x1E,'î':0x20,'ï':0x21,
+ 'ò':0x22,'ó':0x23,'ô':0x24,'œ':0x25,'ù':0x26,'ú':0x27,'û':0x28,'º':0x2A,'ª':0x2B,
+ '=':0x35,';':0x36,'¿':0x51,'¡':0x52,'Í':0x5A,'%':0x5B,'(':0x5C,')':0x5D,'â':0x68,'í':0x6F,
+ '·':0xAF,'…':0xB0,'“':0xB1,'”':0xB2,'‘':0xB3,'’':0xB4,'♂':0xB5,'♀':0xB6,'¥':0xB7,'×':0xB9
+});
+const pokemonNicknameReverse={};for(const [ch,code] of Object.entries(pokemonNicknameChars))pokemonNicknameReverse[code]=ch;
+pokemonNicknameReverse[0xB4]="'";
+
 let nameDirty=false,trainerOldPlayer='',trainerOldRival='';
 function gameNameFromBytes(bytes){
  let name='';
@@ -2877,7 +2896,26 @@ const speciesMeta={"1":[31,"OVERGROW","NONE"],"2":[31,"OVERGROW","NONE"],"3":[31
 const statKeys=['HP','Attack','Defense','Speed','Sp. Attack','Sp. Defense'];
 const u32=(d,i)=>(d[i]|(d[i+1]<<8)|(d[i+2]<<16)|(d[i+3]<<24))>>>0;
 const put32=(d,i,v)=>{d[i]=v&255;d[i+1]=(v>>>8)&255;d[i+2]=(v>>>16)&255;d[i+3]=(v>>>24)&255};
-function textMon(d){let s='';for(const c of d){if(c===255)break;if(c>=0xbb&&c<=0xd4)s+=String.fromCharCode(65+c-0xbb);else if(c>=0xd5&&c<=0xee)s+=String.fromCharCode(97+c-0xd5);else if(c>=0xa1&&c<=0xaa)s+=String.fromCharCode(48+c-0xa1);else if(c===0)s+=' ';else s+='·'}return s.trim()}
+function textMon(d){let s='';for(const c of d){if(c===255)break;s+=pokemonNicknameReverse[c]??'�'}return s.trim()}
+function encodePokemonNickname(value){
+ const chars=Array.from(String(value).normalize('NFC').trim());
+ if(chars.length<1||chars.length>10)throw Error('Nickname must be 1–10 game characters.');
+ const out=new Uint8Array(10).fill(0xff);
+ for(let i=0;i<chars.length;i++){
+  const code=pokemonNicknameChars[chars[i]];
+  if(code===undefined)throw Error('Unsupported in-game nickname character: '+chars[i]);
+  out[i]=code;
+ }
+ return out;
+}
+function withPokemonNickname(record,value){
+ if(!(record instanceof Uint8Array)||record.length<80)throw Error('Pokémon record is incomplete.');
+ const output=record.slice();output.set(encodePokemonNickname(value),8);return output;
+}
+function nicknameHelp(){
+ const value=$('monNickname').value,count=Array.from(value).length;
+ $('monNicknameHelp').textContent=value.trim()?count+'/10 characters • Tap Save Pokémon below, then export SVS. Personality and trainer IDs remain unchanged.':'Enter a nickname or use the species name button.';
+}
 function decodeMon(bytes){if(!bytes||bytes.length<80)return null;
  let pid=u32(bytes,0),ot=u32(bytes,4);if(!pid||!ot||pid===0xffffffff||ot===0xffffffff)return null;
  let key=pid^ot,buf=new Uint8Array(48);for(let i=0;i<12;i++)put32(buf,i*4,u32(bytes,32+i*4)^key);
@@ -4126,8 +4164,10 @@ function renderPokemon(){if(!loaded)return;
    (pcShuffleSource?.kind==='pc'&&pcShuffleSource.slot===idx&&inPC&&pcShuffleEnabled?' shuffle-source':'');
   if(!mon&&suggested!==undefined)button.style.borderStyle='dashed';
   const title=document.createElement('strong'),extra=document.createElement('small');
-  const label=mon?(monNames[mon.sp]||'Species '+mon.sp):suggested!==undefined?'#'+String(nationalDexNo(suggested)).padStart(3,'0')+' '+monNames[suggested]+' (placeholder)':empty?'Empty':'Unreadable';
-  const shortName=mon?(monNames[mon.sp]||'Pokémon'):suggested!==undefined?'#'+nationalDexNo(suggested):empty?'Empty':'Invalid';
+  const speciesName=mon?(monNames[mon.sp]||'Species '+mon.sp):'';
+   const namedMon=mon&&mon.name&&mon.name.toLowerCase()!==speciesName.toLowerCase();
+   const label=mon?(namedMon?mon.name+' ('+speciesName+')':speciesName):suggested!==undefined?'#'+String(nationalDexNo(suggested)).padStart(3,'0')+' '+monNames[suggested]+' (placeholder)':empty?'Empty':'Unreadable';
+   const shortName=mon?(namedMon?mon.name:speciesName):suggested!==undefined?'#'+nationalDexNo(suggested):empty?'Empty':'Invalid';
   title.textContent=compact?shortName:monMode==='party'?(idx+1)+'. '+label:sortedView?'#'+String(nationalDexNo(mon.sp)).padStart(3,'0')+' '+label:(idx%30+1)+'. '+label;
   extra.textContent=compact?(mon?'Lv '+pcLevel(mon)+(shiny?' ✨':''):(suggested!==undefined?'Placeholder':inPC?'Slot '+(idx%30+1):'Slot '+(idx+1))):
    (mon?(mon.name||'')+' · '+pcSpeciesType(mon.sp)+' · '+pcSpeciesClass(mon.sp)+' Pokémon · Lv '+pcLevel(mon)+(shiny?' · ✨ Shiny':'')+(isProtected(mon)?' · Starter ★':''):suggested!==undefined?'Empty slot — preview only':'')+
@@ -4181,7 +4221,7 @@ function renderPokemon(){if(!loaded)return;
  $('removeMon').disabled=!mon||isProtected(mon)||monMode!=='box';$('cloneMon').disabled=!mon||isProtected(mon);$('moveMon').disabled=!mon||isProtected(mon)||monMode!=='box';
  if(!mon){refreshMonSaveStatus();return;}
  ensureMonOption(mon.sp,$('species'),'Species');ensureMonOption(mon.held,$('held'),'Item');for(let k=0;k<4;k++)ensureMonOption(mon.moves[k],$('move'+k),'Move');
- const v=(id,n)=>{$(id).value=n};v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('monLevel',shownLevel(mon,data));v('friendship',mon.friend);abilityOptions(false,mon.ability);v('monShiny',shinyStatus(mon.pid,mon.ot)?1:0);updateMonGenderUI(mon);$('monShiny').disabled=isProtected(mon);$('monShinyHelp').textContent=isProtected(mon)?'Original starter Pikachu: shiny status is locked because follower logic uses its fixed Pokémon ID. Moves and ability are editable.':'Shiny Yes/No changes this Pokémon’s personality ID while preserving its nature and gender. Keep a backup and test in Delta.';
+ const v=(id,n)=>{$(id).value=n};v('monNickname',mon.name);nicknameHelp();v('species',mon.sp);v('held',mon.held);v('experience',mon.exp);v('monLevel',shownLevel(mon,data));v('friendship',mon.friend);abilityOptions(false,mon.ability);v('monShiny',shinyStatus(mon.pid,mon.ot)?1:0);updateMonGenderUI(mon);$('monShiny').disabled=isProtected(mon);$('monShinyHelp').textContent=isProtected(mon)?'Original starter Pikachu: shiny status is locked because follower logic uses its fixed Pokémon ID. Moves and ability are editable.':'Shiny Yes/No changes this Pokémon’s personality ID while preserving its nature and gender. Keep a backup and test in Delta.';
  for(let k=0;k<4;k++){v('move'+k,mon.moves[k]);v('pp'+k,mon.pp[k]);v('up'+k,mon.ppups[k])}
  for(let k=0;k<6;k++){v('iv'+k,mon.iv[k]);v('ev'+k,mon.ev[k]);}showEVBudget();
  $('monLevelHelp').textContent='Changing level sets matching EXP and recalculates party stats. EXP-only edits preserve the existing party level.';
@@ -4195,6 +4235,8 @@ function commitMon(){
  try{
   const data=getSlotBytes(),mon=decodeMon(data);
   if(!mon)throw Error('Select a readable Pokémon before editing.');
+  const requestedNickname=$('monNickname').value,nicknameEdited=requestedNickname!==mon.name;
+  if(nicknameEdited)encodePokemonNickname(requestedNickname);
   const level=readMonNumber('monLevel',1,100,'Level'),shinyWanted=readMonNumber('monShiny',0,1,'Shiny')===1,genderWanted=$('monGender').value;
   const f={sp:readMonNumber('species',1,1400,'Species'),held:readMonNumber('held',0,65535,'Held item'),exp:readMonNumber('experience',0,3000000,'Experience'),friend:readMonNumber('friendship',0,255,'Friendship'),ability:readMonNumber('monAbility',0,1,'Ability slot'),moves:[],pp:[],ppups:[],iv:[],ev:[]};
   for(let i=0;i<4;i++){f.moves.push(readMonNumber('move'+i,0,65535,'Move '+(i+1)));f.pp.push(readMonNumber('pp'+i,0,99,'PP '+(i+1)));f.ppups.push(readMonNumber('up'+i,0,3,'PP Ups '+(i+1)));}
@@ -4222,7 +4264,10 @@ function commitMon(){
     put32(updatedBytes,0,pid);
   }
   let next=encodeMon({...mon,pid,bytes:updatedBytes},f);
+  if(nicknameEdited)next=withPokemonNickname(next,requestedNickname);
   const checkMon=decodeMon(next);
+  if(nicknameEdited&&checkMon?.name!==requestedNickname.normalize('NFC').trim())
+   throw Error('Nickname verification failed; no changes were saved.');
   if(!checkMon||shinyStatus(checkMon.pid,checkMon.ot)!==shinyWanted||monGenderFromPID(f.sp,checkMon.pid)!==genderWanted)
    throw Error('Pokémon checksum, gender, or shiny validation failed; nothing was written.');
   if(monMode==='party'&&data.length===100){
@@ -4308,6 +4353,12 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  $('mon40PP').onclick=()=>monQuickPP('fixed40');
  for(let k=0;k<6;k++)for(let [prefix,max] of [['iv',31],['ev',255]]){const div=document.createElement('div');div.innerHTML=`<label class="label" for="${prefix}${k}">${statKeys[k]} ${prefix.toUpperCase()}</label><input class="input" id="${prefix}${k}" type="number" min="0" max="${max}" inputmode="numeric">`;$('monStatRows').append(div)}
  for(let k=0;k<7;k++){const label=k===0?'Current HP':k===1?'Maximum HP':statKeys[k-1];let div=document.createElement('div');div.innerHTML=`<label class="label" for="stat${k}">${label}</label><input class="input" id="stat${k}" type="number" min="0" max="65535" inputmode="numeric">`;$('partyStatRows').append(div)}
+ $('monNicknameSpecies').onclick=()=>{
+  const species=monNames[Number($('species').value)];
+  if(!species){msg($('monMsg'),'Choose a recognized Pokémon species first.','warn');return;}
+  $('monNickname').value=species.replace(/\s+([♀♂])/g,'$1').slice(0,10);
+  nicknameHelp();markMonDirty();
+ };
  $('moveQuick').onclick=()=>{const i=Number($('moveQuickSlot').value),v=Number($('moveQuickName').value);if(Number.isInteger(i)&&i>=0&&i<=3&&Number.isInteger(v)){$('move'+i).value=v;markMonDirty()}};
  $('pcViewOrder').onchange=()=>{
   const previous=confirmedPCView,selected=$('pcViewOrder').value;
@@ -4325,6 +4376,7 @@ function initializeMonUI(){for(let i=0;i<14;i++){let o=document.createElement('o
  $('monTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.mode===monMode)return;if(!confirmMonDiscard())return;if(b.dataset.mode==='party'){pcShuffleEnabled=false;pcShuffleSource=null;}monMode=b.dataset.mode;monSlot=monMode==='party'?0:boxNo*30;invalidateShowdownExport();renderPokemon()});$('boxSelect').onchange=()=>{if(!confirmMonDiscard()){$('boxSelect').value=boxNo;return}boxNo=Number($('boxSelect').value);$('pcViewOrder').value='box';confirmedPCView='box';invalidatePCSortPreview();monSlot=boxNo*30;invalidateShowdownExport();renderPokemon()};
  const handleMonEdit=e=>{
   enforceLegalStat(e);
+  if(e.target.id==='monNickname')nicknameHelp();
   if(e.target.id==='species'){abilityOptions(true);const m=decodeMon(getSlotBytes());updateMonGenderUI(m,true);previewLevel();}
   else if(e.target.id==='monLevel')previewLevel();
   else if(/^(iv|ev)[0-5]$/.test(e.target.id)){

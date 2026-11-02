@@ -24,5 +24,7 @@ jobs:
         run: node tests/inventory.test.cjs
       - name: Frozen-state recovery tests
         run: node tests/frozen-recovery.test.cjs
+      - name: Pokémon nickname encoding and integrity tests
+        run: node tests/pokemon-nickname.test.cjs
       - name: Current-vs-historical FLASH party regression tests
         run: node tests/party-save-backups.test.cjs
