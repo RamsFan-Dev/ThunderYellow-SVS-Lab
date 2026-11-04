@@ -14,5 +14,10 @@
   },
   "patch": null,
   "expectedOutputSha256": null,
-  "notes": "The first public release remains in development. No approved base-game patch is published, and no complete commercial ROM is distributed. Internal testing designations are not public release versions."
+  "notes": "Beta 1 public testing program announced. Download remains disabled until an original LeafGreen USA Rev 1 source and target game patch are verified. No complete commercial ROM is distributed. Internal testing designations are not public release versions.",
+  "betaProgram": {
+    "name": "Beta 1",
+    "status": "announced",
+    "downloadAvailable": false
+  }
 }
