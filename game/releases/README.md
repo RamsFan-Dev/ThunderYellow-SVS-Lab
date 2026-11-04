@@ -1,51 +1,55 @@
-# ThunderYellow first-release packaging
+# Pokémon ThunderYellow (2026 Special Edition) — Beta 1
 
-Official project: **Pokemon: ThunderYellow Version (2026 Special Edition)**
+**Status: PUBLIC BETA TESTING** — not a stable or finished release.
 
-**Status: NOT RELEASED.** Test 125N is an internal development candidate; there is no public v1 or first public ROM/patch yet.
+The public installer is at: https://ramsfan-dev.github.io/ThunderYellow-SVS-Lab/game/install/
 
-## Compatible original ROM
+## Release delivery
 
-Players must provide their own lawfully obtained **Pokémon LeafGreen (USA) Rev 1 (also called 1.1)** GBA file.
+The website hosts a **patch only**, split into 16 binary parts under `game/releases/assets/`.
+The installer downloads and reassembles them locally, validates the full IPS SHA-256,
+applies the patch to the player's own verified LeafGreen original, and checks the
+resulting 16 MiB GBA game SHA-256 before enabling the download. No original or
+modified full commercial ROM file is hosted on the public repository.
 
-- Original file size: **16,777,216** bytes.
-- Game code: `BPGE`; GBA revision byte: `1`.
-- Original ROM SHA-1: `7862c67bdecbe21d1d69ce082ce34327e1c6ed5e`.
+- Public version: **Beta 1**
+- Required original: **Pokémon LeafGreen (USA) Rev 1 / 1.1**, 16,777,216 bytes
+- Header game code: `BPGE`, revision: `1`
+- Original SHA-1: `7862c67bdecbe21d1d69ce082ce34327e1c6ed5e`
+- IPS patch size (reassembled): **7,958,103 bytes**
+- IPS SHA-256: `568f656821cf720b6b62591d0bdb9fd692d5bf449de89a60f42effd55b1e5936`
+- Finished ThunderYellow Beta 1 SHA-256: `c5b09f9b65538353387ab40f5c6d0dbd7917df20579c53e9105df1ad33ca27d7`
+- Website release metadata: `latest.json`
+- Patch part filenames: `assets/ThunderYellow-Beta1.ips.part00` through `part15`
 
-The `/game/install/` webpage checks a visitor's chosen ROM locally and does **not** upload it or copy it to the server. It cannot currently generate a game because there is no first-release IPS patch.
+The 16 part blobs have been verified against their exact Git blob IDs. The
+reassembled original IPS applies byte-for-byte to the supported LeafGreen Rev 1
+game and reproduces the finished Beta 1 SHA-256.
 
-## First-release developer procedure
+## Tester notes
 
-1. Finish Test 125N regression and release-readiness testing. A good internal candidate is not a completed release.
-2. Use your *privately held, user-supplied* compatible original LeafGreen Rev 1 game file and the internally tested Test 125N ROM. Keep both full ROMs **out of public GitHub**.
-3. Run the local builder (Python 3, no external dependencies):
+The public beta has not completed a full end-to-end gameplay and device matrix.
+Back up all .sav/.svs files, and use a separate emulator game entry for testing.
+Fresh saves are recommended. Test areas include Pikachu following after battles,
+Surf and ledges, legendary encounters, story progress, and optional move and
+Pokémon battle advice. The coach uses heuristics; its suggestions are not a
+guarantee of maximum damage or safety.
 
-   ```bash
-   python3 game/release-tools/make_patch.py \
-      --base /private/path/pokeleafgreen_rev1.gba \
-      --candidate /private/path/ThunderYellow-Test125N.gba \
-      --out /private/path/ThunderYellow-FirstRelease.ips
-   ```
+Please report reproducible issues through
+[technical support](../../support/) or the
+[bug-report tracker](https://github.com/RamsFan-Dev/ThunderYellow-SVS-Lab/issues/new?template=bug-report.yml).
 
-4. The script rejects incorrect inputs, creates a sparse IPS, round-trip applies it to the original, then checks the exact expected Test 125N output hash. Review any future changes to the target candidate before relying on its hard-coded SHA-256.
-5. Complete actual gameplay and Delta compatibility checks using the **patched output**, not only the original internal candidate. Include known issues and installation instructions.
-6. Only after explicit first-public-release approval, upload the **patch file only** to `game/releases/assets/` and update `game/releases/latest.json`:
+## Release controls
 
-   - `publicRelease`: `true`
-   - `releaseStatus`: `"released"`
-   - `publicVersion`: assigned official release number (not the old internal “v1” label)
-   - `patch`: `{"format":"ips","path":"assets/ThunderYellow-FirstRelease.ips","sha256":"<VERIFIED PATCH SHA256>"}`
-   - `expectedOutputSha256`: SHA-256 of the **exact verified target** ROM
+A publicly available manifest (`latest.json`) enables the installer only when:
+`publicRelease=true`, `releaseStatus=released`, the exact base hash matches,
+the patch part filenames are acceptable, the full IPS hash matches, and the
+finished game hash matches. If any check fails, no ROM output is offered.
 
-7. Test the public `/game/install/` workflow with the supported original LeafGreen file: base hash, downloaded patch integrity, fully patched game hash and actual launch in Delta.
-8. Only then update public download/status wording, release notes and Reddit announcements.
+To issue an updated Beta 1 patch, add new uniquely named parts, verify all
+fingerprints and round-trips, and update the manifest last. Do not replace
+existing public parts in place, distribute full ROMs, or use internal test
+numbers as public version names.
 
-Do **not** upload, commit, or link to a full Nintendo ROM in the public repository. Never mark the manifest released merely because an experimental patch exists.
-
-## Related pages
-
-- [Game homepage](../)
-- [Release status / downloads](../downloads/)
-- [Local LeafGreen checker and release installer](../install/)
-- [Original cover art](../artwork/)
-- [Technical support](../../support/)
+Unofficial, noncommercial fan project. Not affiliated with Nintendo,
+Game Freak, or The Pokémon Company.
