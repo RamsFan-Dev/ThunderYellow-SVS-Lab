@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "project": "Pokemon: ThunderYellow Version (2026 Special Edition)",
-  "releaseStatus": "unreleased",
-  "publicRelease": false,
-  "publicVersion": null,
+  "releaseStatus": "released",
+  "publicRelease": true,
+  "publicVersion": "Beta 1",
   "developmentCandidate": null,
   "base": {
     "displayName": "Pokemon LeafGreen (USA), revision 1 (1.1)",
@@ -12,12 +12,34 @@
     "revision": 1,
     "sha1": "7862c67bdecbe21d1d69ce082ce34327e1c6ed5e"
   },
-  "patch": null,
-  "expectedOutputSha256": null,
-  "notes": "Beta 1 public testing program announced. Download remains disabled until an original LeafGreen USA Rev 1 source and target game patch are verified. No complete commercial ROM is distributed. Internal testing designations are not public release versions.",
+  "patch": {
+    "format": "ips",
+    "parts": [
+      "assets/ThunderYellow-Beta1.ips.part00",
+      "assets/ThunderYellow-Beta1.ips.part01",
+      "assets/ThunderYellow-Beta1.ips.part02",
+      "assets/ThunderYellow-Beta1.ips.part03",
+      "assets/ThunderYellow-Beta1.ips.part04",
+      "assets/ThunderYellow-Beta1.ips.part05",
+      "assets/ThunderYellow-Beta1.ips.part06",
+      "assets/ThunderYellow-Beta1.ips.part07",
+      "assets/ThunderYellow-Beta1.ips.part08",
+      "assets/ThunderYellow-Beta1.ips.part09",
+      "assets/ThunderYellow-Beta1.ips.part10",
+      "assets/ThunderYellow-Beta1.ips.part11",
+      "assets/ThunderYellow-Beta1.ips.part12",
+      "assets/ThunderYellow-Beta1.ips.part13",
+      "assets/ThunderYellow-Beta1.ips.part14",
+      "assets/ThunderYellow-Beta1.ips.part15"
+    ],
+    "size": 7958103,
+    "sha256": "568f656821cf720b6b62591d0bdb9fd692d5bf449de89a60f42effd55b1e5936"
+  },
+  "expectedOutputSha256": "c5b09f9b65538353387ab40f5c6d0dbd7917df20579c53e9105df1ad33ca27d7",
+  "notes": "Beta 1 is a public test release, not a stable or final edition. Download is generated locally using the player's verified LeafGreen USA Rev 1 ROM and a SHA-256 validated patch. Backup saves and report problems. Internal test numbers are not public release names.",
   "betaProgram": {
     "name": "Beta 1",
-    "status": "announced",
-    "downloadAvailable": false
+    "status": "released",
+    "downloadAvailable": true
   }
 }
