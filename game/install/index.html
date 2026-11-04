@@ -97,9 +97,9 @@ async function hash(name, bytes) {return hex(await crypto.subtle.digest(name,byt
 function resetOutput() {ready.hidden=true; save.removeAttribute("href"); if(generatedUrl){URL.revokeObjectURL(generatedUrl);generatedUrl=null;}}
 function allowed() {
  const p = manifest?.patch;
- const validSingle = typeof p?.path === "string" && /^[a-zA-Z0-9/_\\-.]+\\.ips$/.test(p.path);
+ const validSingle = typeof p?.path === "string" && /^assets\/[A-Za-z0-9_-]+\.ips$/.test(p.path);
  const validParts = Array.isArray(p?.parts) && p.parts.length >= 1 && p.parts.length <= 32 &&
-   p.parts.every(name => typeof name === "string" && /^[a-zA-Z0-9/_\\-.]+\\.ips\\.part[0-9]{2}$/.test(name));
+   p.parts.every(name => typeof name === "string" && /^assets\/[A-Za-z0-9_-]+\.ips\.part[0-9]{2}$/.test(name));
  return Boolean(manifest && manifest.publicRelease === true && manifest.releaseStatus === "released" &&
   manifest.base?.sha1 === EXPECTED_BASE_SHA1 &&
   p?.format === "ips" && (validSingle || validParts) &&
